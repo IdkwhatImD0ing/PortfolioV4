@@ -1,0 +1,23 @@
+{
+  "extract_id": "extract_b19cb596bb56429986696f4fde4d62ed",
+  "session_id": "session_b19cb596bb56429986696f4fde4d62ed",
+  "status": "ok",
+  "results": [
+    {
+      "url": "https://devpost.com/IdkwhatImD0ing",
+      "title": "Bill Z's (IdkwhatImD0ing) software portfolio | Devpost",
+      "publish_date": "2026-01-01",
+      "excerpts": [
+        "# Bill Z\n(IdkwhatImD0ing) > Doggo AI > TalkTuahBank > Dispatch AI > AdaptEd\ninteractive and personalized lectures, through conversational voice AI\n![Winner](https://d2dmyh35ffsxbl.cloudfront.net/assets/shared/software/winner-ribbon-85c4be5085ae1445920f3efa67e2e429d6b32bceffd6921ca3f4bf34de3ba712.png) Winner\n!Jasmine Wu\n!Spike O&;Carroll\n![Jay Wu](https://lh3.googleusercontent.com/a-/AOh14GicSmsB5OcSGwpZoR3N-H40fWKJazzJ89CqyeeQzg=s96-c?type=square \"jayqwu\")\n!Bill Z\n11\n1](https://devpost.com/software/teachme-3p7bw1)\n[![MemGen: Intelligent Vector-Based Cover Letter Creator](https://d112y698adiu2z.cloudfront.net/photos/production/software_thumbnail_photos/002/462/328/datas/medium.png)\n\n...\n\n(IdkwhatImD0ing) > Doggo AI > TalkTuahBank > Dispatch AI > Vocalyze\nSimplifying finance, empowering every voice\u2014making banking effortless and accessible.\n![Winner](https://d2dmyh35ffsxbl.cloudfront.net/assets/shared/software/winner-ribbon-85c4be5085ae1445920f3efa67e2e429d6b32bceffd6921ca3f4bf34de3ba712.png) Winner\n!Bill Z\n3\n0](https://devpost.com/software/weeee-i-love-reading-documentation)\n[![TFT: TeamFood Tactics](https://d112y698adiu2z.cloudfront.net/photos/production/software_thumbnail_photos/003/249/492/datas/medium.png)\n\n...\n\n(IdkwhatImD0ing) > Doggo AI > TalkTuahBank > Dispatch AI > SoundSearch\nSound Search: Navigate any website effortlessly with real-time voice guidance\u2014just one call away.\n![Winner](https://d2dmyh35ffsxbl.cloudfront.net/assets/shared/software/winner-ribbon-85c4be5085ae1445920f3efa67e2e429d6b32bceffd6921ca3f4bf34de3ba712.png) Winner\n!Bill Z\n3\n0](https://devpost.com/software/maybe-zc19va)\n[![SkySearch](https://d112y698adiu2z.cloudfront.net/photos/production/software_thumbnail_photos/003/090/780/datas/medium.png)\n\n...\n\n(IdkwhatImD0ing) > Doggo AI > TalkTuahBank > Dispatch AI > BikstAR\n[![Linguify](https://d112y698adiu2z.cloudfront.net/photos/production/software_thumbnail_photos/003/021/853/datas/medium.png)\n\n...\n\n(IdkwhatImD0ing) > Doggo AI > TalkTuahBank > Portfolio\n* [Your projects](https://devpost.com/portfolio/redirect?page=projects)\n* [Your hackathons](https://devpost.com/portfolio/redirect?page=hackathons)\n* [Settings](https://devpost.com/settings)"
+      ]
+    }
+  ],
+  "errors": [],
+  "usage": [
+    {
+      "name": "sku_extract_excerpts",
+      "count": 1
+    }
+  ],
+  "warnings": []
+}

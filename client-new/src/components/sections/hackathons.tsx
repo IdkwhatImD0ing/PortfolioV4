@@ -33,7 +33,8 @@ export function HackathonsSection() {
           </h2>
           <p className="mt-4 text-[18px] leading-[1.5] text-ink-soft max-w-[640px]">
             Hackathon culture is a forge. You start with nothing, you ship something, you
-            defend it on a stage. These are selected public wins from the broader run.
+            defend it on a stage. These are selected public wins from a broader run with
+            $150k+ in prizes.
           </p>
         </div>
       </div>
@@ -76,8 +77,8 @@ export function HackathonsSection() {
         <div className="grid grid-cols-4 gap-6 mt-14 max-[800px]:grid-cols-2">
           {[
             { n: "36", l: "Hackathons won" },
-            { n: "$25k", l: "Largest prize" },
-            { n: "36h", l: "Typical build" },
+            { n: "$74k", l: "Largest prize" },
+            { n: "$150k+", l: "Prizes won" },
             { n: "9", l: "Voice-AI shipped" },
           ].map((s) => (
             <div

@@ -1,0 +1,806 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic [ref=e4]: Bill Zhang ✦ v2026
+    - generic [ref=e5]:
+      - generic [ref=e6]: Voice ready
+      - generic [ref=e8]: LA · 01:54
+  - main [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e14]: VOICE-DRIVEN PORTFOLIO · 2026
+        - heading "Ask me anything." [level=1] [ref=e18]:
+          - text: Ask me
+          - emphasis [ref=e19]: anything.
+        - paragraph [ref=e20]: I'm Bill Zhang — AI engineer, voice-first builder, serial hackathon winner. This site listens. Talk to it, scroll it, drag it around — it'll rearrange.
+        - generic [ref=e21]:
+          - button "“ Who is Bill?" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]: “
+            - generic [ref=e24]: Who is Bill?
+          - button "“ What voice AI projects has he built?" [ref=e25] [cursor=pointer]:
+            - generic [ref=e26]: “
+            - generic [ref=e27]: What voice AI projects has he built?
+          - button "“ Show me the hackathon wins." [ref=e28] [cursor=pointer]:
+            - generic [ref=e29]: “
+            - generic [ref=e30]: Show me the hackathon wins.
+          - button "“ What does he do for fun?" [ref=e31] [cursor=pointer]:
+            - generic [ref=e32]: “
+            - generic [ref=e33]: What does he do for fun?
+          - button "“ Take me to his projects." [ref=e34] [cursor=pointer]:
+            - generic [ref=e35]: “
+            - generic [ref=e36]: Take me to his projects.
+      - generic:
+        - generic [ref=e37]:
+          - generic [ref=e38]: Latest
+          - generic [ref=e39]: Building voice agents that ship.
+        - generic [ref=e42]: SCROLL
+        - generic [ref=e44]:
+          - generic [ref=e45]: Currently
+          - generic [ref=e46]: Software engineer · Los Angeles
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]: ABOUT
+        - heading "A builder who listens first." [level=2] [ref=e51]:
+          - text: A builder who
+          - emphasis [ref=e52]: listens
+          - text: first.
+      - generic [ref=e53]:
+        - article [ref=e54]:
+          - generic [ref=e56]: 01 / WHO
+          - heading "I make AI feel like a real product." [level=3] [ref=e57]
+          - paragraph [ref=e58]: Most AI demos crumble under a real conversation. I obsess over the seams — latency, interruption handling, tool-use, fallback. The work that survives contact with users is the work I want to do.
+        - article [ref=e59]:
+          - generic [ref=e61]: 02 / WHAT
+          - heading "Voice-first, agent-shaped systems." [level=3] [ref=e62]
+          - paragraph [ref=e63]: Phones. Smart glasses. Browser sidebars. Pinned terminals. Wherever the interface is least visual, I'm trying to make it more useful — for banking, education, public safety, food rescue, sports tape.
+        - article [ref=e64]:
+          - generic [ref=e66]: 03 / HOW
+          - heading "Ship a startup-grade product every weekend." [level=3] [ref=e67]
+          - paragraph [ref=e68]: "Twelve hackathon wins is a lot of weekends. The discipline of 36 hours sharpens the instinct: pick the smallest demo that proves the hypothesis, build the spine first, decorate last."
+        - article [ref=e69]:
+          - generic [ref=e71]: 04 / WHY
+          - heading "The next billion users will talk to software." [level=3] [ref=e72]
+          - paragraph [ref=e73]: Most people on Earth still type slower than they speak — and a lot of them never learned to type at all. Every product I touch tries to bend the floor of access a little closer to the ground.
+    - generic [ref=e76]:
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]: PROJECTS · 12
+          - heading "Things I shipped." [level=2] [ref=e81]:
+            - text: Things I
+            - emphasis [ref=e82]: shipped.
+          - generic [ref=e83]:
+            - button "All" [ref=e84] [cursor=pointer]
+            - button "Voice" [ref=e85] [cursor=pointer]
+            - button "AI" [ref=e86] [cursor=pointer]
+            - button "Fintech" [ref=e87] [cursor=pointer]
+            - button "Safety" [ref=e88] [cursor=pointer]
+            - button "Education" [ref=e89] [cursor=pointer]
+            - button "3D" [ref=e90] [cursor=pointer]
+            - button "Winners" [ref=e91] [cursor=pointer]
+            - button "2025" [ref=e92] [cursor=pointer]
+            - button "2024" [ref=e93] [cursor=pointer]
+        - generic [ref=e94]:
+          - generic [ref=e95]: Voice-controlled gallery
+          - generic [ref=e96]: "Try: “Show me only voice AI projects.”"
+      - generic [ref=e97]:
+        - article [ref=e98] [cursor=pointer]:
+          - generic [ref=e99]:
+            - generic [ref=e100]: ★ Best AI/ML — HackDavis 2025
+            - generic [ref=e101]: /sentinelai
+            - generic [ref=e102]: ↗ deep dive
+          - generic [ref=e103]:
+            - heading "SentinelAI" [level=4] [ref=e104]
+            - paragraph [ref=e105]: Public-safety orchestrator. Detects panic from live audio, drives evacuations in <500ms with a streaming LLM superintendent.
+            - generic [ref=e106]:
+              - generic [ref=e107]: "#ai"
+              - generic [ref=e108]: "#voice"
+              - generic [ref=e109]: "#safety"
+              - generic [ref=e110]: "#winner"
+              - generic [ref=e111]: "2025"
+        - article [ref=e112] [cursor=pointer]:
+          - generic [ref=e113]:
+            - generic [ref=e114]: ★ UC Berkeley AI Hackathon 2025
+            - generic [ref=e115]: /courtvision
+            - generic [ref=e116]: ↗ deep dive
+          - generic [ref=e117]:
+            - heading "CourtVision" [level=4] [ref=e118]
+            - paragraph [ref=e119]: 2D game footage → 3D Gaussian splat replays. Voice-controlled tactical Q&A for athletes.
+            - generic [ref=e120]:
+              - generic [ref=e121]: "#ai"
+              - generic [ref=e122]: "#voice"
+              - generic [ref=e123]: "#3d"
+              - generic [ref=e124]: "#winner"
+              - generic [ref=e125]: "2025"
+        - article [ref=e126] [cursor=pointer]:
+          - generic [ref=e127]:
+            - generic [ref=e128]: ★ Grand Prize — UC Berkeley AI Hackathon 2024
+            - generic [ref=e129]: /dispatchai
+            - generic [ref=e130]: ↗ deep dive
+          - generic [ref=e131]:
+            - heading "Dispatch AI" [level=4] [ref=e132]
+            - paragraph [ref=e133]: Empathetic 911 co-pilot. Filters by severity, listens for emotion, recommends action — humans always decide.
+            - generic [ref=e134]:
+              - generic [ref=e135]: "#ai"
+              - generic [ref=e136]: "#voice"
+              - generic [ref=e137]: "#safety"
+              - generic [ref=e138]: "#winner"
+              - generic [ref=e139]: "2024"
+        - article [ref=e140] [cursor=pointer]:
+          - generic [ref=e141]:
+            - generic [ref=e142]: ★ Grand + Goldman Sachs — HackUTD 2024
+            - generic [ref=e143]: /talktuahbank
+            - generic [ref=e144]: ↗ deep dive
+          - generic [ref=e145]:
+            - heading "TalkTuahBank" [level=4] [ref=e146]
+            - paragraph [ref=e147]: Phone-only banking for the unbanked. Multi-language voice agent for balances, transfers, and bill pay.
+            - generic [ref=e148]:
+              - generic [ref=e149]: "#voice"
+              - generic [ref=e150]: "#fintech"
+              - generic [ref=e151]: "#ai"
+              - generic [ref=e152]: "#winner"
+              - generic [ref=e153]: "2024"
+        - article [ref=e154] [cursor=pointer]:
+          - generic [ref=e155]:
+            - generic [ref=e156]: ★ Google Challenge — LA Hacks 2024
+            - generic [ref=e157]: /adapted
+            - generic [ref=e158]: ↗ deep dive
+          - generic [ref=e159]:
+            - heading "AdaptEd" [level=4] [ref=e160]
+            - paragraph [ref=e161]: Live humanoid AI lecturer. Slides rewrite themselves based on what students say back.
+            - generic [ref=e162]:
+              - generic [ref=e163]: "#ai"
+              - generic [ref=e164]: "#voice"
+              - generic [ref=e165]: "#education"
+              - generic [ref=e166]: "#winner"
+              - generic [ref=e167]: "2024"
+        - article [ref=e168] [cursor=pointer]:
+          - generic [ref=e169]:
+            - generic [ref=e170]: ★ Letta + Finance — HackMerced X
+            - generic [ref=e171]: /vocalyze
+            - generic [ref=e172]: ↗ deep dive
+          - generic [ref=e173]:
+            - heading "Vocalyze" [level=4] [ref=e174]
+            - paragraph [ref=e175]: Banking applications by phone. Speech to filled-in forms, jargon decoded in real time.
+            - generic [ref=e176]:
+              - generic [ref=e177]: "#voice"
+              - generic [ref=e178]: "#fintech"
+              - generic [ref=e179]: "#ai"
+              - generic [ref=e180]: "#winner"
+              - generic [ref=e181]: "2025"
+        - article [ref=e182] [cursor=pointer]:
+          - generic [ref=e183]:
+            - generic [ref=e184]: ★ DiamondHacks 2025
+            - generic [ref=e185]: /secway
+            - generic [ref=e186]: ↗ deep dive
+          - generic [ref=e187]:
+            - heading "SecWay" [level=4] [ref=e188]
+            - paragraph [ref=e189]: Always-on browser companion. Flags overreach, explains it in plain English, one-clicks the fix.
+            - generic [ref=e190]:
+              - generic [ref=e191]: "#ai"
+              - generic [ref=e192]: "#security"
+              - generic [ref=e193]: "#winner"
+              - generic [ref=e194]: "2025"
+        - article [ref=e195] [cursor=pointer]:
+          - generic [ref=e196]:
+            - generic [ref=e197]: ★ Gemini + WebXR — CruzHacks 2025
+            - generic [ref=e198]: /slugmeditate
+            - generic [ref=e199]: ↗ deep dive
+          - generic [ref=e200]:
+            - heading "SlugMeditate" [level=4] [ref=e201]
+            - paragraph [ref=e202]: Type a calming thought, step into it. Imagen→Veo→Gaussian splats→WebXR meditation worlds.
+            - generic [ref=e203]:
+              - generic [ref=e204]: "#ai"
+              - generic [ref=e205]: "#3d"
+              - generic [ref=e206]: "#winner"
+              - generic [ref=e207]: "2025"
+        - article [ref=e208] [cursor=pointer]:
+          - generic [ref=e209]:
+            - generic [ref=e210]: /talktuahduck
+            - generic [ref=e211]: ↗ deep dive
+          - generic [ref=e212]:
+            - heading "TalkTuahDuck" [level=4] [ref=e213]
+            - paragraph [ref=e214]: Rubber-duck your notes. Upload messy PDFs and whiteboards, conversation-debug your understanding.
+            - generic [ref=e215]:
+              - generic [ref=e216]: "#ai"
+              - generic [ref=e217]: "#voice"
+              - generic [ref=e218]: "#education"
+              - generic [ref=e219]: "2025"
+        - article [ref=e220] [cursor=pointer]:
+          - generic [ref=e221]:
+            - generic [ref=e222]: ★ Sustainability — SpartaHack X
+            - generic [ref=e223]: /tft
+            - generic [ref=e224]: ↗ deep dive
+          - generic [ref=e225]:
+            - heading "TeamFood Tactics" [level=4] [ref=e226]
+            - paragraph [ref=e227]: Voice-first food rescue. Bakeries call to log surplus; people in need call to find it.
+            - generic [ref=e228]:
+              - generic [ref=e229]: "#voice"
+              - generic [ref=e230]: "#ai"
+              - generic [ref=e231]: "#winner"
+              - generic [ref=e232]: "2025"
+        - article [ref=e233] [cursor=pointer]:
+          - generic [ref=e234]:
+            - generic [ref=e235]: ★ SolanaU — SoCal Tech Week
+            - generic [ref=e236]: /splatnft
+            - generic [ref=e237]: ↗ deep dive
+          - generic [ref=e238]:
+            - heading "SplatNFT" [level=4] [ref=e239]
+            - paragraph [ref=e240]: Turn personal video into interactive 3D NFTs. Solana-minted, Anyone Protocol-stored.
+            - generic [ref=e241]:
+              - generic [ref=e242]: "#3d"
+              - generic [ref=e243]: "#web3"
+              - generic [ref=e244]: "#winner"
+              - generic [ref=e245]: "2024"
+        - article [ref=e246] [cursor=pointer]:
+          - generic [ref=e247]:
+            - generic [ref=e248]: /instarizz
+            - generic [ref=e249]: ↗ deep dive
+          - generic [ref=e250]:
+            - heading "InstaRizz" [level=4] [ref=e251]
+            - paragraph [ref=e252]: Ray-Ban smart glasses + Claude. Live face-recognition pickup-line generator. Spicy. Provocative.
+            - generic [ref=e253]:
+              - generic [ref=e254]: "#ai"
+              - generic [ref=e255]: "#wearable"
+              - generic [ref=e256]: "2024"
+      - generic [ref=e257]:
+        - generic [ref=e258]: SCROLL ↓ drives gallery →
+        - generic [ref=e261]: 12/12 match
+    - generic [ref=e262]:
+      - generic [ref=e264]:
+        - generic [ref=e265]: HACKATHONS · 12 WINS
+        - heading "Twelve weekends of winning." [level=2] [ref=e267]:
+          - text: Twelve weekends of
+          - emphasis [ref=e268]: winning.
+        - paragraph [ref=e269]: Hackathon culture is a forge. You start with nothing, you ship something, you defend it on a stage. I've done it from Berkeley to Davis to UTD.
+      - generic [ref=e270]:
+        - generic [ref=e272]:
+          - generic [ref=e273]:
+            - text: HackDavis
+            - generic [ref=e274]: ★ Best AI/ML
+            - generic [ref=e275]: ✦
+          - generic [ref=e276]:
+            - text: UC Berkeley AI 2025
+            - generic [ref=e277]: ★ Track Winner
+            - generic [ref=e278]: ✦
+          - generic [ref=e279]:
+            - text: DiamondHacks
+            - generic [ref=e280]: ★ Winner
+            - generic [ref=e281]: ✦
+          - generic [ref=e282]:
+            - text: CruzHacks
+            - generic [ref=e283]: ★ Gemini + WebXR
+            - generic [ref=e284]: ✦
+          - generic [ref=e285]:
+            - text: HackMerced X
+            - generic [ref=e286]: ★ Letta + Finance
+            - generic [ref=e287]: ✦
+          - generic [ref=e288]:
+            - text: SpartaHack X
+            - generic [ref=e289]: ★ Sustainability
+            - generic [ref=e290]: ✦
+          - generic [ref=e291]:
+            - text: SB Hacks XI
+            - generic [ref=e292]: ★ Featured
+            - generic [ref=e293]: ✦
+          - generic [ref=e294]:
+            - text: HackUTD 2024
+            - generic [ref=e295]: ★ Grand Prize + Goldman Sachs
+            - generic [ref=e296]: ✦
+          - generic [ref=e297]:
+            - text: UC Berkeley AI 2024
+            - generic [ref=e298]: ★ Grand Prize $25k
+            - generic [ref=e299]: ✦
+          - generic [ref=e300]:
+            - text: LA Hacks
+            - generic [ref=e301]: ★ Google Challenge
+            - generic [ref=e302]: ✦
+          - generic [ref=e303]:
+            - text: AI ATL
+            - generic [ref=e304]: ★ Featured
+            - generic [ref=e305]: ✦
+          - generic [ref=e306]:
+            - text: SoCal Tech Week
+            - generic [ref=e307]: ★ SolanaU
+            - generic [ref=e308]: ✦
+          - generic [ref=e309]:
+            - text: HackDavis
+            - generic [ref=e310]: ★ Best AI/ML
+            - generic [ref=e311]: ✦
+          - generic [ref=e312]:
+            - text: UC Berkeley AI 2025
+            - generic [ref=e313]: ★ Track Winner
+            - generic [ref=e314]: ✦
+          - generic [ref=e315]:
+            - text: DiamondHacks
+            - generic [ref=e316]: ★ Winner
+            - generic [ref=e317]: ✦
+          - generic [ref=e318]:
+            - text: CruzHacks
+            - generic [ref=e319]: ★ Gemini + WebXR
+            - generic [ref=e320]: ✦
+          - generic [ref=e321]:
+            - text: HackMerced X
+            - generic [ref=e322]: ★ Letta + Finance
+            - generic [ref=e323]: ✦
+          - generic [ref=e324]:
+            - text: SpartaHack X
+            - generic [ref=e325]: ★ Sustainability
+            - generic [ref=e326]: ✦
+          - generic [ref=e327]:
+            - text: SB Hacks XI
+            - generic [ref=e328]: ★ Featured
+            - generic [ref=e329]: ✦
+          - generic [ref=e330]:
+            - text: HackUTD 2024
+            - generic [ref=e331]: ★ Grand Prize + Goldman Sachs
+            - generic [ref=e332]: ✦
+          - generic [ref=e333]:
+            - text: UC Berkeley AI 2024
+            - generic [ref=e334]: ★ Grand Prize $25k
+            - generic [ref=e335]: ✦
+          - generic [ref=e336]:
+            - text: LA Hacks
+            - generic [ref=e337]: ★ Google Challenge
+            - generic [ref=e338]: ✦
+          - generic [ref=e339]:
+            - text: AI ATL
+            - generic [ref=e340]: ★ Featured
+            - generic [ref=e341]: ✦
+          - generic [ref=e342]:
+            - text: SoCal Tech Week
+            - generic [ref=e343]: ★ SolanaU
+            - generic [ref=e344]: ✦
+        - generic [ref=e346]:
+          - generic [ref=e347]:
+            - text: "2024"
+            - generic [ref=e348]: /
+            - text: SolanaU
+            - generic [ref=e349]: ✦
+          - generic [ref=e350]:
+            - text: "2024"
+            - generic [ref=e351]: /
+            - text: Featured
+            - generic [ref=e352]: ✦
+          - generic [ref=e353]:
+            - text: "2024"
+            - generic [ref=e354]: /
+            - text: Google Challenge
+            - generic [ref=e355]: ✦
+          - generic [ref=e356]:
+            - text: "2024"
+            - generic [ref=e357]: /
+            - text: Grand Prize $25k
+            - generic [ref=e358]: ✦
+          - generic [ref=e359]:
+            - text: "2024"
+            - generic [ref=e360]: /
+            - text: Grand Prize + Goldman Sachs
+            - generic [ref=e361]: ✦
+          - generic [ref=e362]:
+            - text: "2025"
+            - generic [ref=e363]: /
+            - text: Featured
+            - generic [ref=e364]: ✦
+          - generic [ref=e365]:
+            - text: "2025"
+            - generic [ref=e366]: /
+            - text: Sustainability
+            - generic [ref=e367]: ✦
+          - generic [ref=e368]:
+            - text: "2025"
+            - generic [ref=e369]: /
+            - text: Letta + Finance
+            - generic [ref=e370]: ✦
+          - generic [ref=e371]:
+            - text: "2025"
+            - generic [ref=e372]: /
+            - text: Gemini + WebXR
+            - generic [ref=e373]: ✦
+          - generic [ref=e374]:
+            - text: "2025"
+            - generic [ref=e375]: /
+            - text: Winner
+            - generic [ref=e376]: ✦
+          - generic [ref=e377]:
+            - text: "2025"
+            - generic [ref=e378]: /
+            - text: Track Winner
+            - generic [ref=e379]: ✦
+          - generic [ref=e380]:
+            - text: "2025"
+            - generic [ref=e381]: /
+            - text: Best AI/ML
+            - generic [ref=e382]: ✦
+          - generic [ref=e383]:
+            - text: "2024"
+            - generic [ref=e384]: /
+            - text: SolanaU
+            - generic [ref=e385]: ✦
+          - generic [ref=e386]:
+            - text: "2024"
+            - generic [ref=e387]: /
+            - text: Featured
+            - generic [ref=e388]: ✦
+          - generic [ref=e389]:
+            - text: "2024"
+            - generic [ref=e390]: /
+            - text: Google Challenge
+            - generic [ref=e391]: ✦
+          - generic [ref=e392]:
+            - text: "2024"
+            - generic [ref=e393]: /
+            - text: Grand Prize $25k
+            - generic [ref=e394]: ✦
+          - generic [ref=e395]:
+            - text: "2024"
+            - generic [ref=e396]: /
+            - text: Grand Prize + Goldman Sachs
+            - generic [ref=e397]: ✦
+          - generic [ref=e398]:
+            - text: "2025"
+            - generic [ref=e399]: /
+            - text: Featured
+            - generic [ref=e400]: ✦
+          - generic [ref=e401]:
+            - text: "2025"
+            - generic [ref=e402]: /
+            - text: Sustainability
+            - generic [ref=e403]: ✦
+          - generic [ref=e404]:
+            - text: "2025"
+            - generic [ref=e405]: /
+            - text: Letta + Finance
+            - generic [ref=e406]: ✦
+          - generic [ref=e407]:
+            - text: "2025"
+            - generic [ref=e408]: /
+            - text: Gemini + WebXR
+            - generic [ref=e409]: ✦
+          - generic [ref=e410]:
+            - text: "2025"
+            - generic [ref=e411]: /
+            - text: Winner
+            - generic [ref=e412]: ✦
+          - generic [ref=e413]:
+            - text: "2025"
+            - generic [ref=e414]: /
+            - text: Track Winner
+            - generic [ref=e415]: ✦
+          - generic [ref=e416]:
+            - text: "2025"
+            - generic [ref=e417]: /
+            - text: Best AI/ML
+            - generic [ref=e418]: ✦
+      - generic [ref=e420]:
+        - generic [ref=e421]:
+          - generic [ref=e422]: 12+
+          - generic [ref=e423]: Hackathons won
+        - generic [ref=e424]:
+          - generic [ref=e425]: $25k
+          - generic [ref=e426]: Largest prize
+        - generic [ref=e427]:
+          - generic [ref=e428]: 36h
+          - generic [ref=e429]: Typical build
+        - generic [ref=e430]:
+          - generic [ref=e431]: "9"
+          - generic [ref=e432]: Voice-AI shipped
+    - generic [ref=e433]:
+      - generic [ref=e434]:
+        - generic [ref=e435]: EXPERIENCE
+        - heading "A short, productive career." [level=2] [ref=e437]:
+          - text: A short,
+          - emphasis [ref=e438]: productive
+          - text: career.
+      - generic [ref=e439]:
+        - article [ref=e441]:
+          - generic [ref=e442]: 2024 — Now
+          - generic [ref=e443]:
+            - heading "Software Engineer" [level=4] [ref=e445]
+            - generic [ref=e446]: Voice AI · Los Angeles
+            - paragraph [ref=e447]: Building production voice agents end-to-end. Latency budgets in the hundreds of ms, real-time tool-use, multi-turn state.
+            - generic [ref=e448]: Now
+        - article [ref=e450]:
+          - generic [ref=e451]: 2023 — 2024
+          - generic [ref=e452]:
+            - heading "ML Engineer Intern" [level=4] [ref=e454]
+            - generic [ref=e455]: Major AI Lab
+            - paragraph [ref=e456]: Fine-tuned and shipped multi-modal models. Owned eval infrastructure. Publication-quality experiments on tight cycles.
+        - article [ref=e457]:
+          - generic [ref=e458]: 2022 — 2023
+          - generic [ref=e459]:
+            - heading "Software Engineer Intern" [level=4] [ref=e461]
+            - generic [ref=e462]: Big Tech
+            - paragraph [ref=e463]: Backend systems at scale — high-throughput services, observability, on-call rotation.
+        - article [ref=e464]:
+          - generic [ref=e465]: 2020 — 2023
+          - generic [ref=e466]:
+            - heading "Hackathon Mainstay" [level=4] [ref=e468]
+            - generic [ref=e469]: 12+ wins across the West Coast
+            - paragraph [ref=e470]: Shipped a startup-grade product every weekend. Most of the projects on this page started here.
+    - generic [ref=e471]:
+      - generic [ref=e472]:
+        - generic [ref=e473]: EDUCATION
+        - heading "Three schools, one path." [level=2] [ref=e475]:
+          - text: Three schools,
+          - emphasis [ref=e476]: one path.
+        - paragraph [ref=e477]: Click a card to flip it.
+      - generic [ref=e478]:
+        - generic [ref=e479] [cursor=pointer]:
+          - generic [ref=e480]:
+            - img "USC logo" [ref=e483]
+            - generic [ref=e484]:
+              - generic [ref=e485]: 01 / 03
+              - heading "University of Southern California" [level=4] [ref=e486]
+              - generic [ref=e487]: M.S. Computer Science — AI Specialization
+              - generic [ref=e488]: Aug 2023 — May 2025
+            - generic [ref=e489]:
+              - text: FLIP
+              - generic [ref=e490]: ↻
+          - generic [ref=e491]:
+            - generic [ref=e492]:
+              - generic [ref=e493]: USC · NOTES
+              - heading "M.S. Computer Science — AI Specialization" [level=4] [ref=e494]
+              - paragraph [ref=e495]: Graduate-level ML, applied AI, agentic systems. Built voice-first products throughout.
+            - generic [ref=e496]:
+              - text: BACK
+              - generic [ref=e497]: ↺
+        - generic [ref=e498] [cursor=pointer]:
+          - generic [ref=e499]:
+            - img "UCSC logo" [ref=e502]
+            - generic [ref=e503]:
+              - generic [ref=e504]: 02 / 03
+              - heading "UC Santa Cruz" [level=4] [ref=e505]
+              - generic [ref=e506]: B.S. Computer Science
+              - generic [ref=e507]: Sep 2020 — Mar 2023
+            - generic [ref=e508]:
+              - text: FLIP
+              - generic [ref=e509]: ↻
+          - generic [ref=e510]:
+            - generic [ref=e511]:
+              - generic [ref=e512]: UCSC · NOTES
+              - heading "B.S. Computer Science" [level=4] [ref=e513]
+              - paragraph [ref=e514]: Finished a 4-year program in 2.5 years. Caught the hackathon bug.
+            - generic [ref=e515]:
+              - text: BACK
+              - generic [ref=e516]: ↺
+        - generic [ref=e517] [cursor=pointer]:
+          - generic [ref=e518]:
+            - img "Lynbrook logo" [ref=e521]
+            - generic [ref=e522]:
+              - generic [ref=e523]: 03 / 03
+              - heading "Lynbrook High School" [level=4] [ref=e524]
+              - generic [ref=e525]: College Prep
+              - generic [ref=e526]: 2016 — 2020
+            - generic [ref=e527]:
+              - text: FLIP
+              - generic [ref=e528]: ↻
+          - generic [ref=e529]:
+            - generic [ref=e530]:
+              - generic [ref=e531]: Lynbrook · NOTES
+              - heading "College Prep" [level=4] [ref=e532]
+              - paragraph [ref=e533]: South Bay. First wrote code here.
+            - generic [ref=e534]:
+              - text: BACK
+              - generic [ref=e535]: ↺
+    - generic [ref=e538]: I buildvoice-firstagentsthat ship inweekends,wingrand prizes,and run inproduction.I care aboutlatency,human-in-the-loopcontrol, and thequiet craftof making AI feel like arealproduct.
+    - generic [ref=e540]:
+      - generic [ref=e541]:
+        - generic [ref=e542]: RESUME · ONE-PAGER
+        - heading "The printable version." [level=2] [ref=e544]:
+          - text: The
+          - emphasis [ref=e545]: printable
+          - text: version.
+        - paragraph [ref=e546]: Same story, traditional format. Click through below or grab the PDF — both stay in lock-step with everything else on this page.
+      - generic [ref=e547]:
+        - generic [ref=e548]:
+          - iframe [ref=e550]:
+
+          - generic [ref=e551]:
+            - generic [ref=e552]: resume.pdf · last updated 2025
+            - generic [ref=e553]:
+              - link "↗ Open in new tab" [ref=e554] [cursor=pointer]:
+                - /url: /resume.pdf
+                - generic [ref=e555]: ↗
+                - text: Open in new tab
+              - link "↓ Download PDF" [ref=e556] [cursor=pointer]:
+                - /url: /resume.pdf
+                - generic [ref=e557]: ↓
+                - text: Download PDF
+        - generic [ref=e558]:
+          - generic [ref=e559]:
+            - generic [ref=e560]:
+              - generic [ref=e561]: 5+
+              - generic [ref=e562]: Years building
+            - generic [ref=e563]:
+              - generic [ref=e564]: 12+
+              - generic [ref=e565]: Hackathon wins
+            - generic [ref=e566]:
+              - generic [ref=e567]: "8"
+              - generic [ref=e568]: Voice apps shipped
+            - generic [ref=e569]:
+              - generic [ref=e570]: 120k
+              - generic [ref=e571]: Lines of TS in prod
+          - generic [ref=e572]:
+            - generic [ref=e573]: At a glance
+            - list [ref=e574]:
+              - listitem [ref=e575]:
+                - strong [ref=e576]: AI engineer
+                - text: — voice-first agents, multimodal pipelines, real-time inference.
+              - listitem [ref=e577]:
+                - strong [ref=e578]: Software engineer
+                - text: — production systems, observability, on-call.
+              - listitem [ref=e579]:
+                - strong [ref=e580]: USC
+                - text: — M.S. Computer Science, AI specialization.
+              - listitem [ref=e581]:
+                - strong [ref=e582]: Stack
+                - text: — TypeScript / Python / Rust, Next.js, Retell, Twilio, Mistral, Llama.
+          - generic [ref=e583]:
+            - generic [ref=e584]: Get in touch
+            - generic [ref=e585]:
+              - link "billzhang0011@gmail.com" [ref=e586] [cursor=pointer]:
+                - /url: mailto:billzhang0011@gmail.com
+              - link "github.com/IdkwhatImD0ing" [ref=e587] [cursor=pointer]:
+                - /url: https://github.com/IdkwhatImD0ing
+              - link "linkedin.com/in/bill-zhang1" [ref=e588] [cursor=pointer]:
+                - /url: https://www.linkedin.com/in/bill-zhang1/
+          - generic [ref=e589]:
+            - text: Voice tip
+            - paragraph [ref=e590]: “Send me your resume.” → opens the download.
+    - generic [ref=e592]:
+      - generic [ref=e593]:
+        - generic [ref=e594]: HOW THIS SITE WORKS
+        - heading "A portfolio that talks back." [level=2] [ref=e596]:
+          - text: A portfolio that
+          - emphasis [ref=e597]: talks back.
+        - paragraph [ref=e598]:
+          - text: Most portfolios are read-only documents. This one is an agent. You speak, and the structured tool calls coming back from the LLM rearrange the page in real time — filter projects, scroll, expand a deep-dive, jump to a specific section. The voice agent
+          - emphasis [ref=e599]: is
+          - text: the navigation.
+      - generic [ref=e600]:
+        - generic [ref=e601]:
+          - generic [ref=e603]: "01"
+          - generic [ref=e604]:
+            - heading "Mic input" [level=5] [ref=e605]
+            - paragraph [ref=e606]: Browser mic stream → Retell client SDK. Low-latency WebRTC pipe to a hosted agent.
+        - generic [ref=e607]:
+          - generic [ref=e609]: "02"
+          - generic [ref=e610]:
+            - heading "LLM agent" [level=5] [ref=e611]
+            - paragraph [ref=e612]: Retell agent runs an instruction-tuned model with this site's content + a small tool registry as its world.
+        - generic [ref=e613]:
+          - generic [ref=e615]: "03"
+          - generic [ref=e616]:
+            - heading "Tool calls" [level=5] [ref=e617]
+            - paragraph [ref=e618]: Agent emits structured tool calls — filter_projects(tag), focus_project(id), open_project(id), scroll_to(section).
+        - generic [ref=e619]:
+          - generic [ref=e621]: "04"
+          - generic [ref=e622]:
+            - heading "VoiceBus" [level=5] [ref=e623]
+            - paragraph [ref=e624]: A pub-sub on window broadcasts each tool call. No prop drilling, no router — sections opt in.
+        - generic [ref=e625]:
+          - generic [ref=e627]: "05"
+          - generic [ref=e628]:
+            - heading "Sections react" [level=5] [ref=e629]
+            - paragraph [ref=e630]: Each section subscribes to the events it cares about and animates its own state. The site rearranges itself.
+        - generic [ref=e631]:
+          - generic [ref=e633]: "06"
+          - generic [ref=e634]:
+            - heading "Voice reply" [level=5] [ref=e635]
+            - paragraph [ref=e636]: The agent confirms in spoken English while the page settles. The user keeps both hands free.
+      - generic [ref=e637]:
+        - generic [ref=e638]:
+          - generic [ref=e639]:
+            - generic [ref=e640]: Voice
+            - list [ref=e641]:
+              - listitem [ref=e642]: Retell AI (agent runtime)
+              - listitem [ref=e643]: WebRTC (stream)
+              - listitem [ref=e644]: Custom tool registry
+          - generic [ref=e645]:
+            - generic [ref=e646]: Brain
+            - list [ref=e647]:
+              - listitem [ref=e648]: GPT-4 / Claude (selectable)
+              - listitem [ref=e649]: Site-grounded system prompt
+              - listitem [ref=e650]: Function-calling JSON schema
+          - generic [ref=e651]:
+            - generic [ref=e652]: Frame
+            - list [ref=e653]:
+              - listitem [ref=e654]: Next.js + React 19
+              - listitem [ref=e655]: Three.js + GLSL bg
+              - listitem [ref=e656]: Framer Motion + GSAP
+          - generic [ref=e657]:
+            - generic [ref=e658]: State
+            - list [ref=e659]:
+              - listitem [ref=e660]: VoiceBus pub-sub
+              - listitem [ref=e661]: URL-driven section anchors
+              - listitem [ref=e662]: Per-section local React state
+        - generic [ref=e663]: "// every section subscribes to the same bus VoiceBus.on((cmd) => { if (cmd.type === \"filter\") setFilter(cmd.tag); if (cmd.type === \"focus\") setFocusId(cmd.id); if (cmd.type === \"open\") setOpenId(cmd.id); if (cmd.type === \"scroll\") scrollToSection(cmd.id); }); // the agent's tool calls become events agent.onToolCall(\"filter_projects\", ({ tag }) => VoiceBus.emit({ type: \"filter\", tag }) );"
+    - generic [ref=e664]:
+      - generic:
+        - generic: off the clock · off the clock · off the clock
+        - generic: climbing · coffee · code
+        - generic: made in los angeles
+      - generic [ref=e665]:
+        - generic [ref=e666]:
+          - generic [ref=e667]: OFF THE CLOCK
+          - heading "A few true things." [level=2] [ref=e669]:
+            - text: A few
+            - emphasis [ref=e670]: true things.
+        - generic [ref=e671]:
+          - generic [ref=e672]:
+            - img "Bill Zhang" [ref=e673]
+            - generic [ref=e674]: SHOT · 2025 · LA
+          - generic [ref=e675]:
+            - generic [ref=e676]:
+              - generic [ref=e677]:
+                - generic [ref=e678]: ✦
+                - generic [ref=e679]: Finished a 4-year CS degree in 2.5 years.
+              - generic [ref=e680]:
+                - generic [ref=e681]: ✦
+                - generic [ref=e682]: Won my first hackathon at 17. Haven't slowed down.
+              - generic [ref=e683]:
+                - generic [ref=e684]: ✦
+                - generic [ref=e685]: Speaks Mandarin and English; building agents in both.
+              - generic [ref=e686]:
+                - generic [ref=e687]: ✦
+                - generic [ref=e688]: If I'm not coding, I'm probably climbing or chasing good coffee.
+              - generic [ref=e689]:
+                - generic [ref=e690]: ✦
+                - generic [ref=e691]: Believe the next billion users will talk to software, not click it.
+            - generic [ref=e692]: "› Try asking the orb: “What does Bill do for fun?”"
+    - generic [ref=e694]:
+      - generic [ref=e695]:
+        - generic [ref=e696]: CONTACT
+        - heading "Let's talk. (Literally.)" [level=2] [ref=e698]:
+          - text: Let's
+          - emphasis [ref=e699]: talk.
+          - text: (Literally.)
+        - paragraph [ref=e700]: Tap the orb. Or, if you're old-school, send a normal email — I read every one.
+      - generic [ref=e701]:
+        - generic [ref=e702]:
+          - heading "Direct" [level=5] [ref=e703]
+          - link "billzhang0011@gmail.com ↗" [ref=e704] [cursor=pointer]:
+            - /url: mailto:billzhang0011@gmail.com
+            - text: billzhang0011@gmail.com
+            - generic [ref=e705]: ↗
+          - link "Tap voice orb ↗" [ref=e706] [cursor=pointer]:
+            - /url: "#hero"
+            - text: Tap voice orb
+            - generic [ref=e707]: ↗
+        - generic [ref=e708]:
+          - heading "Elsewhere" [level=5] [ref=e709]
+          - link "GitHub ↗" [ref=e710] [cursor=pointer]:
+            - /url: https://github.com/IdkwhatImD0ing
+            - text: GitHub
+            - generic [ref=e711]: ↗
+          - link "LinkedIn ↗" [ref=e712] [cursor=pointer]:
+            - /url: https://www.linkedin.com/in/bill-zhang1/
+            - text: LinkedIn
+            - generic [ref=e713]: ↗
+          - link "Devpost ↗" [ref=e714] [cursor=pointer]:
+            - /url: https://devpost.com/IdkwhatImD0ing
+            - text: Devpost
+            - generic [ref=e715]: ↗
+        - generic [ref=e716]:
+          - heading "Index" [level=5] [ref=e717]
+          - link "Projects ↗" [ref=e718] [cursor=pointer]:
+            - /url: "#projects"
+            - text: Projects
+            - generic [ref=e719]: ↗
+          - link "Hackathons ↗" [ref=e720] [cursor=pointer]:
+            - /url: "#hackathons"
+            - text: Hackathons
+            - generic [ref=e721]: ↗
+          - link "Experience ↗" [ref=e722] [cursor=pointer]:
+            - /url: "#experience"
+            - text: Experience
+            - generic [ref=e723]: ↗
+      - generic [ref=e724]:
+        - generic [ref=e725]: © 2026 BILL ZHANG · BUILT IN A WEEKEND, AS USUAL
+        - generic [ref=e726]: "VOICE: ON · SCROLL: WORKING · MOOD: VIOLET"
+  - generic [ref=e727]:
+    - generic [ref=e730]: Tap to talk · or scroll
+    - button "Open voice commands" [ref=e731] [cursor=pointer]:
+      - img [ref=e732]
+  - button "Open Next.js Dev Tools" [ref=e740] [cursor=pointer]:
+    - img [ref=e741]
+  - alert [ref=e744]

@@ -9,6 +9,7 @@ Project cards and modals are driven by `src/lib/portfolio-data.ts`.
 - Keep `projectUrl` for live sites, Devpost pages, or project walkthrough pages that are not the primary video.
 
 The modal in `src/components/sections/projects.tsx` falls back from YouTube embed to image preview to a branded placeholder.
+When a YouTube embed is rendered, do not show a duplicate "Watch on YouTube" action; reserve the demo-media action for non-embedded demos.
 
 The project rail defaults to a curated six-project set of awarded projects. The full `PROJECTS` array should still include the broader archive because voice commands, filters, and direct project opens can surface non-curated projects on demand.
 

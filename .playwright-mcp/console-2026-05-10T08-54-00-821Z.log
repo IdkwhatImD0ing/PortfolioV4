@@ -1,0 +1,11 @@
+[      41ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3100/_next/static/chunks/07daa_next_dist_client_88773447._.js:14731
+[      71ms] [LOG] [Fast Refresh] done in 31ms @ http://localhost:3100/_next/static/chunks/07daa_next_dist_client_88773447._.js:14560
+[      77ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3100/_next/static/chunks/07daa_next_dist_client_88773447._.js:14731
+[     292ms] [LOG] [Fast Refresh] done in 214ms @ http://localhost:3100/_next/static/chunks/07daa_next_dist_client_88773447._.js:14560
+[     296ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3100/_next/static/chunks/07daa_next_dist_client_88773447._.js:14731
+[     324ms] [LOG] [Fast Refresh] done in 27ms @ http://localhost:3100/_next/static/chunks/07daa_next_dist_client_88773447._.js:14560
+[     328ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3100/_next/static/chunks/07daa_next_dist_client_88773447._.js:14731
+[     436ms] [LOG] %c[Vercel Speed Insights]%c [vitals] color: rgb(120, 120, 120) color: inherit {speed: 4g, metrics: Array(3), scriptVersion: 0.1.3, sdkName: @vercel/speed-insights/next, sdkVersion: 1.3.1} /_vercel/speed-insights/vitals @ https://va.vercel-scripts.com/v1/speed-insights/script.debug.js:0
+[     436ms] [LOG] %c[Vercel Speed Insights]%c [vitals] color: rgb(120, 120, 120) color: inherit {speed: 4g, metrics: Array(1), scriptVersion: 0.1.3, sdkName: @vercel/speed-insights/next, sdkVersion: 1.3.1} /_vercel/speed-insights/vitals @ https://va.vercel-scripts.com/v1/speed-insights/script.debug.js:0
+[     437ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3100/:0
+[     444ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3100/favicon.ico:0

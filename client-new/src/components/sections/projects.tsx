@@ -458,7 +458,7 @@ function ProjectDetail({
               </span>
             </div>
             <div className="flex flex-col gap-2">
-              {demoLink && (
+              {demoLink && !embed && (
                 <a
                   href={demoLink}
                   target="_blank"
@@ -469,7 +469,7 @@ function ProjectDetail({
                   <span className="w-7 h-7 grid place-items-center font-mono text-[12px] rounded-full bg-gradient-to-br from-violet to-magenta text-white">
                     ▶
                   </span>{" "}
-                  {embed ? "Watch on YouTube" : "View demo media"}
+                  View demo media
                 </a>
               )}
               {p.projectUrl && (

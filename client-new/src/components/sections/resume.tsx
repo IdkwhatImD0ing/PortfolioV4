@@ -4,7 +4,7 @@ const STATS = [
   { k: "Years building", v: "5+" },
   { k: "Hackathon wins", v: "36" },
   { k: "Voice apps shipped", v: "9" },
-  { k: "Lines of TS in prod", v: "120k" },
+  { k: "Prizes won", v: "$150k+" },
 ];
 
 export function ResumeSection() {
