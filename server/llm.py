@@ -22,6 +22,7 @@ from agents import (
 from openai.types.shared import Reasoning
 
 
+from navigation import tool_call_to_metadata
 from custom_types import (
     AgentInterruptResponse,
     MetadataResponse,
@@ -492,46 +493,9 @@ class LlmClient:
                                 arguments=args,
                             )
 
-                            if name == "display_homepage":
-                                yield MetadataResponse(
-                                    metadata={"type": "navigation", "page": "personal"}
-                                )
-                            elif name == "display_landing_page":
-                                yield MetadataResponse(
-                                    metadata={"type": "navigation", "page": "landing"}
-                                )
-                            elif name == "display_education_page":
-                                yield MetadataResponse(
-                                    metadata={"type": "navigation", "page": "education"}
-                                )
-                            elif name == "display_resume_page":
-                                yield MetadataResponse(
-                                    metadata={"type": "navigation", "page": "resume"}
-                                )
-                            elif name == "display_hackathons_page":
-                                yield MetadataResponse(
-                                    metadata={"type": "navigation", "page": "hackathon"}
-                                )
-                            elif name == "display_architecture_page":
-                                yield MetadataResponse(
-                                    metadata={"type": "navigation", "page": "architecture"}
-                                )
-                            elif name == "display_project":
-                                # Parse the arguments to get the project ID
-                                try:
-                                    args_dict = json.loads(args) if args else {}
-                                    project_id = args_dict.get("id", "")
-                                    yield MetadataResponse(
-                                        metadata={
-                                            "type": "navigation",
-                                            "page": "project",
-                                            "project_id": project_id,
-                                        }
-                                    )
-                                except:
-                                    yield MetadataResponse(
-                                        metadata={"type": "navigation", "page": "project"}
-                                    )
+                            nav_meta = tool_call_to_metadata(name, args)
+                            if nav_meta is not None:
+                                yield MetadataResponse(metadata=nav_meta)
                             elif name == "search_projects":
                                 # For search_projects, we might want to send the results as metadata
                                 # but since the function returns text, we'll let it be handled normally
@@ -647,53 +611,11 @@ class LlmClient:
                                 yield TextChatStreamChunk(type="status", content=status_label)
 
                             # Send navigation metadata
-                            if name == "display_homepage":
+                            nav_meta = tool_call_to_metadata(name, args)
+                            if nav_meta is not None:
                                 yield TextChatStreamChunk(
-                                    type="metadata",
-                                    metadata={"type": "navigation", "page": "personal"}
+                                    type="metadata", metadata=nav_meta
                                 )
-                            elif name == "display_landing_page":
-                                yield TextChatStreamChunk(
-                                    type="metadata",
-                                    metadata={"type": "navigation", "page": "landing"}
-                                )
-                            elif name == "display_education_page":
-                                yield TextChatStreamChunk(
-                                    type="metadata",
-                                    metadata={"type": "navigation", "page": "education"}
-                                )
-                            elif name == "display_resume_page":
-                                yield TextChatStreamChunk(
-                                    type="metadata",
-                                    metadata={"type": "navigation", "page": "resume"}
-                                )
-                            elif name == "display_hackathons_page":
-                                yield TextChatStreamChunk(
-                                    type="metadata",
-                                    metadata={"type": "navigation", "page": "hackathon"}
-                                )
-                            elif name == "display_architecture_page":
-                                yield TextChatStreamChunk(
-                                    type="metadata",
-                                    metadata={"type": "navigation", "page": "architecture"}
-                                )
-                            elif name == "display_project":
-                                try:
-                                    args_dict = json.loads(args) if args else {}
-                                    project_id = args_dict.get("id", "")
-                                    yield TextChatStreamChunk(
-                                        type="metadata",
-                                        metadata={
-                                            "type": "navigation",
-                                            "page": "project",
-                                            "project_id": project_id,
-                                        }
-                                    )
-                                except:
-                                    yield TextChatStreamChunk(
-                                        type="metadata",
-                                        metadata={"type": "navigation", "page": "project"}
-                                    )
 
                     else:
                         self._log(f"unhandled stream event: {type(event).__name__}")

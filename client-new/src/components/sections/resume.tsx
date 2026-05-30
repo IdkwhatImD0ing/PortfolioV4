@@ -1,5 +1,7 @@
 "use client";
 
+import { PORTFOLIO } from "@/lib/portfolio-data";
+
 const STATS = [
   { k: "Years building", v: "5+" },
   { k: "Hackathon wins", v: "36" },
@@ -28,7 +30,7 @@ export function ResumeSection() {
             version.
           </h2>
           <p className="text-[18px] leading-[1.55] text-ink-soft mt-5">
-            Same story, traditional format. Click through below or grab the PDF — both stay in
+            Same story, traditional format. Click through below or grab the PDF; both stay in
             lock-step with everything else on this page.
           </p>
         </div>
@@ -38,7 +40,7 @@ export function ResumeSection() {
             <div className="aspect-[8.5/11] w-full bg-[#f5f3ee]">
               <iframe
                 src="/resume.pdf#toolbar=0&navpanes=0&view=FitH"
-                title="Bill Zhang — Resume"
+                title="Bill Zhang Resume"
                 className="w-full h-full border-0"
               />
             </div>
@@ -97,19 +99,19 @@ export function ResumeSection() {
               </div>
               <ul className="list-none flex flex-col gap-2.5">
                 <li className="text-[13.5px] text-ink-soft leading-[1.5] pl-3.5 relative before:content-[''] before:absolute before:left-0 before:top-[9px] before:w-[5px] before:h-[5px] before:rounded-full before:bg-violet">
-                  <strong className="text-ink font-medium">AI engineer</strong> — voice-first
+                  <strong className="text-ink font-medium">AI engineer:</strong> voice-first
                   agents, multimodal pipelines, real-time inference.
                 </li>
                 <li className="text-[13.5px] text-ink-soft leading-[1.5] pl-3.5 relative before:content-[''] before:absolute before:left-0 before:top-[9px] before:w-[5px] before:h-[5px] before:rounded-full before:bg-violet">
-                  <strong className="text-ink font-medium">Scale AI Applied AI Engineer</strong> —
+                  <strong className="text-ink font-medium">Scale AI Applied AI Engineer:</strong>{" "}
                   enterprise GenAI, LLM evals, multi-agent systems.
                 </li>
                 <li className="text-[13.5px] text-ink-soft leading-[1.5] pl-3.5 relative before:content-[''] before:absolute before:left-0 before:top-[9px] before:w-[5px] before:h-[5px] before:rounded-full before:bg-violet">
-                  <strong className="text-ink font-medium">USC</strong> — M.S. Computer Science,
+                  <strong className="text-ink font-medium">USC:</strong> M.S. Computer Science,
                   AI specialization.
                 </li>
                 <li className="text-[13.5px] text-ink-soft leading-[1.5] pl-3.5 relative before:content-[''] before:absolute before:left-0 before:top-[9px] before:w-[5px] before:h-[5px] before:rounded-full before:bg-violet">
-                  <strong className="text-ink font-medium">Stack</strong> — TypeScript / Python
+                  <strong className="text-ink font-medium">Stack:</strong> TypeScript / Python
                   / Rust, Next.js, Retell, Twilio, Mistral, Llama.
                 </li>
               </ul>
@@ -121,11 +123,11 @@ export function ResumeSection() {
               </div>
               <div className="flex flex-col gap-2">
                 <a
-                  href="mailto:billzhang0011@gmail.com"
+                  href={`mailto:${PORTFOLIO.email}`}
                   data-cursor-hover
                   className="text-ink no-underline text-[13.5px] px-2.5 py-2 rounded-lg transition-colors duration-200 hover:bg-[rgba(168,85,247,0.1)] hover:text-violet"
                 >
-                  billzhang0011@gmail.com
+                  {PORTFOLIO.email}
                 </a>
                 <a
                   href="https://github.com/IdkwhatImD0ing"

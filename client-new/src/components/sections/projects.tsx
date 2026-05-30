@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { PROJECTS, type Project } from "@/lib/portfolio-data";
-import { VoiceBus } from "@/lib/voice-bus";
+import { PROJECTS, findProject, type Project } from "@/lib/portfolio-data";
+import { loadFallbackProject } from "@/lib/project-fallback";
+import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
 import { cn } from "@/lib/utils";
+
+const PROJECT_HASH_PREFIX = "#project/";
 
 const FILTERS = [
   { key: "all", label: "Standouts" },
@@ -40,7 +43,58 @@ export function ProjectsSection() {
   const [year, setYear] = useState<number | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [openProject, setOpenProject] = useState<Project | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
+
+  // Resolve openId to a Project: curated PROJECTS first, then lazy-load from
+  // the Pinecone corpus for archived ones the agent surfaces.
+  useEffect(() => {
+    if (!openId) {
+      setOpenProject(null);
+      return;
+    }
+    const known = findProject(openId);
+    if (known) {
+      setOpenProject(known);
+      return;
+    }
+    let cancelled = false;
+    loadFallbackProject(openId).then((p) => {
+      if (!cancelled) setOpenProject(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [openId]);
+
+  // Deep linking: parse `#project/<id>` on mount + sync hash when modal opens/closes.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (hash.startsWith(PROJECT_HASH_PREFIX)) {
+      const rawId = decodeURIComponent(hash.slice(PROJECT_HASH_PREFIX.length));
+      if (rawId) {
+        const known = findProject(rawId);
+        setOpenId(known?.id ?? rawId);
+        // Defer scroll so the section is laid out by the time we jump.
+        requestAnimationFrame(() => scrollToSection("projects"));
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const currentHash = window.location.hash;
+    if (openId) {
+      const next = `${PROJECT_HASH_PREFIX}${encodeURIComponent(openId)}`;
+      if (currentHash !== next) {
+        window.history.replaceState(null, "", next);
+      }
+    } else if (currentHash.startsWith(PROJECT_HASH_PREFIX)) {
+      // Clear only our own hash; don't clobber section anchors set by other code.
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, [openId]);
 
   useEffect(
     () =>
@@ -56,20 +110,32 @@ export function ProjectsSection() {
             setFilter("all");
             setFocusId(null);
           }
+          setOpenId(null);
           setTranscript(`Filtering by ${cmd.tag ?? cmd.year}.`);
           window.setTimeout(() => setTranscript(null), 2400);
         }
         if (cmd.type === "focus") {
-          setFocusId(cmd.id);
+          const project = findProject(cmd.id);
+          if (!project) return;
+          setFocusId(project.id);
           setFilter("all");
           setYear(null);
-          setTranscript(`Focusing on ${cmd.id}.`);
+          setOpenId(null);
+          setTranscript(`Focusing on ${project.name}.`);
           window.setTimeout(() => setTranscript(null), 2400);
         }
         if (cmd.type === "open") {
-          setOpenId(cmd.id);
-          setTranscript(`Opening ${cmd.id}.`);
+          // Allow opening any project the agent surfaces, even archived ones
+          // that aren't in the curated PROJECTS array. Known projects keep
+          // their local id (for stable URLs); unknown ones use the raw id and
+          // get lazy-loaded from the Pinecone corpus.
+          const known = findProject(cmd.id);
+          setOpenId(known?.id ?? cmd.id);
+          setTranscript(`Opening ${known?.name ?? cmd.id}.`);
           window.setTimeout(() => setTranscript(null), 2400);
+        }
+        if (cmd.type === "scroll") {
+          setOpenId(null);
         }
       }),
     [],
@@ -88,7 +154,7 @@ export function ProjectsSection() {
     };
   }, [openId]);
 
-  const open = openId ? PROJECTS.find((p) => p.id === openId) ?? null : null;
+  const open = openProject;
   const isCuratedRail = filter === "all" && !year && !focusId;
   const isMatch = (p: Project) => {
     if (focusId) return p.id === focusId;
@@ -393,7 +459,7 @@ function ProjectDetail({
                   /{p.id}
                 </span>
                 <span className="text-muted font-mono text-[12px] tracking-[0.12em] uppercase mt-3 block">
-                  Demo media not available — check the project links.
+                  Demo media not available. Check the project links.
                 </span>
               </div>
             </div>

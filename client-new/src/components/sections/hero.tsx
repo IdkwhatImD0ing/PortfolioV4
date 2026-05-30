@@ -97,9 +97,9 @@ export function HeroSection() {
         </h1>
 
         <p className="mt-7 max-w-[640px] text-[19px] leading-[1.5] text-ink-soft">
-          I&apos;m <b className="text-ink font-semibold">Bill Zhang</b> — Applied AI Engineer
+          I&apos;m <b className="text-ink font-semibold">Bill Zhang</b>, Applied AI Engineer
           at Scale, voice-first builder, serial hackathon winner. This site listens. Talk to it,
-          scroll it, drag it around — it&apos;ll rearrange.
+          scroll it, drag it around. It&apos;ll rearrange.
         </p>
 
         <div className="mt-9 flex flex-wrap gap-2.5">
@@ -118,22 +118,6 @@ export function HeroSection() {
         </div>
       </div>
 
-      <div className="absolute left-8 right-8 bottom-9 flex justify-between items-end gap-6 font-mono text-[11.5px] tracking-[0.12em] uppercase text-muted pointer-events-none pr-[280px] transition-opacity duration-[250ms] max-[900px]:hidden max-[760px]:hidden">
-        <div className="flex flex-col gap-1 pointer-events-auto">
-          <span>Latest</span>
-          <b className="text-ink font-medium">Building voice agents that ship.</b>
-        </div>
-        <div className="flex flex-col gap-1 pointer-events-auto items-center">
-          <div className="flex flex-col items-center gap-2 font-mono text-[11px] tracking-[0.18em] text-ink-soft">
-            <span>SCROLL</span>
-            <span className="w-px h-10 bg-gradient-to-b from-accent to-transparent animate-scroll-line" />
-          </div>
-        </div>
-        <div className="flex flex-col gap-1 pointer-events-auto text-right">
-          <span>Currently</span>
-          <b className="text-ink font-medium">Applied AI Engineer · Scale AI</b>
-        </div>
-      </div>
     </section>
   );
 }

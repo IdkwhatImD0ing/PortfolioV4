@@ -2,41 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RetellWebClient as RetellWebClientType } from "retell-client-js-sdk";
-import { VoiceBus, scrollToSection, type VoiceCommand } from "@/lib/voice-bus";
+import {
+  VoiceBus,
+  scrollToSection,
+  metaToNavigationAction,
+  type VoiceCommand,
+  type NavigationMeta,
+} from "@/lib/voice-bus";
+import { mergeTranscript, type TranscriptEntry } from "@/lib/transcript";
 import { cn } from "@/lib/utils";
 
 interface RegisterCallResponse {
   access_token: string;
   call_id: string;
 }
-
-interface NavigationMeta {
-  type: string;
-  page?:
-    | "landing"
-    | "education"
-    | "project"
-    | "personal"
-    | "resume"
-    | "hackathon"
-    | "architecture";
-  project_id?: string;
-}
-
-interface TranscriptEntry {
-  role: "agent" | "user";
-  content: string;
-}
-
-const PAGE_TO_SECTION: Record<NonNullable<NavigationMeta["page"]>, string> = {
-  landing: "hero",
-  personal: "personal",
-  education: "education",
-  project: "projects",
-  resume: "resume",
-  hackathon: "hackathons",
-  architecture: "architecture",
-};
 
 const SHORTCUTS: Array<{ you: string; ai: string; cmd: VoiceCommand }> = [
   { you: "Show me only the voice AI projects.", ai: "Filtering by voice + AI.", cmd: { type: "filter", tag: "voice" } },
@@ -45,7 +24,7 @@ const SHORTCUTS: Array<{ you: string; ai: string; cmd: VoiceCommand }> = [
   { you: "Send me your resume.", ai: "Heading to the resume.", cmd: { type: "scroll", id: "resume" } },
   { you: "How does this site work?", ai: "Heading to the architecture section.", cmd: { type: "scroll", id: "architecture" } },
   { you: "Take me to hackathons.", ai: "Jumping to hackathons.", cmd: { type: "scroll", id: "hackathons" } },
-  { you: "Show me only the 2025 projects.", ai: "Filtering by year — 2025.", cmd: { type: "filter", year: 2025 } },
+  { you: "Show me only the 2025 projects.", ai: "Filtering to 2025.", cmd: { type: "filter", year: 2025 } },
   { you: "What about the fintech work?", ai: "Filtering by fintech.", cmd: { type: "filter", tag: "fintech" } },
   { you: "Reset the projects.", ai: "Clearing filters.", cmd: { type: "filter", tag: "all" } },
   { you: "Take me to your education.", ai: "Heading to education.", cmd: { type: "scroll", id: "education" } },
@@ -57,10 +36,8 @@ const cmdBtn =
 
 export function VoiceOrb() {
   const [open, setOpen] = useState(false);
-  const [transcriptDisplay, setTranscriptDisplay] = useState({
-    you: "",
-    ai: "Tap the mic to talk — or try a quick command.",
-  });
+  const [fullTranscript, setFullTranscript] = useState<TranscriptEntry[]>([]);
+  const [hint, setHint] = useState("Tap the mic to talk, or try a quick command.");
   const [pulsing, setPulsing] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [isAgentTalking, setIsAgentTalking] = useState(false);
@@ -68,17 +45,24 @@ export function VoiceOrb() {
 
   const retellRef = useRef<RetellWebClientType | null>(null);
   const listenersBoundRef = useRef(false);
+  const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.body.classList.toggle("voice-open", open);
     return () => document.body.classList.remove("voice-open");
   }, [open]);
 
+  // Auto-scroll transcript to bottom on new turn or while pulsing.
+  useEffect(() => {
+    const el = transcriptScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [fullTranscript, pulsing]);
+
   const fireShortcut = useCallback((item: (typeof SHORTCUTS)[number]) => {
-    setTranscriptDisplay({ you: item.you, ai: "…thinking" });
+    setFullTranscript((prev) => [...prev, { role: "user", content: item.you }]);
     setPulsing(true);
     window.setTimeout(() => {
-      setTranscriptDisplay({ you: item.you, ai: item.ai });
+      setFullTranscript((prev) => [...prev, { role: "agent", content: item.ai }]);
       VoiceBus.emit(item.cmd);
       if (item.cmd.type === "scroll") scrollToSection(item.cmd.id);
       setPulsing(false);
@@ -90,7 +74,7 @@ export function VoiceOrb() {
 
     client.on("call_started", () => {
       setIsCalling(true);
-      setTranscriptDisplay({ you: "", ai: "Connected. I'm listening…" });
+      setHint("Connected. I'm listening…");
     });
     client.on("call_ended", () => {
       setIsCalling(false);
@@ -102,29 +86,14 @@ export function VoiceOrb() {
     client.on("update", (update: { transcript?: TranscriptEntry[] }) => {
       const t = update?.transcript;
       if (!t || t.length === 0) return;
-      const lastUser = [...t].reverse().find((e) => e.role === "user");
-      const lastAgent = [...t].reverse().find((e) => e.role === "agent");
-      setTranscriptDisplay({
-        you: lastUser?.content ?? "",
-        ai: lastAgent?.content ?? "…",
-      });
+      setFullTranscript((prev) => mergeTranscript(prev, t));
     });
 
     client.on("metadata", (metadata: { metadata?: NavigationMeta }) => {
-      const meta = metadata?.metadata;
-      if (!meta || meta.type !== "navigation" || !meta.page) return;
-
-      if (meta.page === "project" && meta.project_id) {
-        VoiceBus.emit({ type: "open", id: meta.project_id });
-        scrollToSection("projects");
-        return;
-      }
-
-      const section = PAGE_TO_SECTION[meta.page];
-      if (section) {
-        VoiceBus.emit({ type: "scroll", id: section });
-        scrollToSection(section);
-      }
+      const action = metaToNavigationAction(metadata?.metadata);
+      if (!action) return;
+      VoiceBus.emit(action.command);
+      requestAnimationFrame(() => scrollToSection(action.scrollTo));
     });
 
     client.on("error", (error) => {
@@ -132,7 +101,7 @@ export function VoiceOrb() {
       client.stopCall();
       setIsCalling(false);
       setIsAgentTalking(false);
-      setTranscriptDisplay({ you: "", ai: "Hit a snag — please try again." });
+      setHint("Hit a snag. Please try again.");
     });
 
     listenersBoundRef.current = true;
@@ -141,6 +110,8 @@ export function VoiceOrb() {
   const startCall = useCallback(async () => {
     if (isCalling || isStarting) return;
     setIsStarting(true);
+    setFullTranscript([]);
+    setHint("Connecting…");
     try {
       const agentId = process.env.NEXT_PUBLIC_RETELL_AGENT_ID;
       if (!agentId) {
@@ -173,10 +144,7 @@ export function VoiceOrb() {
       await retellRef.current.startCall({ accessToken: data.access_token });
     } catch (err) {
       console.error("Failed to start call:", err);
-      setTranscriptDisplay({
-        you: "",
-        ai: "Couldn't start the call. Use the demo commands below.",
-      });
+      setHint("Couldn't start the call. Use the demo commands below.");
     } finally {
       setIsStarting(false);
     }
@@ -197,7 +165,7 @@ export function VoiceOrb() {
   const orbStatus = isCalling
     ? isAgentTalking
       ? "Agent talking…"
-      : "Listening — speak"
+      : "Listening · speak"
     : isStarting
       ? "Connecting…"
       : "Tap to talk · or scroll";
@@ -206,20 +174,11 @@ export function VoiceOrb() {
     <>
       {open && (
         <div
-          className="fixed inset-0 z-[70] bg-[radial-gradient(ellipse_at_bottom_right,rgba(4,3,12,0.55),rgba(4,3,12,0.25)_60%)] backdrop-blur-[2px] animate-scrim-fade"
-          onClick={() => setOpen(false)}
-        />
-      )}
-      {open && (
-        <div
           role="dialog"
           aria-label="Voice commands"
-          className="fixed right-6 bottom-[110px] z-[80] w-[360px] max-w-[calc(100vw-48px)] max-h-[min(72vh,640px)] flex flex-col bg-[rgba(12,10,23,0.92)] backdrop-blur-xl border border-line rounded-[22px] shadow-[0_30px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(192,132,252,0.1)_inset] overflow-hidden animate-panel-in"
+          className="fixed right-6 bottom-[110px] z-[300] w-[360px] max-w-[calc(100vw-48px)] max-h-[min(72vh,640px)] flex flex-col bg-[rgba(12,10,23,0.92)] backdrop-blur-xl border border-line rounded-[22px] shadow-[0_30px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(192,132,252,0.1)_inset] overflow-hidden animate-panel-in"
         >
           <header className="px-[18px] py-4 border-b border-line-soft flex items-center gap-2.5">
-            <span className="font-mono text-[10.5px] tracking-[0.14em] uppercase text-accent px-2 py-1 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)] whitespace-nowrap">
-              {isCalling ? "VOICE · LIVE" : "VOICE · READY"}
-            </span>
             <span className="font-mono text-[11px] text-muted">powered by Retell</span>
             <button
               type="button"
@@ -266,35 +225,50 @@ export function VoiceOrb() {
               )}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              {SHORTCUTS.map((c) => (
-                <button
-                  key={c.you}
-                  type="button"
-                  className={cmdBtn}
-                  onClick={() => fireShortcut(c)}
-                  data-cursor-hover
-                >
-                  <span className="text-magenta font-mono text-[11px]">&ldquo;</span>
-                  <span>{c.you}</span>
-                  <span className="ml-auto text-muted">→</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-3.5 p-3 rounded-[10px] bg-black/25 border border-line-soft font-mono text-[12px] text-ink-soft min-h-[70px]">
-              {transcriptDisplay.you && (
-                <div className="text-magenta">› {transcriptDisplay.you}</div>
-              )}
-              <div className="text-accent mt-1.5">
-                {pulsing ? "…" : `↳ ${transcriptDisplay.ai}`}
+            {!isCalling && !isStarting && (
+              <div className="flex flex-col gap-1.5">
+                {SHORTCUTS.map((c) => (
+                  <button
+                    key={c.you}
+                    type="button"
+                    className={cmdBtn}
+                    onClick={() => fireShortcut(c)}
+                    data-cursor-hover
+                  >
+                    <span className="text-magenta font-mono text-[11px]">&ldquo;</span>
+                    <span>{c.you}</span>
+                    <span className="ml-auto text-muted">→</span>
+                  </button>
+                ))}
               </div>
+            )}
+
+            <div
+              ref={transcriptScrollRef}
+              className="mt-3.5 p-3 rounded-[10px] bg-black/25 border border-line-soft font-mono text-[12px] text-ink-soft min-h-[70px] max-h-[320px] overflow-y-auto space-y-1.5"
+            >
+              {fullTranscript.length === 0 ? (
+                <div className="text-accent">↳ {hint}</div>
+              ) : (
+                <>
+                  {fullTranscript.map((entry, i) => (
+                    <div
+                      key={`${entry.role}-${i}`}
+                      className={entry.role === "user" ? "text-magenta" : "text-accent"}
+                    >
+                      {entry.role === "user" ? "› " : "↳ "}
+                      {entry.content}
+                    </div>
+                  ))}
+                  {pulsing && <div className="text-accent">↳ …</div>}
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      <div className="fixed right-7 bottom-7 z-[90] flex items-center gap-3 max-[700px]:right-4 max-[700px]:bottom-4">
+      <div className="fixed right-7 bottom-7 z-[310] flex items-center gap-3 max-[700px]:right-4 max-[700px]:bottom-4">
         {!open && (
           <div className="font-mono text-[12px] px-3.5 py-2.5 rounded-full bg-[rgba(15,12,28,0.85)] backdrop-blur-md border border-line text-ink-soft flex items-center gap-2.5 max-w-[280px] max-[760px]:hidden max-[700px]:hidden">
             <span

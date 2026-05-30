@@ -2,6 +2,9 @@ export type ProjectAccent = "violet" | "magenta";
 
 export interface Project {
   id: string;
+  /** Extra IDs the project can be addressed by — e.g. the Pinecone / Devpost slug
+   *  the agent uses when emitting navigation metadata. */
+  aliases?: string[];
   name: string;
   year: number;
   summary: string;
@@ -16,6 +19,13 @@ export interface Project {
   stack?: string[];
   role?: string;
   long?: string;
+}
+
+/** Resolve a project by its local id or any registered alias. */
+export function findProject(idOrAlias: string): Project | undefined {
+  return PROJECTS.find(
+    (p) => p.id === idOrAlias || p.aliases?.includes(idOrAlias),
+  );
 }
 
 export interface Hackathon {
@@ -55,7 +65,7 @@ export const PORTFOLIO = {
   name: "Bill Zhang",
   tagline: "AI engineer. Builder of voice-first systems.",
   location: "San Francisco, CA",
-  email: "billzhang0011@gmail.com",
+  email: "billzhangsc@gmail.com",
   github: "https://github.com/IdkwhatImD0ing",
   linkedin: "https://www.linkedin.com/in/bill-zhang1/",
   devpost: "https://devpost.com/IdkwhatImD0ing",
@@ -64,6 +74,7 @@ export const PORTFOLIO = {
 export const PROJECTS: Project[] = [
   {
     id: "sentinelai",
+    aliases: ["sentinelai-dec0jp"],
     name: "SentinelAI",
     year: 2025,
     summary:
@@ -89,6 +100,7 @@ export const PROJECTS: Project[] = [
   },
   {
     id: "courtvision",
+    aliases: ["courtvision-gtui7w"],
     name: "CourtVision",
     year: 2025,
     summary:
@@ -104,12 +116,13 @@ export const PROJECTS: Project[] = [
   },
   {
     id: "dispatchai",
+    aliases: ["dispatch-ai"],
     name: "Dispatch AI",
     year: 2024,
     summary:
       "Empathetic 911 dispatcher co-pilot. Aggregates emergency calls, triages severity, extracts context, and keeps humans in control.",
     tags: ["ai", "voice", "safety", "winner"],
-    award: "Grand Prize — UC Berkeley AI Hackathon 2024",
+    award: "Grand Prize, UC Berkeley AI Hackathon 2024",
     accent: "magenta",
     github: "https://github.com/IdkwhatImD0ing/DispatchAI",
     demo: "https://youtu.be/hdpdgxrilQM",
@@ -127,7 +140,7 @@ export const PROJECTS: Project[] = [
     summary:
       "Voice banking over a regular phone call. No internet, smartphone, or banking app required.",
     tags: ["voice", "fintech", "ai", "winner"],
-    award: "Grand + Goldman Sachs — HackUTD 2024",
+    award: "Grand + Goldman Sachs, HackUTD 2024",
     accent: "violet",
     github: "https://github.com/aurelisajuan/TalkTuahBank",
     demo: "https://youtu.be/YsH_z1azXSA",
@@ -140,12 +153,13 @@ export const PROJECTS: Project[] = [
   },
   {
     id: "adapted",
+    aliases: ["teachme-3p7bw1"],
     name: "AdaptEd",
     year: 2024,
     summary:
       "Lectures that talk back. A voice tutor with Gemini-driven slides and emotion-aware pacing.",
     tags: ["ai", "voice", "education", "winner"],
-    award: "Google Challenge — LA Hacks 2024",
+    award: "Google Challenge, LA Hacks 2024",
     accent: "magenta",
     github: "https://github.com/IdkwhatImD0ing/AdaptEd",
     demo: "https://youtu.be/8o1YJUFBcAw",
@@ -162,7 +176,7 @@ export const PROJECTS: Project[] = [
     summary:
       "Real-time UCSC loop bus tracker. Helped students see live campus bus locations and reduce pressure on metro routes.",
     tags: ["transit", "social-good", "winner"],
-    award: "MLH GitHub — CruzHacks 2023",
+    award: "MLH GitHub, CruzHacks 2023",
     accent: "violet",
     github: "https://github.com/IdkwhatImD0ing/SlugLoop",
     demo: "https://youtu.be/DlAGp-IjtJM",
@@ -175,12 +189,13 @@ export const PROJECTS: Project[] = [
   },
   {
     id: "vocalyze",
+    aliases: ["weeee-i-love-reading-documentation"],
     name: "Vocalyze",
     year: 2025,
     summary:
       "Conversational AI for banking applications. Phone calls become filled forms, synced data, and clearer financial choices.",
     tags: ["voice", "fintech", "ai", "winner"],
-    award: "Letta + Finance — HackMerced X",
+    award: "Letta + Finance, HackMerced X",
     accent: "violet",
     github: "https://github.com/IdkwhatImD0ing/idkwhatthisprojectis",
     demo: "https://youtu.be/s8wF-xCPY04",
@@ -192,12 +207,13 @@ export const PROJECTS: Project[] = [
   },
   {
     id: "soundsearch",
+    aliases: ["maybe-zc19va"],
     name: "SoundSearch",
     year: 2024,
     summary:
       "Phone-call voice guidance for complex websites. A caller gets step-by-step spoken help while the page highlights what to do next.",
     tags: ["voice", "ai", "accessibility", "winner"],
-    award: "NLX Overall — AI ATL 2024",
+    award: "NLX Overall, AI ATL 2024",
     accent: "magenta",
     github: "https://github.com/IdkwhatImD0ing/AIATL",
     demo: "https://youtu.be/RgH-i9SYj-o",
@@ -215,7 +231,7 @@ export const PROJECTS: Project[] = [
     summary:
       "Decentralized food rescue agents. Matches surplus suppliers to food banks and shelters with real-time logistics planning.",
     tags: ["ai", "social-good", "winner"],
-    award: "2nd Place — Hack Dearborn 2024",
+    award: "2nd Place, Hack Dearborn 2024",
     accent: "violet",
     github: "https://github.com/IdkwhatImD0ing/SwarmAid",
     demo: "https://youtu.be/Vk73UiZksvo",
@@ -274,12 +290,13 @@ export const PROJECTS: Project[] = [
   },
   {
     id: "tft",
+    aliases: ["tft-team-food-tactics"],
     name: "TeamFood Tactics",
     year: 2025,
     summary:
       "Voice-based food distribution assistant. Any phone can log surplus food or find nearby help.",
     tags: ["voice", "ai", "winner"],
-    award: "Sustainability — SpartaHack X",
+    award: "Sustainability, SpartaHack X",
     accent: "violet",
     github: "https://github.com/aurelisajuan/spartaHacks",
     demo: "https://d112y698adiu2z.cloudfront.net/photos/production/software_photos/003/249/428/datas/gallery.jpg",
@@ -295,7 +312,7 @@ export const PROJECTS: Project[] = [
     summary:
       "Gaussian Splatting plus NFTs. Turn personal video into interactive 3D assets minted on Solana.",
     tags: ["3d", "web3", "winner"],
-    award: "SolanaU — SoCal Tech Week",
+    award: "SolanaU, SoCal Tech Week",
     accent: "magenta",
     github: "https://github.com/KevinWu098/SplatNFT",
     demo: "https://d112y698adiu2z.cloudfront.net/photos/production/software_photos/003/130/048/datas/gallery.jpg",
@@ -307,6 +324,7 @@ export const PROJECTS: Project[] = [
   },
   {
     id: "instarizz",
+    aliases: ["magicloops"],
     name: "InstaRizz",
     year: 2024,
     summary:
@@ -339,7 +357,7 @@ export const EDUCATION: Education[] = [
   {
     school: "USC",
     full: "University of Southern California",
-    degree: "M.S. Computer Science — AI Specialization",
+    degree: "M.S. Computer Science, AI Specialization",
     when: "Aug 2023 — May 2025",
     detail:
       "Graduate-level ML, applied AI, agentic systems. Built voice-first products throughout.",

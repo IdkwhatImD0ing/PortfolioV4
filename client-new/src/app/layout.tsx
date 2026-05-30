@@ -42,6 +42,20 @@ export const metadata: Metadata = {
   authors: [{ name: "Bill Zhang" }],
   creator: "Bill Zhang",
   robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    url: "https://art3m1s.me",
+    siteName: "Bill Zhang — art3m1s.me",
+    title: "Bill Zhang — Voice-driven AI portfolio",
+    description:
+      "Applied AI Engineer at Scale AI. Voice-first, agent-shaped systems. Talk to this portfolio.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bill Zhang — Voice-driven AI portfolio",
+    description:
+      "Applied AI Engineer at Scale AI. Voice-first, agent-shaped systems. Talk to this portfolio.",
+  },
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },

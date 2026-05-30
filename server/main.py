@@ -1,9 +1,14 @@
 import json
 import os
+import sys
 import asyncio
 import traceback
 import uuid
 from dotenv import load_dotenv
+
+# Windows defaults stdout to cp1252; reconfigure so the unicode chars in startup logs don't crash.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse

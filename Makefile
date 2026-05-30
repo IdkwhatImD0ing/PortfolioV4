@@ -1,4 +1,13 @@
-.PHONY: all server ngrok client setup stop clean dev pretty tabs install-deps _pretty_tmux test test-server test-client
+.PHONY: all server ngrok client setup stop clean dev pretty tabs install-deps pull-secrets _pretty_tmux test test-server test-client
+
+# Cross-platform bash. On Windows, bare `bash` resolves to Microsoft's WSL stub
+# at C:\Windows\System32\bash.exe — which fails if no WSL distro is installed.
+# Prefer Git Bash there. Override with `BASH=... make ...` if installed elsewhere.
+ifeq ($(OS),Windows_NT)
+  BASH ?= "C:/Program Files/Git/bin/bash.exe"
+else
+  BASH ?= bash
+endif
 
 # Default target - runs all services in separate terminals
 all: tabs
@@ -14,9 +23,15 @@ install-deps:
 	@echo "Installing client dependencies..."
 	@cd client && (command -v pnpm >/dev/null 2>&1 && pnpm install --legacy-peer-deps || npm install --legacy-peer-deps)
 
-# Setup environment
-setup: install-deps
-	@echo "Setup complete. Virtual environment ready."
+# Pull runtime secrets from GCP Secret Manager into server/.env
+# Requires `gcloud auth login` against an account with secretAccessor on the secrets.
+# Override the project with GCP_PROJECT=... make pull-secrets.
+pull-secrets:
+	@$(BASH) server/scripts/pull-secrets.sh
+
+# Setup environment — deps + secrets, ready to run
+setup: install-deps pull-secrets
+	@echo "Setup complete. Deps installed and server/.env populated from Secret Manager."
 
 # Start the FastAPI server
 server:
@@ -44,7 +59,7 @@ deploy:
 	@echo "Deploying to Cloud Run..."
 	@cd server && uv run python -c "print('Deploying...')"
 	@cd server && (command -v dos2unix >/dev/null 2>&1 && dos2unix deploy.sh || true)
-	@cd server && bash deploy.sh
+	@cd server && $(BASH) deploy.sh
 
 # Clean up processes
 clean: stop

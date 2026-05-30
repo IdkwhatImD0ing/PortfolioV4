@@ -153,7 +153,7 @@ export function FooterSection() {
             (Literally.)
           </h2>
           <p className="mt-6 text-[19px] text-ink-soft max-w-[560px]">
-            Tap the orb. Or, if you&apos;re old-school, send a normal email — I read every one.
+            Tap the orb. Or, if you&apos;re old-school, send a normal email. I read every one.
           </p>
         </div>
 
@@ -250,9 +250,8 @@ export function FooterSection() {
           </div>
         </div>
 
-        <div className="mt-16 flex justify-between font-mono text-[11px] tracking-[0.12em] uppercase text-muted">
-          <span>© 2026 BILL ZHANG · BUILT IN A WEEKEND, AS USUAL</span>
-          <span>VOICE: ON · SCROLL: WORKING · MOOD: VIOLET</span>
+        <div className="mt-16 font-mono text-[11px] tracking-[0.12em] uppercase text-muted">
+          <span>© 2026 BILL ZHANG</span>
         </div>
       </div>
     </footer>

@@ -16,12 +16,12 @@ const FLOW = [
   {
     k: "03",
     title: "Tool calls",
-    body: "Agent emits structured tool calls — filter_projects(tag), focus_project(id), open_project(id), scroll_to(section).",
+    body: "Agent emits structured tool calls: filter_projects(tag), focus_project(id), open_project(id), scroll_to(section).",
   },
   {
     k: "04",
     title: "VoiceBus",
-    body: "A pub-sub on window broadcasts each tool call. No prop drilling, no router — sections opt in.",
+    body: "A pub-sub on window broadcasts each tool call. No prop drilling, no router. Sections opt in.",
   },
   {
     k: "05",
@@ -87,7 +87,7 @@ export function ArchitectureSection() {
           </h2>
           <p className="text-[19px] leading-[1.55] text-ink-soft mt-6 text-pretty">
             Most portfolios are read-only documents. This one is an agent. You speak, and the
-            structured tool calls coming back from the LLM rearrange the page in real time —
+            structured tool calls coming back from the LLM rearrange the page in real time:
             filter projects, scroll, expand a deep-dive, jump to a specific section. The voice
             agent <em className="font-serif italic text-ink">is</em> the navigation.
           </p>

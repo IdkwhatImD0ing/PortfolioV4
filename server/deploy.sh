@@ -52,6 +52,11 @@ else
   AUTH_FLAG="--no-allow-unauthenticated"
 fi
 
+SECRETS="OPENAI_API_KEY=OPENAI_API_KEY:latest,\
+RETELL_API_KEY=RETELL_API_KEY:latest,\
+PINECONE_API_KEY=PINECONE_API_KEY:latest,\
+OBFUSCATED_WS_PATH=OBFUSCATED_WS_PATH:latest"
+
 echo "▶ Deploying $SERVICE_NAME to Cloud Run (build from source)…"
 gcloud run deploy "$SERVICE_NAME" \
   --source . \
@@ -61,6 +66,8 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances "$MAX_INSTANCES" \
   --timeout "${TIMEOUT}s" \
   --execution-environment gen2 \
+  --clear-env-vars \
+  --set-secrets "$SECRETS" \
   $AUTH_FLAG
 
 echo "✅ Deployed. Default URL:"
