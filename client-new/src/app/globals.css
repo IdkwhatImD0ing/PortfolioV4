@@ -179,6 +179,9 @@
   html {
     scroll-behavior: smooth;
     background: var(--bg);
+    /* Always reserve the scrollbar gutter so modals that lock body scroll
+       (project detail, voice panel) don't shift the page sideways. */
+    scrollbar-gutter: stable;
   }
   body {
     font-family: var(--font-sans);
@@ -193,9 +196,6 @@
     body {
       cursor: auto;
     }
-  }
-  body.voice-open {
-    overflow: hidden;
   }
   img,
   svg {

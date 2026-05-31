@@ -47,11 +47,6 @@ export function VoiceOrb() {
   const listenersBoundRef = useRef(false);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    document.body.classList.toggle("voice-open", open);
-    return () => document.body.classList.remove("voice-open");
-  }, [open]);
-
   // Auto-scroll transcript to bottom on new turn or while pulsing.
   useEffect(() => {
     const el = transcriptScrollRef.current;
