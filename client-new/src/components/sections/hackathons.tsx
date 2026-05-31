@@ -1,15 +1,44 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { HACKATHONS, EXPERIENCE } from "@/lib/portfolio-data";
+import { HACKATHONS, EXPERIENCE, type Hackathon } from "@/lib/portfolio-data";
 import { REVEAL_BASE, REVEAL_IN, useReveal } from "@/hooks/use-reveal";
 import { cn } from "@/lib/utils";
 
+/** One marquee card: name → year → prize, all on one line. */
+function HackCard({ h, tone }: { h: Hackathon; tone: string }) {
+  return (
+    <span
+      className={cn(
+        "font-serif italic text-[clamp(36px,5vw,72px)] whitespace-nowrap inline-flex items-center gap-7",
+        tone,
+      )}
+    >
+      {h.name}
+      {h.year && (
+        <span className="font-mono not-italic text-[0.2em] tracking-[0.12em] text-muted">
+          {h.year}
+        </span>
+      )}
+      <span className="font-mono not-italic text-[0.2em] tracking-[0.1em] uppercase text-magenta border border-[rgba(232,121,249,0.4)] px-2.5 py-1.5 rounded-full">
+        ★ {h.prize}
+      </span>
+      <span className="font-sans not-italic text-[0.5em] text-magenta">✦</span>
+    </span>
+  );
+}
+
 export function HackathonsSection() {
   const list = HACKATHONS;
-  const lineA = [...list, ...list];
-  const reversed = [...list].reverse();
-  const lineB = [...reversed, ...reversed];
+  // Split across the two rows so no hackathon appears in both (top half /
+  // bottom half). Each row is doubled in place because the marquee animation
+  // translates -50% — that duplication is what makes the loop seamless, it
+  // isn't a content repeat across rows.
+  const half = Math.ceil(list.length / 2);
+  const topList = list.slice(0, half);
+  const bottomList = list.slice(half);
+  const lineA = [...topList, ...topList];
+  const lineB = [...bottomList, ...bottomList];
 
   const { ref, revealed } = useReveal<HTMLDivElement>();
 
@@ -43,31 +72,14 @@ export function HackathonsSection() {
         <div className="flex gap-8 py-8 overflow-hidden border-t border-b border-line-soft bg-gradient-to-b from-[rgba(192,132,252,0.04)] to-transparent [mask-image:linear-gradient(90deg,transparent_0%,black_8%,black_92%,transparent_100%)]">
           <div className="flex gap-14 flex-none animate-marq">
             {lineA.map((h, i) => (
-              <span
-                key={`a-${i}`}
-                className="font-serif italic text-[clamp(36px,5vw,72px)] text-ink whitespace-nowrap inline-flex items-center gap-8"
-              >
-                {h.name}
-                <span className="font-mono not-italic text-[0.22em] tracking-[0.1em] uppercase text-magenta border border-[rgba(232,121,249,0.4)] px-2.5 py-1.5 rounded-full">
-                  ★ {h.award}
-                </span>
-                <span className="font-sans not-italic text-[0.5em] text-magenta">✦</span>
-              </span>
+              <HackCard key={`a-${i}`} h={h} tone="text-ink" />
             ))}
           </div>
         </div>
         <div className="flex gap-8 py-8 overflow-hidden border-t border-b border-line-soft bg-gradient-to-b from-[rgba(192,132,252,0.04)] to-transparent [mask-image:linear-gradient(90deg,transparent_0%,black_8%,black_92%,transparent_100%)]">
           <div className="flex gap-14 flex-none animate-marq-rev">
             {lineB.map((h, i) => (
-              <span
-                key={`b-${i}`}
-                className="font-serif italic text-[clamp(36px,5vw,72px)] text-ink-soft whitespace-nowrap inline-flex items-center gap-8"
-              >
-                {h.year}{" "}
-                <span className="font-sans not-italic text-[0.5em] text-magenta">/</span>{" "}
-                {h.award}
-                <span className="font-sans not-italic text-[0.5em] text-magenta">✦</span>
-              </span>
+              <HackCard key={`b-${i}`} h={h} tone="text-ink-soft" />
             ))}
           </div>
         </div>
@@ -83,9 +95,9 @@ export function HackathonsSection() {
           ].map((s) => (
             <div
               key={s.l}
-              className="p-7 rounded-[18px] border border-line bg-gradient-to-b from-[rgba(192,132,252,0.06)] to-transparent"
+              className="p-7 max-[800px]:p-5 rounded-[18px] border border-line bg-gradient-to-b from-[rgba(192,132,252,0.06)] to-transparent"
             >
-              <div className="font-sans text-[56px] font-semibold -tracking-[0.04em] bg-[image:var(--grad)] bg-clip-text text-transparent leading-none">
+              <div className="font-sans text-[clamp(28px,8vw,56px)] font-semibold -tracking-[0.04em] bg-[image:var(--grad)] bg-clip-text text-transparent leading-none">
                 {s.n}
               </div>
               <div className="font-mono text-[11.5px] tracking-[0.14em] uppercase text-ink-soft mt-2.5">

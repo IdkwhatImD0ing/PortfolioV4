@@ -59,8 +59,8 @@
   --animate-pulse-dot: pulse-dot 1.6s infinite;
   --animate-wf: wf 1.2s ease-in-out infinite;
   --animate-scroll-line: scroll-line 2s infinite;
-  --animate-marq: marq 50s linear infinite;
-  --animate-marq-rev: marq 60s linear infinite reverse;
+  --animate-marq: marq 110s linear infinite;
+  --animate-marq-rev: marq 130s linear infinite reverse;
   --animate-orb-pulse: orb-pulse 2.6s ease-out infinite;
   --animate-orb-pulse-delayed: orb-pulse 2.6s ease-out 0.6s infinite;
   --animate-scrim-fade: scrim-fade 0.25s ease-out;
