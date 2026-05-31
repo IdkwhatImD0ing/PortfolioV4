@@ -61,6 +61,26 @@ describe("mergeTranscript", () => {
     expect(mergeTranscript(prev, window)).toEqual([u("hi"), a("hello there")]);
   });
 
+  it("replaces a turn as its content streams in token-by-token", () => {
+    // Retell grows the agent's turn one chunk at a time. Each update must
+    // replace the partial in place, not stack a new line per token.
+    let history: TranscriptEntry[] = [u("tell me about yourself")];
+    const partials = ["I'm", "I'm Bill", "I'm Bill Zhang."];
+    for (const p of partials) {
+      history = mergeTranscript(history, [u("tell me about yourself"), a(p)]);
+    }
+    expect(history).toEqual([u("tell me about yourself"), a("I'm Bill Zhang.")]);
+  });
+
+  it("streams the very first turn without stacking partials", () => {
+    // No preceding turn to anchor on — the growing turn is the whole window.
+    let history: TranscriptEntry[] = [];
+    for (const p of ["Hey,", "Hey, I'm", "Hey, I'm Bill."]) {
+      history = mergeTranscript(history, [a(p)]);
+    }
+    expect(history).toEqual([a("Hey, I'm Bill.")]);
+  });
+
   it("distinguishes turns with same content but different roles", () => {
     // Edge case: user says "ok" and agent also says "ok" — both should be
     // preserved.
