@@ -17,5 +17,9 @@
       "Bash(npm run build:*)"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "cloudflare-api"
+  ],
+  "enableAllProjectMcpServers": true
 }
