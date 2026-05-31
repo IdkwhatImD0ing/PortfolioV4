@@ -5,6 +5,7 @@ import Image from "next/image";
 import { PROJECTS, findProject, type Project } from "@/lib/portfolio-data";
 import { loadFallbackProject } from "@/lib/project-fallback";
 import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
+import { useIsMobile } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 
 const PROJECT_HASH_PREFIX = "#project/";
@@ -38,6 +39,10 @@ export function ProjectsSection() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef(0);
+
+  const isMobile = useIsMobile();
 
   const [filter, setFilter] = useState<string>("all");
   const [year, setYear] = useState<number | null>(null);
@@ -45,6 +50,17 @@ export function ProjectsSection() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [openProject, setOpenProject] = useState<Project | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
+  const [activeCard, setActiveCard] = useState(0);
+
+  const pickFilter = (key: string) => {
+    setFilter(key);
+    setYear(null);
+    setFocusId(null);
+  };
+  const pickYear = (y: number) => {
+    setYear(year === y ? null : y);
+    setFocusId(null);
+  };
 
   // Resolve openId to a Project: curated PROJECTS first, then lazy-load from
   // the Pinecone corpus for archived ones the agent surfaces.
@@ -171,6 +187,8 @@ export function ProjectsSection() {
   const railHeight = `${Math.max(220, railProjects.length * 26)}vh`;
 
   useEffect(() => {
+    // Mobile uses a native scroll-snap carousel, not the scroll-jacked rail.
+    if (isMobile) return;
     const wrap = wrapRef.current;
     const track = trackRef.current;
     const prog = progressRef.current;
@@ -196,182 +214,335 @@ export function ProjectsSection() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, [railProjects.length]);
+  }, [railProjects.length, isMobile]);
+
+  // Mobile carousel: track which card is centered for the pagination dots.
+  const onCarouselScroll = () => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const el = carouselRef.current;
+      if (!el) return;
+      const center = el.scrollLeft + el.clientWidth / 2;
+      let best = 0;
+      let bestDist = Infinity;
+      Array.from(el.children).forEach((c, i) => {
+        const card = c as HTMLElement;
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const d = Math.abs(cardCenter - center);
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      });
+      setActiveCard(best);
+    });
+  };
+
+  const scrollToCard = (i: number) => {
+    const el = carouselRef.current;
+    const card = el?.children[i] as HTMLElement | undefined;
+    card?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  };
+
+  // When a filter/focus changes the mobile rail, snap back to the first card.
+  useEffect(() => {
+    if (!isMobile) return;
+    carouselRef.current?.scrollTo({ left: 0 });
+    setActiveCard(0);
+  }, [filter, year, focusId, isMobile]);
+
+  const railCount = isCuratedRail
+    ? `${railProjects.length} STANDOUTS`
+    : `${railProjects.length}/${PROJECTS.length}`;
 
   return (
-    <section
-      id="projects"
-      data-screen-label="03 Projects"
-      className="relative"
-    >
-      <div ref={wrapRef} className="relative" style={{ height: railHeight }}>
-        <div className="sticky top-0 h-screen flex flex-col overflow-hidden">
-          <div className="flex-none px-[8vw] pt-[5vh] pb-[18px] flex justify-between items-end gap-6 z-[5] bg-gradient-to-b from-[rgba(7,6,13,0.85)] from-0% via-[rgba(7,6,13,0.6)] via-70% to-transparent to-100% backdrop-blur-md">
-            <div>
-              <span className="inline-flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
-                PROJECTS ·{" "}
-                {isCuratedRail
-                  ? `${railProjects.length} STANDOUTS`
-                  : `${railProjects.length}/${PROJECTS.length}`}
-              </span>
-              <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-3.5 text-balance">
-                Things I{" "}
-                <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
-                  shipped.
-                </em>
-              </h2>
-              <div className="flex flex-wrap gap-2 mt-[18px]">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    data-cursor-hover
-                    onClick={() => {
-                      setFilter(f.key);
-                      setYear(null);
-                      setFocusId(null);
-                    }}
-                    className={cn(
-                      filterBtnBase,
-                      filter === f.key && !focusId && !year && filterBtnActive,
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  data-cursor-hover
-                  onClick={() => {
-                    setYear(year === 2025 ? null : 2025);
-                    setFocusId(null);
-                  }}
-                  className={cn(filterBtnBase, year === 2025 && filterBtnActive)}
-                >
-                  2025
-                </button>
-                <button
-                  type="button"
-                  data-cursor-hover
-                  onClick={() => {
-                    setYear(year === 2024 ? null : 2024);
-                    setFocusId(null);
-                  }}
-                  className={cn(filterBtnBase, year === 2024 && filterBtnActive)}
-                >
-                  2024
-                </button>
-              </div>
-            </div>
-            <div className="min-w-[260px] text-right">
-              <div className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">
-                Curated gallery
-              </div>
-              <div className="font-mono text-[12.5px] text-ink-soft mt-1.5">
-                Ask by voice for any project, or filter the archive.
-              </div>
-            </div>
-          </div>
+    <section id="projects" data-screen-label="03 Projects" className="relative">
+      {isMobile ? (
+        <div className="px-[6vw] pt-[7vh] pb-[6vh]">
+          <span className="inline-flex items-center gap-2.5 font-mono text-[11px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
+            PROJECTS · {railCount}
+          </span>
+          <h2 className="font-sans text-[clamp(40px,11vw,64px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 text-balance">
+            Things I{" "}
+            <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
+              shipped.
+            </em>
+          </h2>
+          <p className="font-mono text-[12.5px] text-ink-soft mt-3">
+            Swipe the cards, ask by voice, or filter the archive.
+          </p>
+
+          <FilterBar
+            filter={filter}
+            year={year}
+            focusId={focusId}
+            onPick={pickFilter}
+            onYear={pickYear}
+            className="mt-5"
+          />
 
           <div
-            ref={trackRef}
-            className="flex-auto flex items-center gap-6 px-[8vw] will-change-transform min-h-0"
+            ref={carouselRef}
+            onScroll={onCarouselScroll}
+            className="mt-6 flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-[6vw] px-[6vw] pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
-            {railProjects.map((p) => {
-              const match = isCuratedRail || isMatch(p);
-              const isFocus = focusId === p.id;
-              return (
-                <article
-                  key={p.id}
-                  data-cursor-hover
-                  onClick={() => setOpenId(p.id)}
-                  className={cn(
-                    "group/card flex-none w-[460px] h-[min(58vh,540px)] rounded-3xl bg-gradient-to-b from-card to-card-2 border border-line relative overflow-hidden flex flex-col cursor-pointer transition-[transform,opacity,filter] duration-[350ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
-                    !match && "opacity-[0.32] [filter:saturate(0.4)_blur(0.5px)]",
-                    isFocus &&
-                      "shadow-[0_30px_80px_rgba(162,89,255,0.45),0_0_0_1px_rgba(232,121,249,0.65)] -translate-y-1.5 scale-[1.015]",
-                  )}
-                >
-                  <div className="h-[56%] relative overflow-hidden bg-[radial-gradient(120%_100%_at_0%_0%,rgba(192,132,252,0.35),transparent_60%),radial-gradient(120%_100%_at_100%_100%,rgba(232,121,249,0.35),transparent_60%),#1a1430]">
-                    {p.poster ? (
-                      <Image
-                        src={p.poster}
-                        alt={`${p.name} demo still`}
-                        fill
-                        sizes="460px"
-                        className="object-cover opacity-80 saturate-[0.95] transition-[transform,opacity,filter] duration-500 group-hover/card:scale-105 group-hover/card:opacity-100"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.05)_50%,rgba(255,255,255,0.05)_75%,transparent_75%)] [background-size:40px_40px] opacity-60" />
-                    )}
-                    <div className="absolute inset-0 bg-[radial-gradient(120%_100%_at_0%_0%,rgba(192,132,252,0.26),transparent_58%),linear-gradient(to_bottom,rgba(6,5,13,0.12),rgba(6,5,13,0.7))]" />
-                    {p.award && (
-                      <span className="absolute top-3.5 left-3.5 max-w-[calc(100%-28px)] font-mono text-[10.5px] tracking-[0.12em] uppercase text-[#fff7cc] bg-[rgba(7,6,13,0.82)] px-3 py-1.5 rounded-full border border-[rgba(252,211,77,0.55)] inline-flex items-center gap-1.5 z-[1] shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md">
-                        ★ {p.award}
-                      </span>
-                    )}
-                    <span className="absolute bottom-3 left-3.5 font-mono text-[11px] tracking-[0.14em] uppercase text-ink-soft bg-black/40 px-2 py-1 rounded backdrop-blur-sm z-[1]">
-                      /{p.id}
-                    </span>
-                    <span className="absolute right-3.5 top-3.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-ink px-2.5 py-1 rounded-full bg-[rgba(168,85,247,0.22)] border border-[rgba(168,85,247,0.4)] opacity-0 -translate-y-1 transition-[opacity,transform] duration-[250ms] group-hover/card:opacity-100 group-hover/card:translate-y-0 z-[1]">
-                      ↗ deep dive
-                    </span>
-                  </div>
-                  <div className="px-6 pt-5 pb-6 flex flex-col gap-2.5 flex-1">
-                    <h4 className="text-[26px] -tracking-[0.02em] font-semibold m-0">{p.name}</h4>
-                    <p className="text-[14px] leading-[1.45] text-ink-soft m-0 flex-1">{p.summary}</p>
-                    <div className="flex flex-wrap gap-1.5 mt-auto">
-                      {p.tags.map((t) => (
-                        <span
-                          key={t}
-                          className={cn(
-                            "font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase",
-                            match &&
-                              (t === filter || (filter === "all" && focusId === p.id)) &&
-                              "text-magenta border-[rgba(232,121,249,0.45)] bg-[rgba(232,121,249,0.08)]",
-                          )}
-                        >
-                          #{t}
-                        </span>
-                      ))}
-                      <span className="font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase ml-auto">
-                        {p.year}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-            <div className="flex-none w-[8vw]" />
+            {railProjects.map((p) => (
+              <ProjectCard
+                key={p.id}
+                project={p}
+                match={isCuratedRail || isMatch(p)}
+                isFocus={focusId === p.id}
+                filter={filter}
+                focusId={focusId}
+                sizes="84vw"
+                onOpen={setOpenId}
+                className="snap-center shrink-0 w-[84vw] max-w-[400px] h-[62vh] max-h-[560px]"
+              />
+            ))}
           </div>
 
-          <div className="flex-none px-[8vw] py-[18px] pb-[4vh] flex justify-between items-end gap-6 bg-gradient-to-t from-[rgba(7,6,13,0.85)] from-0% via-[rgba(7,6,13,0.6)] via-70% to-transparent to-100% font-mono text-[11.5px] text-muted tracking-[0.04em] z-[5]">
-            <div>
-              <span className="text-ink-soft">SCROLL ↓</span> drives gallery →
+          {railProjects.length > 1 && (
+            <div className="flex justify-center flex-wrap gap-2 mt-5">
+              {railProjects.map((p, i) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => scrollToCard(i)}
+                  aria-label={`Show ${p.name}`}
+                  aria-current={i === activeCard}
+                  className={cn(
+                    "h-2 rounded-full transition-all duration-300",
+                    i === activeCard
+                      ? "w-6 bg-[image:var(--grad)]"
+                      : "w-2 bg-line",
+                  )}
+                />
+              ))}
             </div>
-            <div className="w-[220px] h-0.5 bg-line rounded-full overflow-hidden">
-              <i
-                ref={progressRef}
-                className="block h-full w-0 bg-[image:var(--grad)] transition-[width] duration-150 ease-linear"
-              />
-            </div>
-            <div className="min-w-[200px] text-right">
-              {transcript ? (
-                <span className="text-magenta">↳ {transcript}</span>
-              ) : (
-                <span>
-                  {isCuratedRail
-                    ? `${railProjects.length}/${PROJECTS.length} standouts`
-                    : `${railProjects.length}/${PROJECTS.length} match`}
+          )}
+
+          <div className="mt-4 text-center font-mono text-[11.5px] text-muted tracking-[0.04em] min-h-[18px]">
+            {transcript ? (
+              <span className="text-magenta">↳ {transcript}</span>
+            ) : (
+              <span>
+                {isCuratedRail
+                  ? `${railProjects.length}/${PROJECTS.length} standouts`
+                  : `${railProjects.length}/${PROJECTS.length} match`}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div ref={wrapRef} className="relative" style={{ height: railHeight }}>
+          <div className="sticky top-0 h-screen flex flex-col overflow-hidden">
+            <div className="flex-none px-[8vw] pt-[5vh] pb-[18px] flex justify-between items-end gap-6 z-[5] bg-gradient-to-b from-[rgba(7,6,13,0.85)] from-0% via-[rgba(7,6,13,0.6)] via-70% to-transparent to-100% backdrop-blur-md">
+              <div>
+                <span className="inline-flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
+                  PROJECTS · {railCount}
                 </span>
-              )}
+                <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-3.5 text-balance">
+                  Things I{" "}
+                  <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
+                    shipped.
+                  </em>
+                </h2>
+                <FilterBar
+                  filter={filter}
+                  year={year}
+                  focusId={focusId}
+                  onPick={pickFilter}
+                  onYear={pickYear}
+                  className="mt-[18px]"
+                />
+              </div>
+              <div className="min-w-[260px] text-right">
+                <div className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">
+                  Curated gallery
+                </div>
+                <div className="font-mono text-[12.5px] text-ink-soft mt-1.5">
+                  Ask by voice for any project, or filter the archive.
+                </div>
+              </div>
+            </div>
+
+            <div
+              ref={trackRef}
+              className="flex-auto flex items-center gap-6 px-[8vw] will-change-transform min-h-0"
+            >
+              {railProjects.map((p) => (
+                <ProjectCard
+                  key={p.id}
+                  project={p}
+                  match={isCuratedRail || isMatch(p)}
+                  isFocus={focusId === p.id}
+                  filter={filter}
+                  focusId={focusId}
+                  sizes="460px"
+                  onOpen={setOpenId}
+                  className="flex-none w-[460px] h-[min(58vh,540px)]"
+                />
+              ))}
+              <div className="flex-none w-[8vw]" />
+            </div>
+
+            <div className="flex-none px-[8vw] py-[18px] pb-[4vh] flex justify-between items-end gap-6 bg-gradient-to-t from-[rgba(7,6,13,0.85)] from-0% via-[rgba(7,6,13,0.6)] via-70% to-transparent to-100% font-mono text-[11.5px] text-muted tracking-[0.04em] z-[5]">
+              <div>
+                <span className="text-ink-soft">SCROLL ↓</span> drives gallery →
+              </div>
+              <div className="w-[220px] h-0.5 bg-line rounded-full overflow-hidden">
+                <i
+                  ref={progressRef}
+                  className="block h-full w-0 bg-[image:var(--grad)] transition-[width] duration-150 ease-linear"
+                />
+              </div>
+              <div className="min-w-[200px] text-right">
+                {transcript ? (
+                  <span className="text-magenta">↳ {transcript}</span>
+                ) : (
+                  <span>
+                    {isCuratedRail
+                      ? `${railProjects.length}/${PROJECTS.length} standouts`
+                      : `${railProjects.length}/${PROJECTS.length} match`}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
       {open && <ProjectDetail project={open} onClose={() => setOpenId(null)} />}
     </section>
+  );
+}
+
+function FilterBar({
+  filter,
+  year,
+  focusId,
+  onPick,
+  onYear,
+  className,
+}: {
+  filter: string;
+  year: number | null;
+  focusId: string | null;
+  onPick: (key: string) => void;
+  onYear: (year: number) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-wrap gap-2", className)}>
+      {FILTERS.map((f) => (
+        <button
+          key={f.key}
+          type="button"
+          data-cursor-hover
+          onClick={() => onPick(f.key)}
+          className={cn(
+            filterBtnBase,
+            filter === f.key && !focusId && !year && filterBtnActive,
+          )}
+        >
+          {f.label}
+        </button>
+      ))}
+      {[2025, 2024].map((y) => (
+        <button
+          key={y}
+          type="button"
+          data-cursor-hover
+          onClick={() => onYear(y)}
+          className={cn(filterBtnBase, year === y && filterBtnActive)}
+        >
+          {y}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ProjectCard({
+  project: p,
+  match,
+  isFocus,
+  filter,
+  focusId,
+  sizes,
+  onOpen,
+  className,
+}: {
+  project: Project;
+  match: boolean;
+  isFocus: boolean;
+  filter: string;
+  focusId: string | null;
+  sizes: string;
+  onOpen: (id: string) => void;
+  className?: string;
+}) {
+  return (
+    <article
+      data-cursor-hover
+      onClick={() => onOpen(p.id)}
+      className={cn(
+        "group/card rounded-3xl bg-gradient-to-b from-card to-card-2 border border-line relative overflow-hidden flex flex-col cursor-pointer transition-[transform,opacity,filter] duration-[350ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+        !match && "opacity-[0.32] [filter:saturate(0.4)_blur(0.5px)]",
+        isFocus &&
+          "shadow-[0_30px_80px_rgba(162,89,255,0.45),0_0_0_1px_rgba(232,121,249,0.65)] -translate-y-1.5 scale-[1.015]",
+        className,
+      )}
+    >
+      <div className="h-[56%] relative overflow-hidden bg-[radial-gradient(120%_100%_at_0%_0%,rgba(192,132,252,0.35),transparent_60%),radial-gradient(120%_100%_at_100%_100%,rgba(232,121,249,0.35),transparent_60%),#1a1430]">
+        {p.poster ? (
+          <Image
+            src={p.poster}
+            alt={`${p.name} demo still`}
+            fill
+            sizes={sizes}
+            className="object-cover opacity-80 saturate-[0.95] transition-[transform,opacity,filter] duration-500 group-hover/card:scale-105 group-hover/card:opacity-100"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.05)_50%,rgba(255,255,255,0.05)_75%,transparent_75%)] [background-size:40px_40px] opacity-60" />
+        )}
+        <div className="absolute inset-0 bg-[radial-gradient(120%_100%_at_0%_0%,rgba(192,132,252,0.26),transparent_58%),linear-gradient(to_bottom,rgba(6,5,13,0.12),rgba(6,5,13,0.7))]" />
+        {p.award && (
+          <span className="absolute top-3.5 left-3.5 max-w-[calc(100%-28px)] font-mono text-[10.5px] tracking-[0.12em] uppercase text-[#fff7cc] bg-[rgba(7,6,13,0.82)] px-3 py-1.5 rounded-full border border-[rgba(252,211,77,0.55)] inline-flex items-center gap-1.5 z-[1] shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md">
+            ★ {p.award}
+          </span>
+        )}
+        <span className="absolute bottom-3 left-3.5 font-mono text-[11px] tracking-[0.14em] uppercase text-ink-soft bg-black/40 px-2 py-1 rounded backdrop-blur-sm z-[1]">
+          /{p.id}
+        </span>
+        <span className="absolute right-3.5 top-3.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-ink px-2.5 py-1 rounded-full bg-[rgba(168,85,247,0.22)] border border-[rgba(168,85,247,0.4)] opacity-0 -translate-y-1 transition-[opacity,transform] duration-[250ms] group-hover/card:opacity-100 group-hover/card:translate-y-0 z-[1]">
+          ↗ deep dive
+        </span>
+      </div>
+      <div className="px-6 pt-5 pb-6 flex flex-col gap-2.5 flex-1">
+        <h4 className="text-[26px] -tracking-[0.02em] font-semibold m-0">{p.name}</h4>
+        <p className="text-[14px] leading-[1.45] text-ink-soft m-0 flex-1">{p.summary}</p>
+        <div className="flex flex-wrap gap-1.5 mt-auto">
+          {p.tags.map((t) => (
+            <span
+              key={t}
+              className={cn(
+                "font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase",
+                match &&
+                  (t === filter || (filter === "all" && focusId === p.id)) &&
+                  "text-magenta border-[rgba(232,121,249,0.45)] bg-[rgba(232,121,249,0.08)]",
+              )}
+            >
+              #{t}
+            </span>
+          ))}
+          <span className="font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase ml-auto">
+            {p.year}
+          </span>
+        </div>
+      </div>
+    </article>
   );
 }
 
