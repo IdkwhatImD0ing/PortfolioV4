@@ -67,15 +67,13 @@ def validate_environment_variables():
 validate_environment_variables()
 
 app = FastAPI()
-origins = [
-    "http://localhost:3000",
-    "https://art3m1s.me",
-    "https://www.art3m1s.me",
-]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    # Local dev origin only; everything else (art3m1s.me apex + any depth of
+    # subdomain like v3., www., eatsafely.projects.) is matched by the regex.
+    allow_origins=["http://localhost:3000"],
+    allow_origin_regex=r"^https://([a-z0-9-]+\.)*art3m1s\.me$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

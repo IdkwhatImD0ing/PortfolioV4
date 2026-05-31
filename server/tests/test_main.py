@@ -210,5 +210,49 @@ class TestCORSConfiguration:
                 "Access-Control-Request-Method": "GET",
             },
         )
-        
+
         assert response.status_code in [200, 204]
+        assert response.headers.get("access-control-allow-origin") == "https://art3m1s.me"
+
+    @pytest.mark.parametrize(
+        "origin",
+        [
+            "https://www.art3m1s.me",
+            "https://v3.art3m1s.me",
+            "https://eatsafely.projects.art3m1s.me",
+            "https://anything-else.art3m1s.me",
+        ],
+    )
+    def test_cors_allows_any_art3m1s_subdomain(self, app_client, origin):
+        """The allow_origin_regex should match the apex and any subdomain depth."""
+        response = app_client.options(
+            "/ping",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert response.status_code in [200, 204]
+        assert response.headers.get("access-control-allow-origin") == origin
+
+    @pytest.mark.parametrize(
+        "origin",
+        [
+            "https://art3m1s.com",          # different TLD
+            "https://evil-art3m1s.me",      # not a subdomain
+            "http://art3m1s.me",            # http (not https)
+            "https://art3m1s.me.evil.com",  # suffix attack
+        ],
+    )
+    def test_cors_rejects_unrelated_origins(self, app_client, origin):
+        """Lookalike origins must NOT be granted CORS access."""
+        response = app_client.options(
+            "/ping",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        # The preflight may still return 200, but the response must NOT include
+        # an Access-Control-Allow-Origin header for the rejected origin.
+        assert response.headers.get("access-control-allow-origin") != origin

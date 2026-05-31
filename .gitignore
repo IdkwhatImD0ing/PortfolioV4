@@ -5,3 +5,4 @@
 *__pycache__/
 *gcloud.json
 node_modules
+.vercel
