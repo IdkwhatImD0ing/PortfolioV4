@@ -46,7 +46,7 @@ export function AboutSection() {
           <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
           ABOUT
         </span>
-        <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 text-balance">
+        <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 text-balance">
           A builder who{" "}
           <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
             listens
@@ -59,14 +59,14 @@ export function AboutSection() {
         {ABOUT.map((c, i) => (
           <article
             key={c.num}
-            className="sticky top-24 mb-5 min-h-[360px] flex flex-col justify-center px-9 py-8 rounded-[24px] border border-line shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_20px_60px_rgba(0,0,0,0.34)] overflow-hidden max-[700px]:static max-[700px]:min-h-[260px] max-[700px]:px-6 max-[700px]:py-6 max-[700px]:rounded-[22px]"
+            className="sticky top-24 mb-5 min-h-[360px] flex flex-col justify-center px-9 py-8 rounded-[24px] border border-line shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_20px_60px_rgba(0,0,0,0.34)] overflow-hidden max-[700px]:relative max-[700px]:min-h-[260px] max-[700px]:px-6 max-[700px]:py-6 max-[700px]:rounded-[22px]"
             style={{ background: STACK_GRADIENTS[i] ?? STACK_GRADIENTS[0] }}
           >
             <div className="absolute -right-[100px] -top-[100px] w-[300px] h-[300px] rounded-full bg-[radial-gradient(circle,rgba(192,132,252,0.22),transparent_70%)] blur-[20px]" />
             <div className="font-mono text-[12px] tracking-[0.16em] text-accent uppercase">
               {c.num}
             </div>
-            <h3 className="text-[clamp(28px,3.4vw,46px)] font-medium -tracking-[0.03em] leading-[1.04] mt-3 mb-4">
+            <h3 className="text-[clamp(28px,3.4vw,46px)] font-medium -tracking-[0.02em] leading-[1.04] mt-3 mb-4">
               {c.title}
             </h3>
             <p className="text-[15.5px] leading-[1.55] text-ink-soft max-w-[680px]">{c.body}</p>

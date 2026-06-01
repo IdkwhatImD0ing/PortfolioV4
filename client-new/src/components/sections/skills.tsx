@@ -32,7 +32,7 @@ export function SkillsSection() {
       className="relative min-h-[155vh] mt-24 mb-32 py-[110px] overflow-clip max-[700px]:min-h-[130vh] max-[700px]:mt-16 max-[700px]:mb-20 max-[700px]:py-16"
     >
       <div className="sticky top-[14vh] min-h-[72vh] flex items-center justify-center text-center max-[700px]:top-[12vh] max-[700px]:min-h-[68vh]">
-        <div className="font-sans text-[clamp(32px,5vw,76px)] font-medium -tracking-[0.04em] leading-[1.12] max-w-[1020px] px-8 text-balance max-[700px]:px-5">
+        <div className="font-sans text-[clamp(32px,5vw,76px)] font-medium -tracking-[0.02em] leading-[1.12] max-w-[1020px] px-8 text-balance max-[700px]:px-5">
           {words.map((w, i) => (
             <span
               key={i}

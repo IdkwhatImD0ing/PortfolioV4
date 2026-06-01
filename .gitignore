@@ -6,3 +6,7 @@
 *gcloud.json
 node_modules
 .vercel
+
+# Playwright MCP debug artifacts (screenshots, snapshots, console logs)
+.playwright-mcp/
+mobile-hero.png

@@ -46,7 +46,7 @@ export function HackathonsSection() {
     <section
       id="hackathons"
       data-screen-label="04 Hackathons"
-      className="pt-[120px] pb-20 relative"
+      className="pt-[120px] pb-20 relative max-[700px]:pt-20 max-[700px]:pb-12"
     >
       <div className="max-w-[1280px] mx-auto px-8 max-[700px]:px-5">
         <div ref={ref} className={cn(REVEAL_BASE, revealed && REVEAL_IN)}>
@@ -54,7 +54,7 @@ export function HackathonsSection() {
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
             HACKATHONS · 36 WINS
           </span>
-          <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 max-w-[1100px] text-balance">
+          <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 max-w-[1100px] text-balance">
             Thirty-six wins from{" "}
             <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
               shipping.
@@ -68,15 +68,15 @@ export function HackathonsSection() {
         </div>
       </div>
 
-      <div className="mt-16">
-        <div className="flex gap-8 py-8 overflow-hidden border-t border-b border-line-soft bg-gradient-to-b from-[rgba(192,132,252,0.04)] to-transparent [mask-image:linear-gradient(90deg,transparent_0%,black_8%,black_92%,transparent_100%)]">
+      <div className="mt-16 max-[700px]:mt-10">
+        <div className="flex gap-8 py-8 max-[700px]:py-5 overflow-hidden border-t border-b border-line-soft bg-gradient-to-b from-[rgba(192,132,252,0.04)] to-transparent [mask-image:linear-gradient(90deg,transparent_0%,black_8%,black_92%,transparent_100%)]">
           <div className="flex gap-14 flex-none animate-marq">
             {lineA.map((h, i) => (
               <HackCard key={`a-${i}`} h={h} tone="text-ink" />
             ))}
           </div>
         </div>
-        <div className="flex gap-8 py-8 overflow-hidden border-t border-b border-line-soft bg-gradient-to-b from-[rgba(192,132,252,0.04)] to-transparent [mask-image:linear-gradient(90deg,transparent_0%,black_8%,black_92%,transparent_100%)]">
+        <div className="flex gap-8 py-8 max-[700px]:py-5 overflow-hidden border-t border-b border-line-soft bg-gradient-to-b from-[rgba(192,132,252,0.04)] to-transparent [mask-image:linear-gradient(90deg,transparent_0%,black_8%,black_92%,transparent_100%)]">
           <div className="flex gap-14 flex-none animate-marq-rev">
             {lineB.map((h, i) => (
               <HackCard key={`b-${i}`} h={h} tone="text-ink-soft" />
@@ -86,18 +86,18 @@ export function HackathonsSection() {
       </div>
 
       <div className="max-w-[1280px] mx-auto px-8 max-[700px]:px-5">
-        <div className="grid grid-cols-4 gap-6 mt-14 max-[800px]:grid-cols-2">
+        <div className="grid grid-cols-4 gap-6 mt-14 max-[800px]:grid-cols-2 max-[700px]:mt-10 max-[700px]:gap-4">
           {[
             { n: "36", l: "Hackathons won" },
             { n: "$74k", l: "Largest prize" },
             { n: "$150k+", l: "Prizes won" },
-            { n: "9", l: "Voice-AI shipped" },
+            { n: "17", l: "Colleges visited" },
           ].map((s) => (
             <div
               key={s.l}
               className="p-7 max-[800px]:p-5 rounded-[18px] border border-line bg-gradient-to-b from-[rgba(192,132,252,0.06)] to-transparent"
             >
-              <div className="font-sans text-[clamp(28px,8vw,56px)] font-semibold -tracking-[0.04em] bg-[image:var(--grad)] bg-clip-text text-transparent leading-none">
+              <div className="font-sans text-[clamp(28px,8vw,56px)] font-semibold -tracking-[0.02em] bg-[image:var(--grad)] bg-clip-text text-transparent leading-none">
                 {s.n}
               </div>
               <div className="font-mono text-[11.5px] tracking-[0.14em] uppercase text-ink-soft mt-2.5">
@@ -136,14 +136,14 @@ export function ExperienceSection() {
     <section
       id="experience"
       data-screen-label="05 Experience"
-      className="max-w-[1280px] mx-auto px-8 py-[120px] max-[700px]:px-5"
+      className="max-w-[1280px] mx-auto px-8 py-[120px] max-[700px]:px-5 max-[700px]:py-16"
     >
       <div ref={ref} className={cn(REVEAL_BASE, revealed && REVEAL_IN)}>
         <span className="inline-flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
           <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
           EXPERIENCE
         </span>
-        <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 text-balance">
+        <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 text-balance">
           A short,{" "}
           <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
             productive
@@ -152,7 +152,7 @@ export function ExperienceSection() {
         </h2>
       </div>
 
-      <div ref={wrapRef} className="relative mt-20">
+      <div ref={wrapRef} className="relative mt-20 max-[700px]:mt-10">
         <div className="absolute top-0 bottom-0 w-px bg-line-soft -translate-x-1/2 left-[220px] max-[800px]:hidden" />
         <div
           ref={lineRef}
@@ -173,7 +173,7 @@ function ExperienceRow({ item }: { item: (typeof EXPERIENCE)[number] }) {
     <article
       ref={ref}
       className={cn(
-        "grid grid-cols-[220px_1fr] gap-14 py-14 border-t border-line-soft items-start max-[800px]:grid-cols-1 max-[800px]:gap-4",
+        "grid grid-cols-[220px_1fr] gap-14 py-14 border-t border-line-soft items-start max-[800px]:grid-cols-1 max-[800px]:gap-4 max-[800px]:py-8",
         REVEAL_BASE,
         revealed && REVEAL_IN,
       )}
@@ -182,7 +182,21 @@ function ExperienceRow({ item }: { item: (typeof EXPERIENCE)[number] }) {
       <div className="relative">
         <span className="absolute -left-10 top-3 w-3 h-3 rounded-full bg-bg border-2 border-magenta shadow-[0_0_12px_rgba(232,121,249,0.6)] max-[800px]:hidden" />
         <h4 className="text-[32px] -tracking-[0.02em] m-0 mb-1.5 font-medium">{item.role}</h4>
-        <div className="font-mono text-[13px] text-accent">{item.where}</div>
+        <div className="font-mono text-[13px] text-accent">
+          {item.link ? (
+            <a
+              href={item.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:text-magenta transition-colors"
+            >
+              {item.where}
+              <span className="text-[0.85em] opacity-70">↗</span>
+            </a>
+          ) : (
+            item.where
+          )}
+        </div>
         <p className="text-[17px] leading-[1.55] text-ink-soft mt-3.5 max-w-[680px]">{item.body}</p>
         {item.badge && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10.5px] tracking-[0.1em] uppercase border border-[rgba(192,132,252,0.4)] text-accent bg-[rgba(192,132,252,0.06)] mt-3">

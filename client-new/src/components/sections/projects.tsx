@@ -263,7 +263,7 @@ export function ProjectsSection() {
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
             PROJECTS · {railCount}
           </span>
-          <h2 className="font-sans text-[clamp(40px,11vw,64px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 text-balance">
+          <h2 className="font-sans text-[clamp(40px,11vw,64px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 text-balance">
             Things I{" "}
             <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
               shipped.
@@ -343,7 +343,7 @@ export function ProjectsSection() {
                   <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
                   PROJECTS · {railCount}
                 </span>
-                <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-3.5 text-balance">
+                <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-3.5 text-balance">
                   Things I{" "}
                   <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
                     shipped.
@@ -626,7 +626,7 @@ function ProjectDetail({
           ) : (
             <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_40%,rgba(168,85,247,0.18),transparent_60%)] text-center">
               <div>
-                <span className="block font-serif text-[64px] -tracking-[0.03em] bg-gradient-to-br from-violet to-magenta bg-clip-text text-transparent">
+                <span className="block font-serif text-[64px] -tracking-[0.02em] bg-gradient-to-br from-violet to-magenta bg-clip-text text-transparent">
                   /{p.id}
                 </span>
                 <span className="text-muted font-mono text-[12px] tracking-[0.12em] uppercase mt-3 block">

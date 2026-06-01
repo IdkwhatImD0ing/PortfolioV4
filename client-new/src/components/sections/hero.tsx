@@ -71,7 +71,7 @@ export function HeroSection() {
       />
 
       <div className="max-w-[1280px] mx-auto px-8 max-[700px]:px-5 relative z-[2] w-full">
-        <div className="flex items-center gap-3 font-mono text-[13px] tracking-[0.1em] uppercase text-ink-soft">
+        <div className="flex items-center gap-3 font-mono text-[13px] tracking-[0.1em] uppercase text-ink-soft max-[700px]:gap-2 max-[700px]:text-[10px] max-[700px]:tracking-[0.06em]">
           <span className="w-2 h-2 rounded-full bg-[#4ade80] shadow-[0_0_10px_#4ade80] animate-pulse-dot" />
           <span>VOICE-DRIVEN PORTFOLIO · 2026</span>
           <span className="ml-auto flex items-center gap-1 h-7">
@@ -87,7 +87,7 @@ export function HeroSection() {
 
         <h1
           ref={headRef}
-          className="font-sans text-[clamp(64px,11vw,180px)] font-semibold -tracking-[0.06em] leading-[0.86] mt-[18px]"
+          className="font-sans text-[clamp(64px,11vw,180px)] font-semibold -tracking-[0.03em] leading-[0.86] mt-[18px]"
         >
           Ask me
           <br />
@@ -96,7 +96,7 @@ export function HeroSection() {
           </em>
         </h1>
 
-        <p className="mt-7 max-w-[640px] text-[19px] leading-[1.5] text-ink-soft">
+        <p className="mt-7 max-w-[640px] text-[19px] leading-[1.5] text-ink-soft max-[700px]:mt-5 max-[700px]:text-[16.5px]">
           I&apos;m <b className="text-ink font-semibold">Bill Zhang</b>, Applied AI Engineer
           at Scale, voice-first builder, serial hackathon winner. This site listens. Talk to it,
           scroll it, drag it around. It&apos;ll rearrange.

@@ -8,10 +8,11 @@ import { cn } from "@/lib/utils";
 import { scrollToSection } from "@/lib/voice-bus";
 
 const decorBase =
-  "absolute font-serif italic text-[clamp(60px,9vw,160px)] text-[rgba(192,132,252,0.06)] -tracking-[0.04em] pointer-events-none whitespace-nowrap";
+  "absolute font-serif italic text-[clamp(60px,9vw,160px)] text-[rgba(192,132,252,0.06)] -tracking-[0.02em] pointer-events-none whitespace-nowrap";
 
 export function PersonalSection() {
   const facts = PERSONAL_FACTS;
+  const sectionRef = useRef<HTMLElement>(null);
   const refL1 = useRef<HTMLDivElement>(null);
   const refL2 = useRef<HTMLDivElement>(null);
   const refL3 = useRef<HTMLDivElement>(null);
@@ -20,10 +21,19 @@ export function PersonalSection() {
 
   useEffect(() => {
     const onScroll = () => {
-      const y = window.scrollY;
-      if (refL1.current) refL1.current.style.transform = `translate3d(${-y * 0.18}px, 0, 0)`;
-      if (refL2.current) refL2.current.style.transform = `translate3d(${y * 0.12}px, 0, 0)`;
-      if (refL3.current) refL3.current.style.transform = `translate3d(${-y * 0.06}px, 0, 0)`;
+      // Parallax is driven by the section's position in the viewport, not the
+      // absolute page scroll — otherwise a section this far down the page gets
+      // a huge constant offset that pushes the decor watermarks off-screen.
+      const section = sectionRef.current;
+      if (section) {
+        const rect = section.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        // -1 → section centered a viewport below; +1 → a viewport above.
+        const p = Math.max(-1, Math.min(1, (window.innerHeight / 2 - mid) / window.innerHeight));
+        if (refL1.current) refL1.current.style.transform = `translate3d(${-p * 90}px, 0, 0)`;
+        if (refL2.current) refL2.current.style.transform = `translate3d(${p * 70}px, 0, 0)`;
+        if (refL3.current) refL3.current.style.transform = `translate3d(${-p * 36}px, 0, 0)`;
+      }
       if (portRef.current) {
         const rect = portRef.current.getBoundingClientRect();
         if (rect.top < window.innerHeight && rect.bottom > 0) {
@@ -39,6 +49,7 @@ export function PersonalSection() {
 
   return (
     <section
+      ref={sectionRef}
       id="personal"
       data-screen-label="08 Personal"
       className="min-h-[130vh] py-20 relative overflow-hidden"
@@ -50,7 +61,7 @@ export function PersonalSection() {
         <div ref={refL2} className={cn(decorBase, "top-1/2 -right-[4%]")}>
           music · climbing · coffee
         </div>
-        <div ref={refL3} className={cn(decorBase, "bottom-[6%] left-[30%]")}>
+        <div ref={refL3} className={cn(decorBase, "bottom-[6%] left-[5%]")}>
           made in san francisco
         </div>
       </div>
@@ -61,7 +72,7 @@ export function PersonalSection() {
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
             OFF THE CLOCK
           </span>
-          <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 text-balance">
+          <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 text-balance">
             A few{" "}
             <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
               true things.
@@ -69,7 +80,7 @@ export function PersonalSection() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-[0.9fr_1.1fr] gap-16 items-center py-20 max-[900px]:grid-cols-1 max-[900px]:gap-8">
+        <div className="grid grid-cols-[0.9fr_1.1fr] gap-16 items-center py-20 max-[900px]:grid-cols-1 max-[900px]:gap-8 max-[700px]:py-10">
           <div
             ref={portRef}
             className="relative aspect-[4/5] rounded-[22px] overflow-hidden border border-line bg-card"
@@ -136,7 +147,7 @@ export function FooterSection() {
   return (
     <footer
       data-screen-label="09 Contact"
-      className="relative overflow-hidden pt-[120px] pb-14 border-t border-line-soft bg-gradient-to-b from-transparent to-[rgba(192,132,252,0.04)]"
+      className="relative overflow-hidden pt-[120px] pb-14 border-t border-line-soft bg-gradient-to-b from-transparent to-[rgba(192,132,252,0.04)] max-[700px]:pt-20"
     >
       <div className="max-w-[1280px] mx-auto px-8 max-[700px]:px-5">
         <div ref={ref} className={cn(REVEAL_BASE, revealed && REVEAL_IN)}>
@@ -144,7 +155,7 @@ export function FooterSection() {
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
             CONTACT
           </span>
-          <h2 className="font-sans font-semibold text-[clamp(64px,13vw,220px)] -tracking-[0.06em] leading-[0.86] uppercase mt-4">
+          <h2 className="font-sans font-semibold text-[clamp(64px,13vw,220px)] -tracking-[0.02em] leading-[0.86] uppercase mt-4">
             Let&apos;s{" "}
             <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent normal-case">
               talk.
@@ -157,7 +168,7 @@ export function FooterSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-8 mt-16 pt-8 border-t border-line-soft max-[800px]:grid-cols-1 max-[800px]:gap-4">
+        <div className="grid grid-cols-3 gap-8 mt-16 pt-8 border-t border-line-soft max-[800px]:grid-cols-1 max-[800px]:gap-4 max-[700px]:mt-10">
           <div className="group/col">
             <h5 className="font-mono text-[11px] tracking-[0.18em] uppercase text-muted mb-3.5">
               Direct
@@ -250,7 +261,7 @@ export function FooterSection() {
           </div>
         </div>
 
-        <div className="mt-16 font-mono text-[11px] tracking-[0.12em] uppercase text-muted">
+        <div className="mt-16 font-mono text-[11px] tracking-[0.12em] uppercase text-muted max-[700px]:mt-10">
           <span>© 2026 BILL ZHANG</span>
         </div>
       </div>

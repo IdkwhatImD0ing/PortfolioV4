@@ -14,15 +14,15 @@ export function ResumeSection() {
     <section
       id="resume"
       data-screen-label="07 Resume"
-      className="px-[8vw] pt-[140px] pb-[160px] border-t border-line-soft bg-[radial-gradient(circle_at_80%_20%,rgba(232,67,147,0.08),transparent_50%)] bg-bg"
+      className="px-[8vw] pt-[140px] pb-[160px] border-t border-line-soft bg-[radial-gradient(circle_at_80%_20%,rgba(232,67,147,0.08),transparent_50%)] bg-bg max-[700px]:px-5 max-[700px]:pt-20 max-[700px]:pb-24"
     >
       <div className="max-w-[1240px] mx-auto">
-        <div className="max-w-[720px] mb-[60px]">
+        <div className="max-w-[720px] mb-[60px] max-[700px]:mb-10">
           <span className="inline-flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
             RESUME · ONE-PAGER
           </span>
-          <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 text-balance">
+          <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 text-balance">
             The{" "}
             <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
               printable
@@ -37,14 +37,14 @@ export function ResumeSection() {
 
         <div className="grid grid-cols-[1.5fr_1fr] gap-9 items-start max-[900px]:grid-cols-1">
           <div className="border border-line rounded-2xl overflow-hidden bg-[#0a0814] shadow-[0_30px_80px_rgba(168,85,247,0.15)]">
-            <div className="aspect-[8.5/11] w-full bg-[#f5f3ee]">
+            <div className="aspect-[8.5/11] w-full bg-[#f5f3ee] max-[700px]:aspect-auto max-[700px]:h-[440px]">
               <iframe
                 src="/resume.pdf#toolbar=0&navpanes=0&view=FitH"
                 title="Bill Zhang Resume"
                 className="w-full h-full border-0"
               />
             </div>
-            <div className="flex justify-between items-center gap-4 px-[18px] py-3.5 border-t border-line bg-[rgba(15,12,28,0.7)]">
+            <div className="flex justify-between items-center gap-4 px-[18px] py-3.5 border-t border-line bg-[rgba(15,12,28,0.7)] max-[700px]:flex-col max-[700px]:items-stretch max-[700px]:gap-3">
               <span className="font-mono text-[11px] tracking-[0.14em] uppercase text-muted">
                 resume.pdf · last updated May 10, 2026
               </span>

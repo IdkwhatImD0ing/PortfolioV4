@@ -10,6 +10,7 @@ import {
   type NavigationMeta,
 } from "@/lib/voice-bus";
 import { mergeTranscript, type TranscriptEntry } from "@/lib/transcript";
+import { resolveAgentId } from "@/lib/retell-agent";
 import { cn } from "@/lib/utils";
 
 interface RegisterCallResponse {
@@ -108,9 +109,11 @@ export function VoiceOrb() {
     setFullTranscript([]);
     setHint("Connecting…");
     try {
-      const agentId = process.env.NEXT_PUBLIC_RETELL_AGENT_ID;
+      // In dev this prefers the dev agent when the local backend is reachable,
+      // otherwise the prod agent. Production builds go straight to prod.
+      const agentId = await resolveAgentId();
       if (!agentId) {
-        throw new Error("NEXT_PUBLIC_RETELL_AGENT_ID is not configured.");
+        throw new Error("No Retell agent id configured (NEXT_PUBLIC_RETELL_AGENT_ID).");
       }
 
       if (!retellRef.current) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { highlightJs } from "@/lib/highlight";
 
 const FLOW = [
   {
@@ -71,15 +72,15 @@ export function ArchitectureSection() {
     <section
       id="architecture"
       data-screen-label="08 Architecture"
-      className="px-[8vw] pt-[140px] pb-[160px] border-t border-line-soft bg-[radial-gradient(circle_at_20%_20%,rgba(126,109,253,0.12),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(232,67,147,0.08),transparent_60%)] bg-bg"
+      className="px-[8vw] pt-[140px] pb-[160px] border-t border-line-soft bg-[radial-gradient(circle_at_20%_20%,rgba(126,109,253,0.12),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(232,67,147,0.08),transparent_60%)] bg-bg max-[700px]:px-5 max-[700px]:pt-20 max-[700px]:pb-24"
     >
       <div className="max-w-[1240px] mx-auto">
-        <div className="max-w-[760px] mb-20">
+        <div className="max-w-[760px] mb-20 max-[700px]:mb-10">
           <span className="inline-flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
             HOW THIS SITE WORKS
           </span>
-          <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 text-balance">
+          <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 text-balance">
             A portfolio that{" "}
             <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
               talks back.
@@ -93,7 +94,7 @@ export function ArchitectureSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 mb-20 border border-line rounded-2xl bg-[rgba(15,12,28,0.4)] overflow-hidden max-[900px]:grid-cols-1">
+        <div className="grid grid-cols-3 mb-20 border border-line rounded-2xl bg-[rgba(15,12,28,0.4)] overflow-hidden max-[900px]:grid-cols-1 max-[700px]:mb-10">
           {FLOW.map((f, i) => {
             const isLastInRow = i % 3 === 2;
             const isLastRow = i >= total - (total % 3 === 0 ? 3 : total % 3);
@@ -147,7 +148,13 @@ export function ArchitectureSection() {
             ))}
           </div>
           <pre className="font-mono text-[12.5px] leading-[1.75] text-ink p-[26px] border border-line rounded-xl bg-[#08070f] bg-[linear-gradient(180deg,rgba(126,109,253,0.05),rgba(232,67,147,0.04)),#08070f] overflow-auto whitespace-pre">
-            {SNIPPET}
+            <code>
+              {highlightJs(SNIPPET).map((t, i) => (
+                <span key={i} className={t.cls || undefined}>
+                  {t.text}
+                </span>
+              ))}
+            </code>
           </pre>
         </div>
       </div>

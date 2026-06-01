@@ -15,14 +15,14 @@ export function EducationSection() {
     <section
       id="education"
       data-screen-label="06 Education"
-      className="max-w-[1280px] mx-auto px-8 py-[120px] max-[700px]:px-5"
+      className="max-w-[1280px] mx-auto px-8 py-[120px] max-[700px]:px-5 max-[700px]:py-16"
     >
       <div ref={ref} className={cn(REVEAL_BASE, revealed && REVEAL_IN)}>
         <span className="inline-flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
           <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
           EDUCATION
         </span>
-        <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.04em] font-semibold leading-[0.95] mt-4 text-balance">
+        <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 text-balance">
           Three schools,{" "}
           <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
             one path.
@@ -32,7 +32,7 @@ export function EducationSection() {
       </div>
 
       <div
-        className="grid grid-cols-3 gap-6 mt-16 max-[900px]:grid-cols-1"
+        className="grid grid-cols-3 gap-6 mt-16 max-[900px]:grid-cols-1 max-[700px]:mt-10 max-[700px]:gap-5"
         style={{ perspective: "1400px" }}
       >
         {items.map((e, i) => (

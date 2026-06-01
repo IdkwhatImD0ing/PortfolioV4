@@ -53,6 +53,8 @@ export interface ExperienceEntry {
   where: string;
   body: string;
   badge?: string;
+  /** Optional external link for the company / project. */
+  link?: string;
 }
 
 export interface SkillsLineWord {
@@ -423,6 +425,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     when: "Jun 2025 — Now",
     role: "Applied AI Engineer",
     where: "Scale AI · San Francisco",
+    link: "https://scale.com/",
     body: "Enterprise Generative AI Platform team. Building agentic automation, LLM evaluation workflows, and multi-agent systems for enterprise AI.",
     badge: "Now",
   },
@@ -430,48 +433,35 @@ export const EXPERIENCE: ExperienceEntry[] = [
     when: "Sep 2023 — Jun 2025",
     role: "AI Engineer",
     where: "RingCentral · Remote",
+    link: "https://www.ringcentral.com/",
     body: "Shipped LLM evaluations and multi-agent assistants for customer-support workflows after starting as a senior AI intern building LLM-powered assistant prototypes.",
   },
   {
     when: "Jun 2024 — Dec 2024",
     role: "Co-founder + CFO",
     where: "Dispatch AI · Remote",
+    link: "https://dispatchai.art3m1s.me/",
     body: "Built an emergency-response AI platform with Berkeley SkyDeck funding. Solo-engineered the voice AI and telephony integration behind the dispatcher demo.",
-  },
-  {
-    when: "May 2024 — Dec 2024",
-    role: "Co-founder",
-    where: "WeCracked · Remote",
-    body: "Co-founded a 4K-member hackathon community with sponsor backing, helping student builders find teams, ship faster, and learn from winning projects.",
   },
   {
     when: "Feb 2023 — Jun 2024",
     role: "Founder",
     where: "SlugLoop · Santa Cruz",
+    link: "https://www.slugloop.tech/",
     body: "Founded and shipped the UCSC real-time bus tracker, turning live campus transit data into a student-facing map for loop buses.",
   },
   {
-    when: "Jun 2023 — Dec 2023",
-    role: "Teacher",
-    where: "X-Camp Academy · Remote",
-    body: "Taught Python with a challenge-based curriculum, helping new programmers build fundamentals through hands-on coding problems.",
-  },
-  {
-    when: "Jan 2023 — Jun 2023",
-    role: "Software Engineer Intern",
-    where: "SproutLabs, LLC · Remote",
-    body: "Engineered a real-time device dashboard and cross-platform backend for connected hardware workflows.",
-  },
-  {
-    when: "Jun 2022 — Jun 2023",
-    role: "Teaching Assistant",
+    when: "Jun 2022 — Dec 2023",
+    role: "CS Instructor + Teaching Assistant",
     where: "X-Camp Academy · San Jose",
-    body: "Coached USACO students from Bronze toward Silver mastery through algorithm practice, debugging, and contest prep.",
+    link: "https://x-camp.academy/",
+    body: "Taught Python through a challenge-based curriculum and coached USACO students from Bronze toward Silver through algorithm practice, debugging, and contest prep.",
   },
   {
     when: "2023 — 2025+",
     role: "Hackathon Mainstay",
     where: "36 wins across the hackathon circuit",
+    link: "https://www.thehackathonplaybook.dev/",
     body: "Mainly competed during college and still jumps into select events. Most of the projects on this page started as weekend builds.",
   },
 ];
@@ -500,7 +490,7 @@ export const PERSONAL_FACTS: PersonalFact[] = [
   { icon: "✦", line: "Finished a 4-year CS degree in <b>2.5 years</b>." },
   { icon: "✦", line: "Won my first hackathon at <b>17</b>. Haven't slowed down." },
   { icon: "✦", line: "Speaks <b>Mandarin and English</b>; building agents in both." },
-  { icon: "✦", line: "If I'm not coding, I'm probably <b>climbing</b> or chasing good coffee." },
+  { icon: "✦", line: "If I'm not coding, I'm probably <b>making music</b> or chasing good noodles." },
   { icon: "✦", line: "Plays <b>drums and piano</b> on the side." },
   { icon: "✦", line: "Believe the next billion users will <b>talk to software</b>, not click it." },
 ];

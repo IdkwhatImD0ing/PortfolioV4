@@ -179,9 +179,24 @@
   html {
     scroll-behavior: smooth;
     background: var(--bg);
-    /* Always reserve the scrollbar gutter so modals that lock body scroll
+    /* Reserve the scrollbar gutter so modals that lock body scroll
        (project detail, voice panel) don't shift the page sideways. */
     scrollbar-gutter: stable;
+  }
+  /* On phones the scrollbar should be an overlay (no width). Desktop browsers
+     used in mobile emulation/devtools still render a classic 15px scrollbar,
+     which leaves an empty strip down the right edge. Drop the reserved gutter
+     and hide the native scrollbar — the ScrollProgressBar at the top already
+     conveys scroll position. */
+  @media (max-width: 900px) {
+    html {
+      scrollbar-gutter: auto;
+      scrollbar-width: none; /* Firefox */
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+      display: none; /* WebKit / Blink */
+    }
   }
   body {
     font-family: var(--font-sans);
