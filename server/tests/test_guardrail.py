@@ -21,11 +21,16 @@ def mock_runner():
     with patch("llm.Runner") as mock:
         yield mock
 
+@pytest.fixture
+def mock_guardrail_runner():
+    with patch("guardrail.Runner") as mock:
+        yield mock
+
 @pytest.mark.asyncio
 class TestSecurityGuardrail:
     """Tests for the security_guardrail function logic."""
 
-    async def test_guardrail_allows_bill_related_content(self, mock_runner):
+    async def test_guardrail_allows_bill_related_content(self, mock_guardrail_runner):
         """Test that content related to Bill is allowed (fast path)."""
         # Mock context
         ctx = MagicMock(spec=RunContextWrapper)
@@ -44,9 +49,9 @@ class TestSecurityGuardrail:
         assert result.tripwire_triggered is False
         assert result.output_info["is_jailbreak"] is False
         # Should not have called the LLM agent because of fast path
-        mock_runner.run.assert_not_called()
+        mock_guardrail_runner.run.assert_not_called()
 
-    async def test_guardrail_blocks_obvious_jailbreak(self, mock_runner):
+    async def test_guardrail_blocks_obvious_jailbreak(self, mock_guardrail_runner):
         """Test that obvious jailbreak attempts are blocked."""
         # Mock context
         ctx = MagicMock(spec=RunContextWrapper)
@@ -66,7 +71,7 @@ class TestSecurityGuardrail:
             is_jailbreak=True,
             reasoning="Obvious jailbreak attempt"
         )
-        mock_runner.run = AsyncMock(return_value=mock_result)
+        mock_guardrail_runner.run = AsyncMock(return_value=mock_result)
 
         # Call guardrail function directly
         result = await security_guardrail.guardrail_function(ctx, agent, input_data)
@@ -74,9 +79,9 @@ class TestSecurityGuardrail:
         # Verify result
         assert result.tripwire_triggered is True
         assert result.output_info.is_jailbreak is True
-        mock_runner.run.assert_called_once()
+        mock_guardrail_runner.run.assert_called_once()
 
-    async def test_guardrail_blocks_off_topic(self, mock_runner):
+    async def test_guardrail_blocks_off_topic(self, mock_guardrail_runner):
         """Test that off-topic requests are blocked via LLM check."""
         # Mock context
         ctx = MagicMock(spec=RunContextWrapper)
@@ -92,7 +97,7 @@ class TestSecurityGuardrail:
             is_jailbreak=True,
             reasoning="Request is unrelated to Bill or tech"
         )
-        mock_runner.run = AsyncMock(return_value=mock_result)
+        mock_guardrail_runner.run = AsyncMock(return_value=mock_result)
 
         # Call guardrail function directly
         result = await security_guardrail.guardrail_function(ctx, agent, input_data)
@@ -100,7 +105,7 @@ class TestSecurityGuardrail:
         # Verify result
         assert result.tripwire_triggered is True
         assert result.output_info.is_jailbreak is True
-        mock_runner.run.assert_called_once()
+        mock_guardrail_runner.run.assert_called_once()
 
 
 @pytest.mark.asyncio

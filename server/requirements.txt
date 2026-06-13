@@ -23,7 +23,7 @@ pydantic==2.13.3
 opencv-python==4.9.0.80
 orjson==3.11.1
 pickleshare==0.7.5
-pinecone==7.3.0
+pinecone[asyncio]==7.3.0
 pip-chill==1.0.3
 pusher==3.3.3
 pyaudio==0.2.14

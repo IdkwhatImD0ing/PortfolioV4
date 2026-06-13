@@ -17,11 +17,11 @@ os.environ.setdefault("PINECONE_API_KEY", "test-pinecone-key")
 
 @pytest.fixture(autouse=True)
 def reset_pinecone_index():
-    """Reset the global Pinecone index in project_search after each test."""
+    """Reset cached Pinecone state in project_search after each test."""
     try:
         import project_search
         yield
-        project_search._index = None
+        project_search._index_host = None
     except ImportError:
         # If project_search cannot be imported, just yield
         yield
@@ -44,7 +44,10 @@ def mock_openai_embeddings():
 @pytest.fixture
 def mock_pinecone():
     """Mock Pinecone async client and index."""
-    with patch("project_search.pc") as mock_pc:
+    with patch("project_search.pc") as mock_pc, patch(
+        "project_search._resolve_index_host",
+        new=AsyncMock(return_value="test-index-host"),
+    ):
         mock_index = MagicMock()
         mock_index.query = AsyncMock()
         mock_index.fetch = AsyncMock()

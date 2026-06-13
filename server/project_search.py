@@ -16,6 +16,32 @@ openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 INDEX_NAME = "portfolio"
 EMBEDDING_MODEL = "text-embedding-3-large"
 
+DEFAULT_PROJECT_NAME = "Unknown Project"
+DEFAULT_PROJECT_SUMMARY = "No summary available"
+DEFAULT_PROJECT_DETAILS = "No details available"
+
+# IndexAsyncio takes a host, not an index name, so resolve the host once (via the
+# control plane) and cache it for the process lifetime.
+_index_host: Optional[str] = None
+
+
+async def _resolve_index_host() -> str:
+    """Resolve and cache the Pinecone index host for INDEX_NAME."""
+    global _index_host
+    if _index_host is None:
+        async with PineconeAsyncio(api_key=PINECONE_API_KEY) as client:
+            desc = await client.describe_index(name=INDEX_NAME)
+            _index_host = desc.host
+    return _index_host
+
+
+def _attach_links(project: Dict, metadata) -> None:
+    """Attach optional github/demo links from metadata onto a project dict, if present."""
+    if metadata.get("github"):
+        project["github"] = metadata.get("github")
+    if metadata.get("demo"):
+        project["demo"] = metadata.get("demo")
+
 
 async def get_embedding(text: str) -> List[float]:
     """Generate embedding for text using OpenAI's text-embedding-3-large model."""
@@ -37,7 +63,8 @@ async def search_projects(query: str, top_k: int = 3) -> List[Dict]:
     try:
         query_embedding = await get_embedding(query)
 
-        async with pc.IndexAsyncio(INDEX_NAME) as index:
+        host = await _resolve_index_host()
+        async with pc.IndexAsyncio(host=host) as index:
             results = await index.query(
                 vector=query_embedding,
                 top_k=top_k,
@@ -48,16 +75,13 @@ async def search_projects(query: str, top_k: int = 3) -> List[Dict]:
         for match in results.matches:
             project = {
                 "id": match.id,
-                "name": match.metadata.get("name", "Unknown Project"),
-                "summary": match.metadata.get("summary", "No summary available"),
-                "details": match.metadata.get("details", "No details available"),
+                "name": match.metadata.get("name", DEFAULT_PROJECT_NAME),
+                "summary": match.metadata.get("summary", DEFAULT_PROJECT_SUMMARY),
+                "details": match.metadata.get("details", DEFAULT_PROJECT_DETAILS),
                 "score": round(match.score, 3),
             }
 
-            if match.metadata.get("github"):
-                project["github"] = match.metadata.get("github")
-            if match.metadata.get("demo"):
-                project["demo"] = match.metadata.get("demo")
+            _attach_links(project, match.metadata)
 
             projects.append(project)
 
@@ -79,7 +103,8 @@ async def get_project_by_id(project_id: str) -> Optional[Dict]:
         Project dictionary with metadata or None if not found
     """
     try:
-        async with pc.IndexAsyncio(INDEX_NAME) as index:
+        host = await _resolve_index_host()
+        async with pc.IndexAsyncio(host=host) as index:
             fetch_result = await index.fetch(ids=[project_id])
 
         if project_id in fetch_result.vectors:
@@ -88,15 +113,12 @@ async def get_project_by_id(project_id: str) -> Optional[Dict]:
 
             project = {
                 "id": project_id,
-                "name": metadata.get("name", "Unknown Project"),
-                "summary": metadata.get("summary", "No summary available"),
-                "details": metadata.get("details", "No details available"),
+                "name": metadata.get("name", DEFAULT_PROJECT_NAME),
+                "summary": metadata.get("summary", DEFAULT_PROJECT_SUMMARY),
+                "details": metadata.get("details", DEFAULT_PROJECT_DETAILS),
             }
 
-            if metadata.get("github"):
-                project["github"] = metadata.get("github")
-            if metadata.get("demo"):
-                project["demo"] = metadata.get("demo")
+            _attach_links(project, metadata)
 
             return project
 
@@ -119,7 +141,8 @@ async def find_similar_projects(project_id: str, top_k: int = 3) -> List[Dict]:
         List of similar project dictionaries
     """
     try:
-        async with pc.IndexAsyncio(INDEX_NAME) as index:
+        host = await _resolve_index_host()
+        async with pc.IndexAsyncio(host=host) as index:
             fetch_result = await index.fetch(ids=[project_id])
 
             if project_id not in fetch_result.vectors:
@@ -138,8 +161,8 @@ async def find_similar_projects(project_id: str, top_k: int = 3) -> List[Dict]:
             if match.id != project_id:
                 project = {
                     "id": match.id,
-                    "name": match.metadata.get("name", "Unknown Project"),
-                    "summary": match.metadata.get("summary", "No summary available"),
+                    "name": match.metadata.get("name", DEFAULT_PROJECT_NAME),
+                    "summary": match.metadata.get("summary", DEFAULT_PROJECT_SUMMARY),
                     "score": round(match.score, 3),
                 }
                 similar_projects.append(project)

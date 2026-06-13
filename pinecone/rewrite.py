@@ -9,6 +9,10 @@ dotenv.load_dotenv()
 # Initialize async client (make sure your OPENAI_API_KEY is set in env)
 client = AsyncOpenAI()
 
+REWRITE_MODEL = "gpt-4o"
+REWRITE_TEMPERATURE = 0.7
+REWRITE_SYSTEM_PROMPT = "You are a helpful assistant for rewriting project summaries."
+
 
 async def rewrite_summary(proj, idx):
     """Rewrite summary for a single project with progress logging."""
@@ -31,15 +35,15 @@ Keep it professional, concise, and engaging.
 
     try:
         response = await client.chat.completions.create(
-            model="gpt-4o",
+            model=REWRITE_MODEL,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful assistant for rewriting project summaries.",
+                    "content": REWRITE_SYSTEM_PROMPT,
                 },
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.7,
+            temperature=REWRITE_TEMPERATURE,
         )
         new_summary = response.choices[0].message.content.strip()
         proj["summary"] = new_summary

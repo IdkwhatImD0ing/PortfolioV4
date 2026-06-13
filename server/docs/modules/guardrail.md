@@ -4,7 +4,7 @@ Documentation for the input security guardrail.
 
 ## File Location
 
-`llm.py` (lines 73-185)
+`guardrail.py` (`security_guardrail`, `guardrail_agent`, and `JailbreakCheckOutput`). It is re-exported from `llm.py` for backwards compatibility, so `from llm import security_guardrail, JailbreakCheckOutput` still works.
 
 ## Purpose
 
@@ -71,7 +71,7 @@ bill_keywords = [
     "bill", "zhang", "project", "education", "homepage",
     "hackathon", "slugloop", "portfolio", "experience",
     "skills", "work", "tech", "programming", "code",
-    "developer", "software", "career",
+    "developer", "software", "career", "resume",
 ]
 ```
 

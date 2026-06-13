@@ -20,6 +20,19 @@ EMBEDDING_MODEL = "text-embedding-3-large"
 EMBEDDING_DIMENSIONS = 3072
 
 
+def build_embedding_text(item: Dict) -> str:
+    """Build the text blob that gets embedded for a single project item."""
+    return f"""
+        Project: {item["name"]}
+
+        Summary:
+        {item["summary"]}
+
+        Details:
+        {item["details"]}
+        """
+
+
 async def get_embedding(text: str) -> List[float]:
     """Generate embedding for text using OpenAI's text-embedding-3-large model."""
     return (await get_embeddings([text]))[0]
@@ -38,15 +51,7 @@ async def prepare_vectors(data: List[Dict]) -> List[tuple]:
     """Prepare vectors for Pinecone upsert."""
     texts_to_embed = []
     for item in data:
-        text_content = f"""
-        Project: {item["name"]}
-
-        Summary:
-        {item["summary"]}
-
-        Details:
-        {item["details"]}
-        """
+        text_content = build_embedding_text(item)
         texts_to_embed.append(text_content)
 
     print(f"Generating embeddings for {len(texts_to_embed)} items in batch...")
