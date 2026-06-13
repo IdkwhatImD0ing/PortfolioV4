@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:resume": "node scripts/compile-resume.mjs",
+    "watch:resume": "node scripts/watch-resume.mjs",
     "dev": "next dev --turbopack",
     "lint": "next lint",
     "start": "next start",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "chokidar": "^5.0.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/node": "^22",
     "@types/react": "^19",
