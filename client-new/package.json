@@ -5,6 +5,7 @@
   "scripts": {
     "build": "next build",
     "build:resume": "node scripts/compile-resume.mjs",
+    "build:resume:anonymized": "node scripts/compile-resume.mjs resume-anonymized",
     "watch:resume": "node scripts/watch-resume.mjs",
     "dev": "next dev --turbopack",
     "lint": "next lint",

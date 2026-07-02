@@ -70,6 +70,13 @@ pnpm build:resume      # regenerates public/resume.pdf (needs pdflatex locally)
 `pnpm watch:resume` recompiles on save during editing (needs `chokidar`, now a devDep —
 run `pnpm install` if you haven't since this change).
 
+There is also a public-safe variant, `public/resume-anonymized.tex`, for sharing resume
+content where direct identity should be withheld: it strips contact details, profile
+links, school/employer/client names, locations, and identifying project URLs while
+keeping role scope, stack, and impact metrics. `pnpm build:resume:anonymized` compiles
+it to `public/resume-anonymized.pdf` (gitignored — compiled on demand and shared
+out-of-band, never served by the site).
+
 ## Open decisions — features intentionally dropped, not restored
 
 The voice-only redesign removed these on purpose. None were auto-restored; each needs a
