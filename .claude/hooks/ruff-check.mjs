@@ -2,7 +2,7 @@
 /**
  * PostToolUse hook — runs after Claude edits a file.
  *
- * The TS counterpart (lint-typecheck.mjs) only guards client-new/. This is the
+ * The TS counterpart (lint-typecheck.mjs) only guards client/. This is the
  * backend mirror: when the edited file is a Python source under server/ or
  * pinecone/, it lint-checks just that file with Ruff so issues surface in the
  * edit loop instead of on push (backend-integration.yml runs pytest in CI).

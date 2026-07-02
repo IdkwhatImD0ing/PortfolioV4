@@ -21,7 +21,8 @@ install-deps:
 	@echo "Installing Python dependencies..."
 	@cd server && uv sync --dev
 	@echo "Installing client dependencies..."
-	@cd client && (command -v pnpm >/dev/null 2>&1 && pnpm install --legacy-peer-deps || npm install --legacy-peer-deps)
+	@command -v pnpm >/dev/null 2>&1 || corepack enable pnpm
+	@cd client && pnpm install
 
 # Pull runtime secrets from GCP Secret Manager into server/.env
 # Requires `gcloud auth login` against an account with secretAccessor on the secrets.
@@ -73,10 +74,10 @@ test-server:
 	@echo "Running backend tests..."
 	@cd server && uv run pytest tests/ -v --tb=short
 
-# Run frontend tests
+# Run frontend checks (lint + typecheck + vitest, matching CI)
 test-client:
-	@echo "Running frontend tests..."
-	@cd client && npm test
+	@echo "Running frontend checks..."
+	@cd client && pnpm lint && pnpm typecheck && pnpm test
 
 # Run services in separate terminal tabs (recommended for clean logs)
 tabs: setup

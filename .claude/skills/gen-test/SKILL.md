@@ -1,6 +1,6 @@
 ---
 name: gen-test
-description: Generate tests following this repo's conventions — Vitest for client-new pure logic, pytest-asyncio for the server. Use when asked to write, scaffold, or add tests.
+description: Generate tests following this repo's conventions — Vitest for client pure logic, pytest-asyncio for the server. Use when asked to write, scaffold, or add tests.
 disable-model-invocation: true
 ---
 
@@ -9,9 +9,9 @@ disable-model-invocation: true
 Scaffold tests that match this repo's two established idioms. Pick the side based
 on the file under test.
 
-## Frontend — Vitest (`client-new/`)
+## Frontend — Vitest (`client/`)
 
-- Test pure logic extracted into `client-new/src/lib/*`. Components stay thin;
+- Test pure logic extracted into `client/src/lib/*`. Components stay thin;
   testable behavior lives in `src/lib` next to a `*.test.ts` sibling (see
   `voice-bus.test.ts`, `transcript.test.ts`, `portfolio-data.test.ts`).
 - Import style: `import { describe, expect, it } from "vitest";` then import the

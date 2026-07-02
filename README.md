@@ -59,7 +59,7 @@ flowchart LR
 - 🔎  **Semantic search** over every project (Pinecone)
 - 🛡️  Prompt-injection **guardrails** on the LLM tier
 - ⚡  **Streaming** end-to-end — voice in → voice out
-- 🌗  Dark-mode-first UI w/ shadcn + Tailwind v4
+- 🌗  Dark-mode-first UI w/ Tailwind v4
 
 </td>
 </tr>
@@ -80,9 +80,9 @@ flowchart LR
 
 | Layer | Tech | Why |
 |---|---|---|
-| **Frontend** | Next.js 15 (App Router) · React 19 · TypeScript 5 · Tailwind v4 · Motion · shadcn/ui · Retell SDK | Fast, modern, theme-able, voice-ready |
-| **Backend** | FastAPI · Uvicorn · OpenAI Agents 0.2 · Retell SDK 4.4 · Pydantic | Streaming WebSocket + tool-calling agent |
-| **Vector DB** | Pinecone 7 · `text-embedding-3-small` | Semantic search across projects |
+| **Frontend** | Next.js 15 (App Router) · React 19 · TypeScript 5 · Tailwind v4 · Retell SDK | Fast, modern, theme-able, voice-ready |
+| **Backend** | FastAPI · Uvicorn · OpenAI Agents SDK · Retell SDK 4.4 · Pydantic | Streaming WebSocket + tool-calling agent |
+| **Vector DB** | Pinecone 7 · `text-embedding-3-large` | Semantic search across projects |
 | **Infra** | Docker · Cloud Run · Vercel · ngrok (dev) | One-command deploys, edge-friendly |
 | **Observability** | Vercel Analytics · Speed Insights · structured logs | Real-user perf + traces |
 
@@ -120,11 +120,10 @@ RETELL_API_KEY=...
 OPENAI_API_KEY=...
 PINECONE_API_KEY=...
 
-# client/.env.local
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_RETELL_AGENT_ID=...
+# client/.env.local (see client/.env.local.example for optional dev-agent vars)
 RETELLAI_API_KEY=...
+NEXT_PUBLIC_RETELL_AGENT_ID=...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ---
@@ -134,8 +133,8 @@ RETELLAI_API_KEY=...
 ```text
 ┌──────────────────────────┐         ┌──────────────────────────┐
 │   client/  (Next.js 15)  │  WSS    │  server/  (FastAPI)      │
-│   • app-sidebar (mic)    │ ◀────▶  │  • /webhook (Retell)     │
-│   • page.tsx (router)    │         │  • /ws-* (LLM stream)    │
+│   • voice orb (mic)      │ ◀────▶  │  • /webhook (Retell)     │
+│   • page.tsx (sections)  │         │  • /ws-* (LLM stream)    │
 │   • metadata listener    │         │  • LlmClient + tools     │
 └────────────┬─────────────┘         └─────────────┬────────────┘
              │                                     │
@@ -148,7 +147,7 @@ RETELLAI_API_KEY=...
 
 | Module | What lives there |
 |---|---|
-| [`client/`](./client) | Next.js 15 UI · voice sidebar · page router · `/api/create-web-call` proxy |
+| [`client/`](./client) | Next.js 15 UI · voice orb · one-page scroll sections · `/api/create-web-call` proxy |
 | [`server/`](./server) | FastAPI WebSocket · OpenAI Agents · navigation + search tools · guardrails |
 | [`pinecone/`](./pinecone) | One-shot ingestion: `data.json` → embeddings → Pinecone index |
 | [`browserless/`](./browserless) | Headless browser sidecar for resume / preview rendering on Cloud Run |
@@ -164,7 +163,7 @@ Deeper docs: [`client/docs`](./client/docs) · [`server/docs`](./server/docs) ·
 - **Guardrails that actually run.** A small classifier agent checks each user turn for prompt-injection / off-topic before the main LLM sees it.
 - **Streaming end-to-end.** Tokens stream from OpenAI → FastAPI → Retell → audio in <600 ms.
 - **JSON-LD + `/llms.txt`** so search engines *and* LLMs both index the site cleanly.
-- **Edge-grade UX.** Geist font, color-scheme-aware skip links, Speed Insights, theme-color matched to the dark hero.
+- **Edge-grade UX.** Speed Insights, Vercel Analytics, theme-color matched to the dark hero.
 
 ---
 

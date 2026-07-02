@@ -1,6 +1,6 @@
 ---
 name: sync-nav-contract
-description: Add, rename, or remove a voice-navigation destination by editing all sides of the wire contract in sync (server/navigation.py, server/llm.py, client-new/src/lib/voice-bus.ts, src/app/page.tsx). Use when the agent needs to navigate to a new section/page, or when a navigable destination changes.
+description: Add, rename, or remove a voice-navigation destination by editing all sides of the wire contract in sync (server/navigation.py, server/llm.py, client/src/lib/voice-bus.ts, src/app/page.tsx). Use when the agent needs to navigate to a new section/page, or when a navigable destination changes.
 disable-model-invocation: true
 ---
 
@@ -25,10 +25,10 @@ Ask the user (or infer from their request) what they want:
 2. **`server/navigation.py`** — `_PAGE_TOOLS` maps the tool name → a `page`
    string. `NAVIGATION_PAGES` is derived from it (plus `"project"`). `display_project`
    is special-cased (it carries a `project_id` arg) — don't add it to `_PAGE_TOOLS`.
-3. **`client-new/src/lib/voice-bus.ts`** — `NavigationMeta["page"]` is the union
+3. **`client/src/lib/voice-bus.ts`** — `NavigationMeta["page"]` is the union
    of accepted `page` values, and `PAGE_TO_SECTION` maps each `page` → a DOM
    section id. Both must include the new value.
-4. **`client-new/src/app/page.tsx`** — composes the section components in scroll
+4. **`client/src/app/page.tsx`** — composes the section components in scroll
    order; the section must render an element whose `id` matches the
    `PAGE_TO_SECTION` value.
 
@@ -46,11 +46,11 @@ matches the rendered DOM `id`):
    short confirmation string. Add the function to the list in `prepare_functions()`.
 2. **`server/navigation.py`** — add `"display_<thing>_page": "<thing>"` to
    `_PAGE_TOOLS`. (`NAVIGATION_PAGES` updates automatically.)
-3. **`client-new/src/lib/voice-bus.ts`** — add `"<thing>"` to the
+3. **`client/src/lib/voice-bus.ts`** — add `"<thing>"` to the
    `NavigationMeta["page"]` union **and** a `"<thing>": "<section-id>"` entry to
    `PAGE_TO_SECTION`. TypeScript's `Record<NonNullable<...>, string>` will fail to
    compile if you add to the union but forget the map — that's the safety net.
-4. **`client-new/src/app/page.tsx`** — ensure a section renders with
+4. **`client/src/app/page.tsx`** — ensure a section renders with
    `id="<section-id>"` at the right scroll position.
 
 ## Procedure to RENAME or REMOVE
@@ -71,7 +71,7 @@ After editing, confirm the contract holds:
 uv run pytest tests/ -k "navigation or nav" -v --tb=short
 
 # Frontend: the union/Record mismatch is a compile error, and voice-bus has tests
-cd client-new && pnpm exec vitest run src/lib/voice-bus.test.ts && pnpm typecheck
+cd client && pnpm exec vitest run src/lib/voice-bus.test.ts && pnpm typecheck
 ```
 
 Then hand off to the `navigation-contract-reviewer` subagent for a final

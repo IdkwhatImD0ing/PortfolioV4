@@ -1,6 +1,6 @@
 ---
 name: navigation-contract-reviewer
-description: Verifies the voice-navigation wire contract stays in sync across the three files that define it. Use proactively after editing server/navigation.py, client-new/src/lib/voice-bus.ts, or any section component / page.tsx, and whenever display_* tools or navigable destinations change.
+description: Verifies the voice-navigation wire contract stays in sync across the three files that define it. Use proactively after editing server/navigation.py, client/src/lib/voice-bus.ts, or any section component / page.tsx, and whenever display_* tools or navigable destinations change.
 tools: Read, Grep, Glob
 ---
 
@@ -16,10 +16,10 @@ drift — that is your job.
    `page` string; `display_project` is special-cased and also emits
    `project_id`. `NAVIGATION_PAGES` is the frozenset of every `page` value the
    server can emit.
-2. **`client-new/src/lib/voice-bus.ts`** — `NavigationMeta["page"]` is the union
+2. **`client/src/lib/voice-bus.ts`** — `NavigationMeta["page"]` is the union
    of accepted page values, and `PAGE_TO_SECTION` maps each `page` to a DOM
    section id. `metaToNavigationAction()` is the routing logic.
-3. **`client-new/src/app/page.tsx`** — composes the section components in scroll
+3. **`client/src/app/page.tsx`** — composes the section components in scroll
    order; each section renders a DOM element whose `id` must match a value in
    `PAGE_TO_SECTION`.
 
@@ -33,7 +33,7 @@ drift — that is your job.
 - **Client → DOM parity**: every section id in `PAGE_TO_SECTION`'s values
   resolves to a real `id={...}` rendered by a section component reachable from
   `page.tsx`. Grep the section components under
-  `client-new/src/components/sections/` for the `id`. Flag any target that
+  `client/src/components/sections/` for the `id`. Flag any target that
   scrolls to a non-existent element.
 - **`display_project` handling**: confirm the `project` page carries
   `project_id` end to end and that `metaToNavigationAction` emits an `open`

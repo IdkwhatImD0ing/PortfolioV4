@@ -12,7 +12,7 @@ report concrete, exploitable issues — not generic advice.
 
 - **Secret handling**: `RETELL_API_KEY`, `OPENAI_API_KEY`, `PINECONE_API_KEY`
   live in `server/.env` (pulled from GCP Secret Manager); the Retell secret key
-  is used server-side by `client-new/src/app/api/create-web-call/route.ts`. The
+  is used server-side by `client/src/app/api/create-web-call/route.ts`. The
   `RETELLAI_API_KEY` must never reach the browser (no `NEXT_PUBLIC_` prefix).
   Flag any secret read in client components, logged, or returned in a response.
 - **Webhook authenticity**: `server/main.py` `/webhook` verifies the

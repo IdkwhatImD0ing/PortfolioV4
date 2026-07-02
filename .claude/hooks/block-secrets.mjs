@@ -2,7 +2,7 @@
 /**
  * PreToolUse hook — runs before Claude writes/edits a file.
  *
- * Blocks edits to real secret files (server/.env, client-new/.env.local, etc.)
+ * Blocks edits to real secret files (server/.env, client/.env.local, etc.)
  * which are populated from GCP Secret Manager / hold the Retell key. Example and
  * template files (.env.local.example, *.sample, *.template) are allowed so the
  * documented placeholders can still be maintained.

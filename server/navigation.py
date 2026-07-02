@@ -2,7 +2,7 @@
 
 This is the single source of truth for the wire contract between the agent
 and the frontend. The frontend's PAGE_TO_SECTION mapping in
-client-new/src/lib/voice-bus.ts must accept every `page` value this
+client/src/lib/voice-bus.ts must accept every `page` value this
 module can emit.
 """
 
