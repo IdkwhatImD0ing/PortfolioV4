@@ -2,9 +2,9 @@
 /**
  * PostToolUse hook — runs after Claude edits a file.
  *
- * When the edited file is a TypeScript source under client-new/, this lints
+ * When the edited file is a TypeScript source under client/, this lints
  * just that file (fast, targeted) and runs the project typecheck (tsc --noEmit).
- * CI gates client-new on lint -> typecheck -> test, so catching failures here
+ * CI gates client on lint -> typecheck -> test, so catching failures here
  * keeps the loop tight instead of failing on push.
  *
  * Exit 2 feeds stderr back to Claude so it can fix the reported errors.
@@ -30,12 +30,12 @@ try {
 const filePath = input?.tool_input?.file_path ?? "";
 const norm = filePath.replace(/\\/g, "/");
 
-// Only act on client-new TS/TSX source (skip declaration files).
-if (!/\/client-new\/.*\.(ts|tsx)$/.test(norm) || norm.endsWith(".d.ts")) {
+// Only act on client TS/TSX source (skip declaration files).
+if (!/\/client\/.*\.(ts|tsx)$/.test(norm) || norm.endsWith(".d.ts")) {
   process.exit(0);
 }
 
-const clientDir = path.join(process.cwd(), "client-new");
+const clientDir = path.join(process.cwd(), "client");
 const run = (cmd) =>
   spawnSync(cmd, { cwd: clientDir, encoding: "utf8", shell: true });
 

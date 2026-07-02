@@ -2,6 +2,11 @@
 
 _Last updated: 2026-06-13_
 
+> **Note (2026-07-02):** `client-new/` has since been renamed to `client/`, taking over
+> the name of the retired package. Path references below reflect the layout at
+> retirement time: `client/` means the deleted legacy frontend, `client-new/` means
+> what is now `client/`.
+
 ## TL;DR
 
 The old frontend (`client/`) has been deleted and the new frontend (`client-new/`)

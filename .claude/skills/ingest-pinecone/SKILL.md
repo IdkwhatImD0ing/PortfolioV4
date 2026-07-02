@@ -16,9 +16,9 @@ related project-data files aligned.
 - **`pinecone/data.json`** — the source of truth for ingestion. Each entry needs
   `id`, `name`, `summary`, `details`, and optional `github` / `demo`. The `id` is
   what the agent passes to `display_project` / `get_project_details`.
-- **`client-new/src/data/pinecone-projects.json`** — the agent-side project data
+- **`client/src/data/pinecone-projects.json`** — the agent-side project data
   used by the frontend.
-- **`client-new/src/lib/portfolio-data.ts`** — typed UI content. Projects resolve
+- **`client/src/lib/portfolio-data.ts`** — typed UI content. Projects resolve
   by `id` or `aliases` via `findProject(idOrAlias)`, so a Pinecone `id` must map
   to a local project (directly or through an alias) or the agent can search a
   project it can't then display.
@@ -47,7 +47,7 @@ section. Flag any Pinecone `id` with no matching `portfolio-data.ts` id/alias.
    > explicitly (or recreate the index) — call this out to the user.
 
 3. **Sync the frontend copy** if it drifted: update
-   `client-new/src/data/pinecone-projects.json` and any `portfolio-data.ts`
+   `client/src/data/pinecone-projects.json` and any `portfolio-data.ts`
    entry/alias so the UI can display what search now returns.
 
 ## Verify
