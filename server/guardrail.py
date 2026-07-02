@@ -69,7 +69,16 @@ async def security_guardrail(
         # Get the last user message
         for item in reversed(input):
             if isinstance(item, dict) and item.get("role") == "user":
-                content = item.get("content", "")
+                raw = item.get("content", "")
+                if isinstance(raw, str):
+                    content = raw
+                elif isinstance(raw, list):
+                    # Structured content parts — pull out the text segments.
+                    content = " ".join(
+                        part.get("text", "")
+                        for part in raw
+                        if isinstance(part, dict)
+                    )
                 break
 
     # Quick checks for obviously allowed content

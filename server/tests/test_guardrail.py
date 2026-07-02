@@ -51,6 +51,25 @@ class TestSecurityGuardrail:
         # Should not have called the LLM agent because of fast path
         mock_guardrail_runner.run.assert_not_called()
 
+    async def test_guardrail_handles_structured_content_parts(self, mock_guardrail_runner):
+        """Structured (list) message content must not crash extraction."""
+        ctx = MagicMock(spec=RunContextWrapper)
+        ctx.context = MagicMock()
+        agent = MagicMock()
+
+        input_data = [
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": "Tell me about Bill's projects"}],
+            }
+        ]
+
+        result = await security_guardrail.guardrail_function(ctx, agent, input_data)
+
+        # Text was extracted from the parts, so the Bill fast path applies
+        assert result.tripwire_triggered is False
+        mock_guardrail_runner.run.assert_not_called()
+
     async def test_guardrail_blocks_obvious_jailbreak(self, mock_guardrail_runner):
         """Test that obvious jailbreak attempts are blocked."""
         # Mock context

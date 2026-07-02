@@ -1,7 +1,7 @@
 import re
 
 
-def clean_markdown(text: str) -> str:
+def clean_markdown(text: str | None) -> str | None:
     """Remove common markdown formatting from text for voice output.
     This version is designed to work with streaming text where we might
     not have complete markdown patterns."""

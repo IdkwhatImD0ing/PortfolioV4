@@ -118,7 +118,7 @@ export const PROJECTS: Project[] = [
     demo: "https://youtu.be/DlAGp-IjtJM",
     videoUrl: "https://youtu.be/DlAGp-IjtJM",
     poster: "/project-posters/slugloop.webp",
-    projectUrl: "https://www.slugloop.com/",
+    projectUrl: "https://www.slugloop.tech/",
     stack: ["React", "Material UI", "ExpressJS", "Firebase", "C", "LibCurl", "Azure"],
     role: "Co-creator · frontend + real-time transit data",
     long: "SlugLoop is a real-time bus tracking app for UC Santa Cruz students. It uses existing GPS hardware on loop buses, processes location data through an ExpressJS service, stores updates in Firebase, and renders a mobile-friendly React map so students can choose campus loop buses more confidently. The project won MLH's Most Creative Use of GitHub at CruzHacks 2023 and was selected as a Google Solution Challenge 2023 Global Top 10 finalist.",

@@ -30,6 +30,16 @@ describe("toEmbed", () => {
     expect(toEmbed("https://vimeo.com/12345")).toBeNull();
   });
 
+  it("returns null for lookalike hostnames", () => {
+    expect(toEmbed("https://notyoutube.com/watch?v=abc123")).toBeNull();
+  });
+
+  it("accepts youtube.com subdomains", () => {
+    expect(toEmbed("https://m.youtube.com/watch?v=abc123")).toBe(
+      "https://www.youtube.com/embed/abc123?rel=0&modestbranding=1",
+    );
+  });
+
   it("returns null for undefined input", () => {
     expect(toEmbed(undefined)).toBeNull();
   });
@@ -67,6 +77,16 @@ describe("isImage", () => {
   it("returns false for non-image urls", () => {
     expect(isImage("https://example.com/a.mp4")).toBe(false);
     expect(isImage("https://youtu.be/abc123")).toBe(false);
+  });
+
+  it("allows a query string or fragment after the extension", () => {
+    expect(isImage("https://example.com/a.jpg?width=100")).toBe(true);
+    expect(isImage("https://example.com/a.webp#frame")).toBe(true);
+  });
+
+  it("does not match an extension in the middle of the url", () => {
+    expect(isImage("https://example.com/clip.png.mp4")).toBe(false);
+    expect(isImage("https://example.com/a.jpg-gallery/video")).toBe(false);
   });
 
   it("returns false for undefined/empty input", () => {

@@ -29,7 +29,7 @@ export function HackathonsSection() {
         <div ref={ref} className={cn(REVEAL_BASE, revealed && REVEAL_IN)}>
           <span className="inline-flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
-            HACKATHONS · 36 WINS
+            HACKATHONS · {HACKATHONS.length} WINS
           </span>
           <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 max-w-[1100px] text-balance">
             Thirty-six wins from{" "}
@@ -65,7 +65,7 @@ export function HackathonsSection() {
       <div className="max-w-[1280px] mx-auto px-8 max-[700px]:px-5">
         <div className="grid grid-cols-4 gap-6 mt-14 max-[800px]:grid-cols-2 max-[700px]:mt-10 max-[700px]:gap-4">
           {[
-            { n: "36", l: "Hackathons won" },
+            { n: `${HACKATHONS.length}`, l: "Hackathons won" },
             { n: "$74k", l: "Largest prize" },
             { n: "$150k+", l: "Prizes won" },
             { n: "17", l: "Colleges visited" },

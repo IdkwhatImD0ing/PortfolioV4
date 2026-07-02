@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PROJECTS, findProject, type Project } from "@/lib/portfolio-data";
 import { loadFallbackProject } from "@/lib/project-fallback";
 import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
@@ -28,6 +28,22 @@ export function ProjectsSection() {
   const [transcript, setTranscript] = useState<string | null>(null);
   const [activeCard, setActiveCard] = useState(0);
 
+  // Single timer so a new message can't be wiped early by an older one's timeout.
+  const transcriptTimer = useRef<number | null>(null);
+  const showTranscript = useCallback((message: string) => {
+    if (transcriptTimer.current) window.clearTimeout(transcriptTimer.current);
+    setTranscript(message);
+    transcriptTimer.current = window.setTimeout(() => {
+      setTranscript(null);
+      transcriptTimer.current = null;
+    }, 2400);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (transcriptTimer.current) window.clearTimeout(transcriptTimer.current);
+    };
+  }, []);
+
   const pickFilter = (key: string) => {
     setFilter(key);
     setYear(null);
@@ -52,12 +68,20 @@ export function ProjectsSection() {
     }
     let cancelled = false;
     loadFallbackProject(openId).then((p) => {
-      if (!cancelled) setOpenProject(p);
+      if (cancelled) return;
+      if (p) {
+        setOpenProject(p);
+      } else {
+        // Unresolvable id (bad deep link or an agent slug missing from the
+        // corpus): bail out rather than leaving openId set with no modal.
+        setOpenId(null);
+        showTranscript(`Couldn't find project "${openId}".`);
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [openId]);
+  }, [openId, showTranscript]);
 
   // Deep linking: parse `#project/<id>` on mount + sync hash when modal opens/closes.
   useEffect(() => {
@@ -80,13 +104,39 @@ export function ProjectsSection() {
     if (openId) {
       const next = `${PROJECT_HASH_PREFIX}${encodeURIComponent(openId)}`;
       if (currentHash !== next) {
-        window.history.replaceState(null, "", next);
+        // Push when the modal first opens so browser Back closes it; replace
+        // when switching projects so swaps don't pile up history entries.
+        if (currentHash.startsWith(PROJECT_HASH_PREFIX)) {
+          window.history.replaceState(null, "", next);
+        } else {
+          window.history.pushState(null, "", next);
+        }
       }
     } else if (currentHash.startsWith(PROJECT_HASH_PREFIX)) {
       // Clear only our own hash; don't clobber section anchors set by other code.
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
   }, [openId]);
+
+  // Back/Forward: keep the modal in sync with the URL so Back closes a
+  // pushed-open modal and Forward reopens it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onPopState = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith(PROJECT_HASH_PREFIX)) {
+        const rawId = decodeURIComponent(hash.slice(PROJECT_HASH_PREFIX.length));
+        if (rawId) {
+          const known = findProject(rawId);
+          setOpenId(known?.id ?? rawId);
+        }
+      } else {
+        setOpenId(null);
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   useEffect(
     () =>
@@ -103,8 +153,7 @@ export function ProjectsSection() {
             setFocusId(null);
           }
           setOpenId(null);
-          setTranscript(`Filtering by ${cmd.tag ?? cmd.year}.`);
-          window.setTimeout(() => setTranscript(null), 2400);
+          showTranscript(`Filtering by ${cmd.tag ?? cmd.year}.`);
         }
         if (cmd.type === "focus") {
           const project = findProject(cmd.id);
@@ -113,8 +162,7 @@ export function ProjectsSection() {
           setFilter("all");
           setYear(null);
           setOpenId(null);
-          setTranscript(`Focusing on ${project.name}.`);
-          window.setTimeout(() => setTranscript(null), 2400);
+          showTranscript(`Focusing on ${project.name}.`);
         }
         if (cmd.type === "open") {
           // Allow opening any project the agent surfaces, even archived ones
@@ -123,18 +171,19 @@ export function ProjectsSection() {
           // get lazy-loaded from the Pinecone corpus.
           const known = findProject(cmd.id);
           setOpenId(known?.id ?? cmd.id);
-          setTranscript(`Opening ${known?.name ?? cmd.id}.`);
-          window.setTimeout(() => setTranscript(null), 2400);
+          showTranscript(`Opening ${known?.name ?? cmd.id}.`);
         }
         if (cmd.type === "scroll") {
           setOpenId(null);
         }
       }),
-    [],
+    [showTranscript],
   );
 
+  // Keyed on the *resolved* project, not openId — an id that fails to resolve
+  // must never lock scrolling behind a modal that isn't rendered.
   useEffect(() => {
-    if (!openId) return;
+    if (!openProject) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpenId(null);
     };
@@ -144,7 +193,7 @@ export function ProjectsSection() {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [openId]);
+  }, [openProject]);
 
   const open = openProject;
   const isCuratedRail = filter === "all" && !year && !focusId;
