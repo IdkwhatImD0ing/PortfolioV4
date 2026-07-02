@@ -6,7 +6,7 @@ import type { Hackathon } from "./types";
 // rows. `year` is omitted only where the event date isn't confirmed (Tank).
 export const HACKATHONS: Hackathon[] = [
   // Top row — flagship + grand-prize wins.
-  { name: "Berkeley AI Hackathon", year: 2024, project: "DispatchAI", prize: "Grand Prize · $25k" },
+  { name: "Berkeley AI Hackathon", year: 2024, project: "DispatchAI", prize: "Grand Prize · $50k" },
   { name: "HackUTD", year: 2024, project: "TalkTuahBank", prize: "Grand Prize + Goldman Sachs" },
   { name: "HackDavis", year: 2025, project: "SentinelAI", prize: "Best AI/ML Hack" },
   { name: "VTHacks", year: 2024, project: "linguify", prize: "Best Startup Hack" },
