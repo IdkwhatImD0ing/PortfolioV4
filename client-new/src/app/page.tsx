@@ -6,10 +6,8 @@ import { VoiceOrb } from "@/components/voice-orb";
 import { HeroSection } from "@/components/sections/hero";
 import { AboutSection } from "@/components/sections/about";
 import { ProjectsSection } from "@/components/sections/projects";
-import {
-  HackathonsSection,
-  ExperienceSection,
-} from "@/components/sections/hackathons";
+import { HackathonsSection } from "@/components/sections/hackathons";
+import { ExperienceSection } from "@/components/sections/experience";
 import { EducationSection } from "@/components/sections/education";
 import { SkillsSection } from "@/components/sections/skills";
 import { ResumeSection } from "@/components/sections/resume";

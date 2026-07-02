@@ -1,0 +1,171 @@
+%-------------------------
+% Anonymized resume in Latex
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,10pt]{article}
+
+\input{glyphtounicode}
+\linespread{0.96}
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+\pagestyle{empty}
+
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.65in}
+\addtolength{\evensidemargin}{-0.65in}
+\addtolength{\textwidth}{1.3in}
+\addtolength{\topmargin}{-.9in}
+\addtolength{\textheight}{1.9in}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\renewcommand{\section}[1]{
+  \vspace{-7pt}{\scshape\raggedright\large #1}\par
+  \vspace{1pt}\hrule\vspace{-7pt}
+}
+
+% Ensure that generated PDF is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-3pt}}
+  }
+}
+
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-8pt}
+
+}
+
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-6pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{list}{}{\setlength{\leftmargin}{0.15in}\setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}\setlength{\topsep}{0pt}\setlength{\partopsep}{0pt}}}
+\newcommand{\resumeSubHeadingListEnd}{\end{list}}
+\newcommand{\resumeItemListStart}{\begin{list}{$\bullet$}{\setlength{\leftmargin}{0.22in}\setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}\setlength{\topsep}{0pt}\setlength{\partopsep}{0pt}}}
+\newcommand{\resumeItemListEnd}{\end{list}\vspace{-8pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\fontsize{9}{9.8}\selectfont
+
+%----------HEADING----------
+\begin{center}
+    {\LARGE\bfseries AI Engineer} \\ \vspace{1pt}
+    \small U.S.-based $|$ contact available on request $|$
+    public links intentionally omitted for anonymized review
+\end{center}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Private Research University}{August 2023 -- May 2025}
+      {Master of Science in Computer Science -- Artificial Intelligence}{California}
+    \resumeSubheading
+      {Public Research University}{September 2020 -- March 2023}
+      {Bachelor of Science in Computer Science}{California}
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Applied AI Engineer}{June 2025 -- Present}
+      {Enterprise AI Platform Company}{California}
+      \resumeItemListStart
+          \resumeItem{Led agent design for a production knowledge assistant on a \textbf{3-person team}; built the agent loop, tool use, prompt hillclimbing, and evals for RAG search, summarization, and multilingual translation across a large archival corpus.}
+          \resumeItem{Added production guardrails including input filtering, refusal logic, and prompt-injection defenses; raised adversarial prompt blocking from roughly \textbf{30\%} to \textbf{95\%}.}
+          \resumeItem{Designed a domain-specific workflow agent on a \textbf{3-person team}; built multi-agent routing, structured tool schemas, and prompt/tool hillclimbing that improved task accuracy from roughly \textbf{30\%} to \textbf{90\%}.}
+          \resumeItem{Built and ran agent evals with \textbf{300 golden traces} and judge-LLM rubrics to support high-volume weekly operations with roughly \textbf{90\%} audit accuracy and about \textbf{10\%} human review.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {AI Engineer}{August 2023 -- June 2025}
+      {Cloud Communications Company}{California}
+      \resumeItemListStart
+          \resumeItem{Built an LLM analytics and evaluation pipeline with OpenAI, Pandas, and GCP that expanded support-chat review coverage from \textbf{1--2\%} to \textbf{100\%}; cut processing time from \textbf{8 hours} to \textbf{1 hour}.}
+          \resumeItem{Improved automated assessment accuracy from roughly \textbf{90\%} to \textbf{95\%} and cut agent hand-offs from roughly \textbf{40\%} to \textbf{13\%} by adding rubric-based retrieval scoring and weekly monitoring dashboards.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {Software Engineer Intern}{June 2023 -- August 2023}
+      {Cloud Communications Company}{California}
+      \resumeItemListStart
+        \resumeItem{Shipped an LLM support chatbot with retrieval over embedded documentation and conversation history, improving first-contact resolution from roughly \textbf{5\%} to \textbf{50\%}.}
+        \resumeItem{Won \textbf{1st place} in an internal hackathon by building a webinar networking and contact-card product; secured executive and PM adoption buy-in through stakeholder demos.}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+%-----------PROJECTS-----------
+\section{Projects}
+    \resumeSubHeadingListStart
+      \resumeProjectHeading
+          {\textbf{Campus Transit Tracker} $|$ \emph{React, Material UI, ExpressJS, C, Azure}}{March 2023 -- Present}
+          \resumeItemListStart
+            \resumeItem{Served \textbf{20,000+ users} by shipping a real-time campus bus tracking web app with a React frontend, ExpressJS APIs, and Azure deployment.}
+            \resumeItem{Placed \textbf{Global Top 10} in a major student software competition out of \textbf{2,000+ projects}.}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Emergency Response Voice Agent} $|$ \emph{NextJS, FastAPI, Twilio, RetellAI, Hume}}{June 2024 -- Present}
+          \resumeItemListStart
+            \resumeItem{Built and demoed a low-latency voice agent for emergency call intake and escalation, including intent routing and structured handoff to responders.}
+            \resumeItem{Won a \textbf{grand prize} at a large university AI hackathon by integrating voice AI, emotion recognition, and a real-time inference pipeline with a fine-tuned open model.}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Phone-Based Banking Assistant} $|$ \emph{NextJS, OpenAI, RetellAI}}{November 2024}
+          \resumeItemListStart
+            \resumeItem{Won \textbf{1st overall} at a large collegiate hackathon by building a phone-based AI banking assistant with multi-agent routing and real-time account workflows.}
+          \resumeItemListEnd
+    \resumeSubHeadingListEnd
+
+%-----------TECHNICAL SKILLS-----------
+\section{Technical Skills}
+ \begin{list}{}{\setlength{\leftmargin}{0.15in}\setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}\setlength{\topsep}{0pt}\setlength{\partopsep}{0pt}}
+    \item\small{
+     \textbf{Languages}{: Python, JavaScript, TypeScript, C/C++, Java, HTML, CSS, Dart} \\
+     \textbf{Machine Learning}{: PyTorch, TensorFlow, Keras, NumPy, Pandas, Scikit Learn, Matplotlib, OpenCV} \\
+     \textbf{WebDev/Cloud}{: React, NextJS, Vue, Angular, Flask, FastAPI, ExpressJS, Azure, GCP, AWS, PostgreSQL, GraphQL} \\
+     \textbf{Tools and Libraries}{: OpenAI, LangChain, LlamaIndex, Git, Docker, Firebase, Supabase, MongoDB}
+    }
+ \end{list}
+
+
+%-------------------------------------------
+\end{document}

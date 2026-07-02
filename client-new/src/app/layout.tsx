@@ -27,6 +27,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://art3m1s.me"),
+  manifest: "/manifest.json",
   title: "Bill Zhang | Voice-Driven Portfolio v2026",
   description:
     "Bill Zhang is an Applied AI Engineer at Scale AI building voice-first and multi-agent systems. Talk to this portfolio.",
@@ -83,6 +84,10 @@ export default function RootLayout({
               "@type": "Person",
               name: "Bill Zhang",
               jobTitle: "Applied AI Engineer",
+              worksFor: {
+                "@type": "Organization",
+                name: "Scale AI",
+              },
               alumniOf: [
                 {
                   "@type": "EducationalOrganization",

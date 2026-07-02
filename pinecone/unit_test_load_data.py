@@ -1,6 +1,7 @@
+import asyncio
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # Mock missing modules before importing load_data
 mock_pinecone = MagicMock()
@@ -36,8 +37,8 @@ class TestLoadData(unittest.TestCase):
         # Mock embeddings
         dummy_embeddings = [[0.1] * 3072, [0.2] * 3072]
 
-        with patch('load_data.get_embeddings', return_value=dummy_embeddings) as mock_get_embeddings:
-            vectors = load_data.prepare_vectors(data)
+        with patch('load_data.get_embeddings', new_callable=AsyncMock, return_value=dummy_embeddings) as mock_get_embeddings:
+            vectors = asyncio.run(load_data.prepare_vectors(data))
 
             # Check calls
             mock_get_embeddings.assert_called_once()
@@ -66,8 +67,8 @@ class TestLoadData(unittest.TestCase):
         # get_embedding should call get_embeddings with a single-item list
         dummy_embedding = [0.1] * 3072
 
-        with patch('load_data.get_embeddings', return_value=[dummy_embedding]) as mock_get_embeddings:
-            result = load_data.get_embedding("test text")
+        with patch('load_data.get_embeddings', new_callable=AsyncMock, return_value=[dummy_embedding]) as mock_get_embeddings:
+            result = asyncio.run(load_data.get_embedding("test text"))
 
             mock_get_embeddings.assert_called_once_with(["test text"])
             self.assertEqual(result, dummy_embedding)
