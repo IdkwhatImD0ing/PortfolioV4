@@ -3,7 +3,14 @@
 import { useEffect, useRef } from "react";
 
 /** Keep a ref pointing at the latest callback so the subscribe effect can run
- *  once on mount instead of re-binding every render. */
+ *  once on mount instead of re-binding every render.
+ *
+ *  Caveat for future call sites: the ref is refreshed in an effect, so between
+ *  a render and that effect flushing, a fired event still runs the *previous*
+ *  render's callback. Every handler here reads live DOM/window state or closes
+ *  over refs and module constants, so one render of staleness is invisible. A
+ *  handler that closed over changing props or state would need those read from
+ *  a ref instead. */
 function useLatest<T>(value: T) {
   const ref = useRef(value);
   useEffect(() => {
