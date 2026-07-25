@@ -1,5 +1,5 @@
-"use client";
-
+// Server component on purpose: this section is fully static, so none of its
+// markup — or the syntax highlighter below — needs to ship to the browser.
 import { cn } from "@/lib/utils";
 import { highlightJs } from "@/lib/highlight";
 
@@ -66,8 +66,13 @@ agent.onToolCall("filter_projects", ({ tag }) =>
   VoiceBus.emit({ type: "filter", tag })
 );`;
 
+// The snippet is a constant, so tokenize it once at module load rather than on
+// every render.
+const SNIPPET_TOKENS = highlightJs(SNIPPET);
+
+const total = FLOW.length;
+
 export function ArchitectureSection() {
-  const total = FLOW.length;
   return (
     <section
       id="architecture"
@@ -149,7 +154,7 @@ export function ArchitectureSection() {
           </div>
           <pre className="font-mono text-[12.5px] leading-[1.75] text-ink p-[26px] border border-line rounded-xl bg-[#08070f] bg-[linear-gradient(180deg,rgba(126,109,253,0.05),rgba(232,67,147,0.04)),#08070f] overflow-auto whitespace-pre">
             <code>
-              {highlightJs(SNIPPET).map((t, i) => (
+              {SNIPPET_TOKENS.map((t, i) => (
                 <span key={i} className={t.cls || undefined}>
                   {t.text}
                 </span>

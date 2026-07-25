@@ -2,35 +2,33 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function useInView<T extends Element = Element>(
-  threshold = 0.18,
-): [React.RefObject<T | null>, boolean] {
+/** One-shot "has this scrolled into view yet" flag, driving the fade-and-rise
+ *  reveal on section headers and cards. Disconnects on the first intersection
+ *  — reveals never play twice. */
+export function useReveal<T extends HTMLElement = HTMLElement>(): {
+  ref: React.RefObject<T | null>;
+  revealed: boolean;
+} {
   const ref = useRef<T | null>(null);
-  const [seen, setSeen] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setSeen(true);
+          setRevealed(true);
           io.disconnect();
         }
       },
-      { threshold },
+      { threshold: 0.15 },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [threshold]);
-  return [ref, seen];
-}
+  }, []);
 
-export function useReveal<T extends HTMLElement = HTMLElement>(): {
-  ref: React.RefObject<T | null>;
-  revealed: boolean;
-} {
-  const [ref, seen] = useInView<T>(0.15);
-  return { ref, revealed: seen };
+  return { ref, revealed };
 }
 
 export const REVEAL_BASE =

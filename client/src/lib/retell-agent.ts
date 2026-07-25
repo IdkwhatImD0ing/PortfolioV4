@@ -17,17 +17,17 @@
  */
 
 /** Dev backend base URL, probed at `/ping`. Defaults to the Makefile tunnel. */
-export const DEV_API_URL =
+const DEV_API_URL =
   process.env.NEXT_PUBLIC_DEV_API_URL ?? "https://conversational.ngrok.app";
 
 /** Production Retell agent (public id, safe to ship). Env wins; the literal is
  *  a fallback so prod works even if the env var is missing. */
-export const PROD_AGENT_ID =
+const PROD_AGENT_ID =
   process.env.NEXT_PUBLIC_RETELL_AGENT_ID ?? "agent_c5ae64152c9091e17243c9bdfc";
 
 /** Dev Retell agent wired to the local backend. Unset → no dev agent, always
  *  prod. */
-export const DEV_AGENT_ID = process.env.NEXT_PUBLIC_RETELL_AGENT_ID_DEV;
+const DEV_AGENT_ID = process.env.NEXT_PUBLIC_RETELL_AGENT_ID_DEV;
 
 /**
  * Pure decision: which agent id to dial given the inputs. No side effects, so
@@ -50,7 +50,7 @@ export function chooseAgentId(opts: {
  * answers ok (see module note on why a dormant ngrok tunnel reads as false).
  * Never throws — times out to false after `timeoutMs`.
  */
-export async function isDevBackendUp(timeoutMs = 1200): Promise<boolean> {
+async function isDevBackendUp(timeoutMs = 1200): Promise<boolean> {
   if (typeof fetch === "undefined") return false;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

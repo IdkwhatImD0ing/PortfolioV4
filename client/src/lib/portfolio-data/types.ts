@@ -1,5 +1,3 @@
-export type ProjectAccent = "violet" | "magenta";
-
 export interface Project {
   id: string;
   /** Extra IDs the project can be addressed by — e.g. the Pinecone / Devpost slug
@@ -10,7 +8,6 @@ export interface Project {
   summary: string;
   tags: string[];
   award?: string;
-  accent: ProjectAccent;
   github?: string;
   demo?: string;
   videoUrl?: string;

@@ -11,12 +11,8 @@ import {
 import { mergeTranscript, type TranscriptEntry } from "@/lib/transcript";
 import { resolveAgentId } from "@/lib/retell-agent";
 import { cn } from "@/lib/utils";
+import type { RetellAIResponse } from "@/types/api";
 import { SHORTCUTS, cmdBtn } from "./shortcuts";
-
-interface RegisterCallResponse {
-  access_token: string;
-  call_id: string;
-}
 
 export function VoiceOrb() {
   const [open, setOpen] = useState(false);
@@ -30,6 +26,7 @@ export function VoiceOrb() {
   const retellRef = useRef<RetellWebClientType | null>(null);
   const listenersBoundRef = useRef(false);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
+  const shortcutTimerRef = useRef(0);
 
   // Auto-scroll transcript to bottom on new turn or while pulsing.
   useEffect(() => {
@@ -40,7 +37,8 @@ export function VoiceOrb() {
   const fireShortcut = useCallback((item: (typeof SHORTCUTS)[number]) => {
     setFullTranscript((prev) => [...prev, { role: "user", content: item.you }]);
     setPulsing(true);
-    window.setTimeout(() => {
+    window.clearTimeout(shortcutTimerRef.current);
+    shortcutTimerRef.current = window.setTimeout(() => {
       setFullTranscript((prev) => [...prev, { role: "agent", content: item.ai }]);
       VoiceBus.emit(item.cmd);
       if (item.cmd.type === "scroll") scrollToSection(item.cmd.id);
@@ -119,7 +117,7 @@ export function VoiceOrb() {
       if (!response.ok) {
         throw new Error(`Server error (${response.status})`);
       }
-      const data = (await response.json()) as RegisterCallResponse;
+      const data = (await response.json()) as RetellAIResponse;
       if (!data.access_token) throw new Error("No access token");
 
       await retellRef.current.startCall({ accessToken: data.access_token });
@@ -135,13 +133,15 @@ export function VoiceOrb() {
     retellRef.current?.stopCall();
   }, []);
 
+  // Unmount-only teardown. Keying this on `isCalling` made the cleanup fire
+  // every time the flag flipped, so ending a call ran stopCall() a second time
+  // on an already-closed client.
   useEffect(() => {
     return () => {
-      if (retellRef.current && isCalling) {
-        retellRef.current.stopCall();
-      }
+      window.clearTimeout(shortcutTimerRef.current);
+      retellRef.current?.stopCall();
     };
-  }, [isCalling]);
+  }, []);
 
   const orbStatus = isCalling
     ? isAgentTalking

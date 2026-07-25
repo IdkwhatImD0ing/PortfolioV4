@@ -7,20 +7,39 @@ export function CustomCursor() {
   const ringRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Touch viewports never show the custom cursor (the dot/ring are hidden
+    // below 900px), so don't subscribe at all there.
     if (window.matchMedia("(max-width: 900px)").matches) return;
 
-    const syncCursor = (e: PointerEvent) => {
+    let raf = 0;
+    let pending: PointerEvent | null = null;
+    let hovering: boolean | null = null;
+
+    // High-polling-rate mice fire pointermove far faster than the screen
+    // refreshes; coalescing to one frame keeps the `closest()` tree walk and
+    // the style writes to once per paint.
+    const paint = () => {
+      raf = 0;
+      const e = pending;
+      if (!e) return;
+
       const transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
       if (dotRef.current) dotRef.current.style.transform = transform;
       if (ringRef.current) ringRef.current.style.transform = transform;
 
-      const t = e.target as Element | null;
-      const hov =
-        t?.closest?.(
-          "a, button, [data-cursor-hover]",
-        ) ?? null;
-      dotRef.current?.setAttribute("data-hover", hov ? "true" : "false");
-      ringRef.current?.setAttribute("data-hover", hov ? "true" : "false");
+      const target = e.target as Element | null;
+      const hov = Boolean(target?.closest?.("a, button, [data-cursor-hover]"));
+      if (hov !== hovering) {
+        hovering = hov;
+        const value = hov ? "true" : "false";
+        dotRef.current?.setAttribute("data-hover", value);
+        ringRef.current?.setAttribute("data-hover", value);
+      }
+    };
+
+    const syncCursor = (e: PointerEvent) => {
+      pending = e;
+      if (!raf) raf = requestAnimationFrame(paint);
     };
 
     const hideCursor = () => {
@@ -33,6 +52,7 @@ export function CustomCursor() {
     window.addEventListener("pointerleave", hideCursor);
 
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", syncCursor);
       window.removeEventListener("pointerleave", hideCursor);
     };

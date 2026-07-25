@@ -23,7 +23,6 @@ function mapPineconeToProject(entry: PineconeEntry): Project {
     // surfaced by the agent but not displayed on the projects rail.
     year: 0,
     tags: [],
-    accent: "violet",
   };
 }
 

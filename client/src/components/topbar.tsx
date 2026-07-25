@@ -3,23 +3,27 @@
 import { useEffect, useState } from "react";
 
 export function Topbar() {
-  const [now, setNow] = useState<Date | null>(null);
+  // Starts as a placeholder so the server render and the first client render
+  // agree; the real clock lands after mount.
+  const [time, setTime] = useState("--:--");
 
   useEffect(() => {
+    // Format straight in the target zone. Round-tripping through
+    // `new Date(date.toLocaleString(...))` re-parses a localized string, which
+    // is engine- and locale-dependent and can yield an Invalid Date.
     const update = () =>
-      setNow(
-        new Date(
-          new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }),
-        ),
+      setTime(
+        new Date().toLocaleTimeString("en-US", {
+          timeZone: "America/Los_Angeles",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
       );
     update();
     const t = setInterval(update, 30000);
     return () => clearInterval(t);
   }, []);
-
-  const time = now
-    ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
-    : "--:--";
 
   const pillBase =
     "px-3 py-1.5 rounded-full border border-line bg-[rgba(15,12,28,0.6)] backdrop-blur-md inline-flex items-center gap-2 whitespace-nowrap";

@@ -56,7 +56,7 @@ export const PAGE_TO_SECTION: Record<NonNullable<NavigationMeta["page"]>, string
   architecture: "architecture",
 };
 
-export interface NavigationAction {
+interface NavigationAction {
   command: VoiceCommand;
   scrollTo: string;
 }

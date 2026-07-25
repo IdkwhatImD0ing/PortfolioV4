@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PROJECTS, findProject, type Project } from "@/lib/portfolio-data";
 import { loadFallbackProject } from "@/lib/project-fallback";
 import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
@@ -10,6 +10,12 @@ import { PROJECT_HASH_PREFIX, STANDOUT_PROJECT_IDS } from "./constants";
 import { FilterBar } from "./filter-bar";
 import { ProjectCard } from "./project-card";
 import { ProjectDetail } from "./project-detail";
+
+/** The unfiltered rail is a fixed hand-picked list, so resolve the ids to
+ *  projects once at module load rather than on every render. */
+const STANDOUT_PROJECTS: Project[] = STANDOUT_PROJECT_IDS.map((id) =>
+  PROJECTS.find((p) => p.id === id),
+).filter((p): p is Project => Boolean(p));
 
 export function ProjectsSection() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -197,18 +203,21 @@ export function ProjectsSection() {
 
   const open = openProject;
   const isCuratedRail = filter === "all" && !year && !focusId;
-  const isMatch = (p: Project) => {
-    if (focusId) return p.id === focusId;
-    if (year && p.year !== year) return false;
-    if (filter === "all") return true;
-    return p.tags.includes(filter);
-  };
-  const standoutProjects = STANDOUT_PROJECT_IDS.map((id) =>
-    PROJECTS.find((p) => p.id === id),
-  ).filter((p): p is Project => Boolean(p));
-  const railProjects = isCuratedRail
-    ? standoutProjects
-    : PROJECTS.filter(isMatch);
+  const isMatch = useCallback(
+    (p: Project) => {
+      if (focusId) return p.id === focusId;
+      if (year && p.year !== year) return false;
+      if (filter === "all") return true;
+      return p.tags.includes(filter);
+    },
+    [focusId, year, filter],
+  );
+  // Re-scan PROJECTS only when the filter actually changes — this component
+  // also re-renders on every frame of a mobile carousel swipe.
+  const railProjects = useMemo(
+    () => (isCuratedRail ? STANDOUT_PROJECTS : PROJECTS.filter(isMatch)),
+    [isCuratedRail, isMatch],
+  );
   const railHeight = `${Math.max(220, railProjects.length * 26)}vh`;
 
   useEffect(() => {
@@ -236,6 +245,7 @@ export function ProjectsSection() {
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
@@ -250,18 +260,20 @@ export function ProjectsSection() {
       const center = el.scrollLeft + el.clientWidth / 2;
       let best = 0;
       let bestDist = Infinity;
-      Array.from(el.children).forEach((c, i) => {
-        const card = c as HTMLElement;
-        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-        const d = Math.abs(cardCenter - center);
+      const cards = el.children;
+      for (let i = 0; i < cards.length; i++) {
+        const card = cards[i] as HTMLElement;
+        const d = Math.abs(card.offsetLeft + card.offsetWidth / 2 - center);
         if (d < bestDist) {
           bestDist = d;
           best = i;
         }
-      });
+      }
       setActiveCard(best);
     });
   };
+
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
   const scrollToCard = (i: number) => {
     const el = carouselRef.current;
