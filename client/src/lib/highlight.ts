@@ -3,7 +3,7 @@
  * enough rules to color this site's example on-theme. Tokens carry Tailwind
  * classes built from the site palette (see globals.css). */
 
-export interface CodeToken {
+interface CodeToken {
   text: string;
   /** Tailwind text-color classes; empty string = inherit the <pre> color. */
   cls: string;

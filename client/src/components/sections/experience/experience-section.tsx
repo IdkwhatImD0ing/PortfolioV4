@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { EXPERIENCE } from "@/lib/portfolio-data";
+import { useRafScroll } from "@/hooks/use-raf-listener";
 import { REVEAL_BASE, REVEAL_IN, useReveal } from "@/hooks/use-reveal";
 import { cn } from "@/lib/utils";
 import { ExperienceRow } from "./experience-row";
@@ -11,21 +12,17 @@ export function ExperienceSection() {
   const lineRef = useRef<HTMLDivElement>(null);
   const { ref, revealed } = useReveal<HTMLDivElement>();
 
-  useEffect(() => {
+  // Draw the timeline spine in as the section passes through the viewport.
+  useRafScroll(() => {
     const el = wrapRef.current;
     const line = lineRef.current;
     if (!el || !line) return;
-    const onScroll = () => {
-      const r = el.getBoundingClientRect();
-      const start = window.innerHeight * 0.7;
-      const end = -r.height + window.innerHeight * 0.3;
-      const p = Math.max(0, Math.min(1, (start - r.top) / Math.max(1, start - end)));
-      line.style.transform = `scaleY(${p})`;
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    const r = el.getBoundingClientRect();
+    const start = window.innerHeight * 0.7;
+    const end = -r.height + window.innerHeight * 0.3;
+    const p = Math.max(0, Math.min(1, (start - r.top) / Math.max(1, start - end)));
+    line.style.transform = `scaleY(${p})`;
+  });
 
   return (
     <section

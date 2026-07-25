@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useRafScroll, useRafWindowEvent } from "@/hooks/use-raf-listener";
 import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
 
 const HERO_CHIPS = [
@@ -18,25 +19,19 @@ export function HeroSection() {
   const glowB = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLHeadingElement>(null);
 
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const x = (e.clientX / window.innerWidth - 0.5) * 60;
-      const y = (e.clientY / window.innerHeight - 0.5) * 40;
-      if (glowA.current) glowA.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-      if (glowB.current) glowB.current.style.transform = `translate3d(${-x}px, ${-y}px, 0)`;
-    };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
+  // The two blurred glows drift opposite the pointer.
+  useRafWindowEvent<MouseEvent>("mousemove", (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 60;
+    const y = (e.clientY / window.innerHeight - 0.5) * 40;
+    if (glowA.current) glowA.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    if (glowB.current) glowB.current.style.transform = `translate3d(${-x}px, ${-y}px, 0)`;
+  });
 
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY * 0.18;
-      if (headRef.current) headRef.current.style.transform = `translate3d(0, ${y}px, 0)`;
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  // Headline parallax against the page scroll.
+  useRafScroll(() => {
+    const y = window.scrollY * 0.18;
+    if (headRef.current) headRef.current.style.transform = `translate3d(0, ${y}px, 0)`;
+  });
 
   const onChip = (chip: string) => {
     const lower = chip.toLowerCase();

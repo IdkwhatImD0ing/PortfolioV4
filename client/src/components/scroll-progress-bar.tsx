@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useRafScroll } from "@/hooks/use-raf-listener";
 
 export function ScrollProgressBar() {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onScroll = () => {
-      const h = document.documentElement;
-      const p = h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight);
-      if (ref.current) ref.current.style.transform = `scaleX(${p})`;
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+
+  useRafScroll(() => {
+    const h = document.documentElement;
+    const p = h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight);
+    if (ref.current) ref.current.style.transform = `scaleX(${p})`;
+  });
+
   return (
     <div
       ref={ref}

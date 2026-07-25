@@ -1,5 +1,4 @@
-"use client";
-
+// Server component on purpose: static markup, no hooks or handlers.
 import { PORTFOLIO } from "@/lib/portfolio-data";
 
 const STATS = [

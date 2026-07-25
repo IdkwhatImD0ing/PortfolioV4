@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { SKILLS_LINE } from "@/lib/portfolio-data";
+import { useRafScroll } from "@/hooks/use-raf-listener";
 import { cn } from "@/lib/utils";
 
 export function SkillsSection() {
@@ -9,20 +10,15 @@ export function SkillsSection() {
   const [active, setActive] = useState(0);
   const words = SKILLS_LINE;
 
-  useEffect(() => {
+  // Light up the sentence word by word as the sticky block scrolls past.
+  useRafScroll(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const onScroll = () => {
-      const r = el.getBoundingClientRect();
-      const dist = el.offsetHeight - window.innerHeight;
-      const p = Math.max(0, Math.min(1, -r.top / Math.max(1, dist)));
-      const n = Math.round(p * (words.length - 1));
-      setActive(n);
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [words.length]);
+    const r = el.getBoundingClientRect();
+    const dist = el.offsetHeight - window.innerHeight;
+    const p = Math.max(0, Math.min(1, -r.top / Math.max(1, dist)));
+    setActive(Math.round(p * (words.length - 1)));
+  });
 
   return (
     <section

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 /** Subscribe to a CSS media query. SSR-safe: always returns `false` on the
  *  server and the first client render (so markup matches), then updates to the
  *  real match after mount. */
-export function useMediaQuery(query: string): boolean {
+function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
   useEffect(() => {
     const mql = window.matchMedia(query);

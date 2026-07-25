@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import Image from "next/image";
 import { PERSONAL_FACTS } from "@/lib/portfolio-data";
+import { useRafScroll } from "@/hooks/use-raf-listener";
 import { REVEAL_BASE, REVEAL_IN, useReveal } from "@/hooks/use-reveal";
 import { cn } from "@/lib/utils";
 import { FactItem } from "./fact-item";
@@ -19,33 +20,28 @@ export function PersonalSection() {
   const portRef = useRef<HTMLDivElement>(null);
   const { ref, revealed } = useReveal<HTMLDivElement>();
 
-  useEffect(() => {
-    const onScroll = () => {
-      // Parallax is driven by the section's position in the viewport, not the
-      // absolute page scroll — otherwise a section this far down the page gets
-      // a huge constant offset that pushes the decor watermarks off-screen.
-      const section = sectionRef.current;
-      if (section) {
-        const rect = section.getBoundingClientRect();
-        const mid = rect.top + rect.height / 2;
-        // -1 → section centered a viewport below; +1 → a viewport above.
-        const p = Math.max(-1, Math.min(1, (window.innerHeight / 2 - mid) / window.innerHeight));
-        if (refL1.current) refL1.current.style.transform = `translate3d(${-p * 90}px, 0, 0)`;
-        if (refL2.current) refL2.current.style.transform = `translate3d(${p * 70}px, 0, 0)`;
-        if (refL3.current) refL3.current.style.transform = `translate3d(${-p * 36}px, 0, 0)`;
+  useRafScroll(() => {
+    // Parallax is driven by the section's position in the viewport, not the
+    // absolute page scroll — otherwise a section this far down the page gets
+    // a huge constant offset that pushes the decor watermarks off-screen.
+    const section = sectionRef.current;
+    if (section) {
+      const rect = section.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      // -1 → section centered a viewport below; +1 → a viewport above.
+      const p = Math.max(-1, Math.min(1, (window.innerHeight / 2 - mid) / window.innerHeight));
+      if (refL1.current) refL1.current.style.transform = `translate3d(${-p * 90}px, 0, 0)`;
+      if (refL2.current) refL2.current.style.transform = `translate3d(${p * 70}px, 0, 0)`;
+      if (refL3.current) refL3.current.style.transform = `translate3d(${-p * 36}px, 0, 0)`;
+    }
+    if (portRef.current) {
+      const rect = portRef.current.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        const center = rect.top + rect.height / 2 - window.innerHeight / 2;
+        portRef.current.style.transform = `translate3d(0, ${center * -0.06}px, 0)`;
       }
-      if (portRef.current) {
-        const rect = portRef.current.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
-          const center = rect.top + rect.height / 2 - window.innerHeight / 2;
-          portRef.current.style.transform = `translate3d(0, ${center * -0.06}px, 0)`;
-        }
-      }
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    }
+  });
 
   return (
     <section
