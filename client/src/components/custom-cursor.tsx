@@ -43,6 +43,13 @@ export function CustomCursor() {
     };
 
     const hideCursor = () => {
+      // Drop any frame still queued from the last pointermove. Without this it
+      // fires after we've parked the cursor and puts it right back on screen,
+      // leaving a ghost at the edge for as long as the pointer is outside.
+      cancelAnimationFrame(raf);
+      raf = 0;
+      pending = null;
+
       const transform = "translate3d(-100px, -100px, 0) translate(-50%, -50%)";
       if (dotRef.current) dotRef.current.style.transform = transform;
       if (ringRef.current) ringRef.current.style.transform = transform;

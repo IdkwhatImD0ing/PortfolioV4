@@ -78,8 +78,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Return the response from RetellAI
-        return NextResponse.json(data, {
+        // Return the response from RetellAI. `data` is null when a 2xx carried
+        // an empty or non-JSON body; send `{}` so the browser reads a missing
+        // access_token rather than dereferencing null.
+        return NextResponse.json(data ?? {}, {
             status: 201,
             headers: jsonHeaders,
         });
