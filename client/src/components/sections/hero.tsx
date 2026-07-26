@@ -3,7 +3,9 @@
 // Aliased: the bare name would shadow the DOM MouseEvent that the mousemove
 // handler below is typed against.
 import { useRef, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect } from "react";
 import { useRafScroll, useRafWindowEvent } from "@/hooks/use-raf-listener";
+import { usePrefersReducedMotion } from "@/hooks/use-media-query";
 import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
 
 const HERO_CHIPS = [
@@ -21,8 +23,15 @@ export function HeroSection() {
   const glowB = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLHeadingElement>(null);
 
+  // Both effects below write transforms from rAF, which the reduced-motion CSS
+  // block cannot reach — it only clamps animation and transition durations. A
+  // drifting glow and a parallaxing headline are exactly the vestibular
+  // triggers that setting exists to suppress, so gate them here.
+  const reduceMotion = usePrefersReducedMotion();
+
   // The two blurred glows drift opposite the pointer.
   useRafWindowEvent<MouseEvent>("mousemove", (e) => {
+    if (reduceMotion) return;
     const x = (e.clientX / window.innerWidth - 0.5) * 60;
     const y = (e.clientY / window.innerHeight - 0.5) * 40;
     if (glowA.current) glowA.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
@@ -31,9 +40,20 @@ export function HeroSection() {
 
   // Headline parallax against the page scroll.
   useRafScroll(() => {
+    if (reduceMotion) return;
     const y = window.scrollY * 0.18;
     if (headRef.current) headRef.current.style.transform = `translate3d(0, ${y}px, 0)`;
   });
+
+  // The hooks above only stop *updating* the transforms. useMediaQuery reports
+  // false until after mount, and the setting can be toggled mid-session, so
+  // clear whatever was already written.
+  useEffect(() => {
+    if (!reduceMotion) return;
+    for (const ref of [glowA, glowB, headRef]) {
+      if (ref.current) ref.current.style.transform = "";
+    }
+  }, [reduceMotion]);
 
   const onChip = (chip: string) => {
     const lower = chip.toLowerCase();

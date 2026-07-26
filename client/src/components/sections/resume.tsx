@@ -41,9 +41,14 @@ export function ResumeSection() {
         <div className="grid grid-cols-[1.5fr_1fr] gap-9 items-start max-[900px]:grid-cols-1">
           <div className="flex flex-col border border-line rounded-2xl overflow-hidden bg-[#0a0814] shadow-[0_30px_80px_rgba(168,85,247,0.15)]">
             <div className="aspect-[8.5/11] w-full bg-[#f5f3ee] max-[700px]:aspect-auto max-[700px]:h-[440px]">
+              {/* Lazy: this sits ~10,000px down the page, and eagerly fetching
+                  113 KB of PDF on every visit costs the mobile visitors who
+                  never scroll this far. Browsers without iframe lazy-loading
+                  simply fall back to eager. */}
               <iframe
                 src="/resume.pdf#toolbar=0&navpanes=0&view=FitH"
                 title="Bill Zhang Resume"
+                loading="lazy"
                 className="w-full h-full border-0"
               />
             </div>
