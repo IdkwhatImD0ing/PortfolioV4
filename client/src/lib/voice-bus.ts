@@ -27,7 +27,8 @@ export function scrollToSection(id: string): void {
   const el = document.getElementById(id);
   if (!el) return;
   const y = el.getBoundingClientRect().top + window.scrollY;
-  window.scrollTo({ top: y, behavior: "smooth" });
+  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: y, behavior: reduced ? "auto" : "smooth" });
 }
 
 /** Navigation metadata shape emitted by the server via Retell's metadata

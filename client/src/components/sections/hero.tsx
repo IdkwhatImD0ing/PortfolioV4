@@ -97,7 +97,36 @@ export function HeroSection() {
           scroll it, drag it around. It&apos;ll rearrange.
         </p>
 
-        <div className="mt-9 flex flex-wrap gap-2.5">
+        {/* Resume shortcut. Plain anchors on purpose — `html` already has
+            `scroll-behavior: smooth`, so the hash jump is smooth without JS,
+            keeps #resume shareable, and works before hydration. The chips
+            below need scrollToSection because they also emit VoiceBus
+            commands; these don't. */}
+        <div className="mt-8 flex flex-wrap items-center gap-3 max-[700px]:mt-6 max-[700px]:gap-2.5">
+          <a
+            href="#resume"
+            data-cursor-hover
+            className="inline-flex items-center gap-2.5 px-[22px] py-3 rounded-full text-[14px] font-medium text-white bg-[image:var(--grad)] border border-transparent shadow-[0_10px_30px_rgba(162,89,255,0.4)] transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent max-[700px]:px-[18px] max-[700px]:py-2.5 max-[700px]:text-[13.5px]"
+          >
+            <span
+              aria-hidden
+              className="inline-grid place-items-center w-5 h-5 rounded-full bg-white/20 font-mono text-[11px]"
+            >
+              ↓
+            </span>
+            View resume
+          </a>
+          <a
+            href="/resume.pdf"
+            download="Bill-Zhang-Resume.pdf"
+            data-cursor-hover
+            className="inline-flex items-center gap-2 px-[18px] py-3 rounded-full text-[14px] text-ink-soft border border-line bg-white/[0.02] transition-all duration-200 hover:bg-[rgba(168,85,247,0.1)] hover:border-violet hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent max-[700px]:px-[15px] max-[700px]:py-2.5 max-[700px]:text-[13.5px]"
+          >
+            Download PDF
+          </a>
+        </div>
+
+        <div className="mt-7 flex flex-wrap gap-2.5 max-[700px]:mt-6">
           {HERO_CHIPS.map((c) => (
             <button
               key={c}

@@ -212,4 +212,10 @@
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+  /* The base layer opts the whole document into smooth scrolling, which the
+     rules above don't cover — anchor jumps like the hero's #resume link would
+     still animate. */
+  html {
+    scroll-behavior: auto;
+  }
 }
