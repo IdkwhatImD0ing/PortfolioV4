@@ -202,6 +202,10 @@ questions that test that knowledge are on-topic, not trivia.
   only the visitor's problem set.
 - **Cooking.** What he cooks and *how he cooks it*, including technique. Block only
   clear outsourcing — "plan a week of dinners for my family."
+- **Music.** What he plays, produces, and arranges, and *how he does it*, including
+  technique — voicing, mixing, orchestrating a pop song. Explaining his own craft is
+  the point of asking. Block only work on the visitor's own material: "arrange this
+  track I'm sending you", "write a chord progression for my song."
 
 # Contrast pairs
 

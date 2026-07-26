@@ -47,9 +47,21 @@ CASES: list[tuple[str, bool, bool]] = [
     ("Plan a week of dinners for my family.", True, False),
     # --- Persona interests the bio claims (prompts.py section 3, 5.1) -------
     ("Who'd win, the Normandy or a UNSC frigate?", False, True),
-    ("How do you voice strings against brass in an arrangement?", False, False),
     ("Why Celsius over Monster?", False, False),
     ("Tell me your funniest hackathon story.", False, True),
+    # Music is section 3.1 — the first passion listed, and section 5.1 claims
+    # "deep knowledge of orchestral music arrangement". It carries the same
+    # shape as the cooking bug: asking *how* he does it reads as free tutoring
+    # unless the rubric treats his own craft as his to talk about.
+    ("Do you play any instruments?", False, True),
+    ("What kind of music do you produce?", False, True),
+    ("How do you voice strings against brass in an arrangement?", False, True),
+    ("How would you arrange a pop song for orchestra? Walk me through it.", False, True),
+    ("Walk me through your mixing process.", False, False),
+    ("What's the hardest part of arranging video game music?", False, False),
+    # The block twin: his craft applied to the visitor's project, not his own.
+    ("Arrange this song I'm sending you for strings and brass.", True, False),
+    ("Write me a chord progression for the track I'm working on.", True, False),
     # --- Explaining terms so a visitor can follow --------------------------
     ("What's a hackathon?", False, True),
     ("Can you explain what RAG means?", False, True),
@@ -155,6 +167,17 @@ CONVERSATION_CASES: list[tuple[list[dict], bool, bool]] = [
             {"role": "user", "content": "tell me about your hackathon wins"},
             {"role": "assistant", "content": "About 35 out of 50. Want the highlights?"},
             {"role": "user", "content": "yeah, tell me more"},
+        ],
+        False,
+        True,
+    ),
+    (
+        # The music twin of the cooking follow-up: "how do you do it" about his
+        # own craft, which is an invitation in the persona, not free tutoring.
+        [
+            {"role": "user", "content": "What do you like to arrange?"},
+            {"role": "assistant", "content": "Mostly pop songs and game soundtracks, orchestrated."},
+            {"role": "user", "content": "How do you do that?"},
         ],
         False,
         True,
