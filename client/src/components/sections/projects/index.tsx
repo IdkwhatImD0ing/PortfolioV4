@@ -33,6 +33,15 @@ export function ProjectsSection() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
   const railFocusRaf = useRef(0);
+  const railFocusStop = useRef<(() => void) | null>(null);
+
+  /** Tear down a pending rail-focus correction: the frame loop and the
+   *  user-intent listeners that can abort it. */
+  const stopRailFocus = useCallback(() => {
+    cancelAnimationFrame(railFocusRaf.current);
+    railFocusStop.current?.();
+    railFocusStop.current = null;
+  }, []);
 
   const isMobile = useIsMobile();
 
@@ -157,6 +166,10 @@ export function ProjectsSection() {
   useEffect(
     () =>
       VoiceBus.on((cmd) => {
+        // Any agent-driven navigation supersedes a pending rail-focus
+        // correction; otherwise the watcher can yank a programmatic scroll back
+        // to whichever card still holds focus.
+        stopRailFocus();
         if (cmd.type === "filter") {
           if (cmd.tag) {
             setFilter(cmd.tag);
@@ -193,7 +206,7 @@ export function ProjectsSection() {
           setOpenId(null);
         }
       }),
-    [showTranscript],
+    [showTranscript, stopRailFocus],
   );
 
   // Keyed on the *resolved* project, not openId — an id that fails to resolve
@@ -280,8 +293,17 @@ export function ProjectsSection() {
    *  Only the desktop rail needs this — the mobile carousel is a real scroll
    *  container, where the browser's own scroll-into-view is already correct. */
   const onRailFocus = (e: ReactFocusEvent<HTMLDivElement>) => {
-    const card = (e.target as HTMLElement).closest<HTMLElement>("[data-project-card]");
+    const target = e.target as HTMLElement;
+    const card = target.closest<HTMLElement>("[data-project-card]");
     if (!card) return;
+    // Keyboard focus only. A pointer click also focuses the title button, and
+    // correcting then would scroll the page out from under the click — and the
+    // modal that click just opened. `:focus-visible` is exactly that
+    // distinction, so let the browser draw it.
+    if (!target.matches(":focus-visible")) return;
+    // Nothing behind an open modal should move; focus shouldn't be here at all
+    // while it's up, but a stray tab must not drag the background around.
+    if (openId) return;
 
     // Measured only once the page has stopped moving. The browser runs its own
     // scroll-into-view for the newly focused card, and globals.css sets
@@ -290,7 +312,22 @@ export function ProjectsSection() {
     // this rail sideways — bringing a below-the-fold card into view can push it
     // out of view horizontally. Measuring before it settles reads a position
     // the browser is still animating away from.
-    cancelAnimationFrame(railFocusRaf.current);
+    stopRailFocus();
+
+    // The watch is bounded by user intent rather than by a timer. A deadline
+    // short enough to avoid fighting a scroll the user started is also short
+    // enough to expire mid-animation on a long jump into the rail — that trade
+    // doesn't exist if the user's own scroll is what calls it off.
+    const abort = () => stopRailFocus();
+    for (const ev of ["wheel", "touchstart", "pointerdown"]) {
+      window.addEventListener(ev, abort, { passive: true });
+    }
+    railFocusStop.current = () => {
+      for (const ev of ["wheel", "touchstart", "pointerdown"]) {
+        window.removeEventListener(ev, abort);
+      }
+    };
+
     let frames = 0;
     let lastY = NaN;
     let stable = 0;
@@ -299,7 +336,7 @@ export function ProjectsSection() {
       const wrap = wrapRef.current;
       const sticky = stickyRef.current;
       const track = trackRef.current;
-      if (!wrap || !sticky || !track || !card.isConnected) return;
+      if (!wrap || !sticky || !track || !card.isConnected) return stopRailFocus();
 
       const y = window.scrollY;
       if (y === lastY) {
@@ -310,10 +347,13 @@ export function ProjectsSection() {
         lastY = y;
       }
 
-      // Two identical frames means nothing is animating *right now* — but the
-      // browser's scroll may not have started yet, which looks identical. So a
-      // still page only ends the watch once it has actually moved.
-      if (stable >= 2) {
+      // A run of identical frames means nothing is animating. It has to be a
+      // *run*: two frames is within the noise of a dropped frame mid-animation,
+      // and a false settle early in the scroll reads the card as still in view,
+      // right before the rail slides it out. And since a scroll that hasn't
+      // begun looks identical to one that has ended, a still page only ends the
+      // watch once it has actually moved.
+      if (stable >= 5) {
         // Undo any scroll the browser applied to the clipped sticky box, so the
         // measurement below reflects the rail transform alone.
         sticky.scrollLeft = 0;
@@ -321,13 +361,20 @@ export function ProjectsSection() {
 
         const margin = 32;
         const r = card.getBoundingClientRect();
+        // If the rail isn't on screen at all, the page has moved on since this
+        // focus (a voice command, a jump to another section) — leave it alone.
+        if (r.bottom < 0 || r.top > window.innerHeight) return stopRailFocus();
         // How far the card is outside the viewport: positive = off to the right.
-        const overflowX =
+        // The 1px deadband matters: at the end of the rail's travel a card can
+        // sit a fraction of a pixel past the margin, and a sub-pixel overflow
+        // would otherwise buy a scroll of several hundred pixels.
+        const raw =
           r.right > window.innerWidth - margin
             ? r.right - (window.innerWidth - margin)
             : r.left < margin
               ? r.left - margin
               : 0;
+        const overflowX = Math.abs(raw) > 1 ? raw : 0;
 
         if (overflowX) {
           // Solve for an absolute scroll position rather than nudging by a
@@ -338,7 +385,7 @@ export function ProjectsSection() {
           //   p = clamp((scrollY - wrapTop) / dist),  translate = -p * max
           const dist = wrap.offsetHeight - window.innerHeight;
           const max = Math.max(0, track.scrollWidth - window.innerWidth + 32);
-          if (dist <= 0 || max <= 0) return;
+          if (dist <= 0 || max <= 0) return stopRailFocus();
           const wrapTop = wrap.getBoundingClientRect().top + window.scrollY;
           const clamp = (v: number) => Math.max(0, Math.min(1, v));
           const translateNow = -clamp((window.scrollY - wrapTop) / dist) * max;
@@ -347,13 +394,16 @@ export function ProjectsSection() {
             top: wrapTop + pTarget * dist,
             behavior: prefersReducedMotion() ? "instant" : "smooth",
           });
-          return;
+          return stopRailFocus();
         }
-        if (moved) return; // settled after a real scroll with the card in view
+        // Settled after a real scroll with the card in view: nothing to do.
+        if (moved) return stopRailFocus();
       }
-      // ~750ms cap: long enough for the browser's smooth scroll-into-view,
-      // short enough not to outlive the focus that started it.
-      if (++frames < 45) railFocusRaf.current = requestAnimationFrame(step);
+      // Backstop only — `abort` above is what normally ends this. The cap has
+      // to clear a full-page smooth scroll into the rail, which can run past a
+      // second on a long jump.
+      if (++frames < 180) railFocusRaf.current = requestAnimationFrame(step);
+      else stopRailFocus();
     };
     railFocusRaf.current = requestAnimationFrame(step);
   };
@@ -383,9 +433,9 @@ export function ProjectsSection() {
   useEffect(
     () => () => {
       cancelAnimationFrame(rafRef.current);
-      cancelAnimationFrame(railFocusRaf.current);
+      stopRailFocus();
     },
-    [],
+    [stopRailFocus],
   );
 
   const scrollToCard = (i: number) => {

@@ -1,5 +1,10 @@
+"use client";
+
+import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { type Project } from "@/lib/portfolio-data";
 import { isImage, toEmbed } from "@/lib/video-embed";
+
+const FOCUSABLE = 'a[href], button, iframe, [tabindex]:not([tabindex="-1"])';
 
 export function ProjectDetail({
   project,
@@ -12,19 +17,57 @@ export function ProjectDetail({
   const demoLink = p.videoUrl ?? p.demo;
   const embed = toEmbed(demoLink);
   const img = !embed && isImage(p.demo) ? p.demo : null;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Move focus into the dialog, and put it back where it came from on close.
+  // Without this the cards stay focused behind the scrim: Tab walks them one by
+  // one — invisible under an 18px backdrop blur — before ever reaching Close.
+  useEffect(() => {
+    const opener = document.activeElement;
+    closeRef.current?.focus();
+    return () => {
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, []);
+
+  // Keep Tab inside the dialog while it's open.
+  const onKeyDown = (ev: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (ev.key !== "Tab") return;
+    const items = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
+    if (!items?.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    const inside = dialogRef.current?.contains(active) ?? false;
+    if (ev.shiftKey && (active === first || !inside)) {
+      ev.preventDefault();
+      last.focus();
+    } else if (!ev.shiftKey && (active === last || !inside)) {
+      ev.preventDefault();
+      first.focus();
+    }
+  };
 
   return (
     <div
       onClick={onClose}
+      onKeyDown={onKeyDown}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="project-detail-title"
       className="fixed inset-0 z-[200] bg-[rgba(4,3,12,0.78)] backdrop-blur-[18px] grid place-items-center p-8 animate-scrim-in"
     >
       <div
+        ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
         className="relative w-[min(1080px,100%)] max-h-[calc(100vh-64px)] bg-gradient-to-b from-[#14101e] to-[#0c0916] border border-line rounded-[22px] overflow-auto shadow-[0_40px_120px_rgba(168,85,247,0.18),0_0_0_1px_rgba(168,85,247,0.12)] animate-detail-in"
       >
         <button
           type="button"
+          ref={closeRef}
           onClick={onClose}
+          aria-label={`Close ${p.name} details`}
           data-cursor-hover
           className="sticky top-4 left-[calc(100%-56px)] z-[4] w-10 h-10 rounded-full bg-[rgba(15,12,28,0.85)] border border-line text-ink text-[22px] leading-none cursor-pointer grid place-items-center transition-[background-color,transform] duration-200 hover:bg-magenta hover:text-white hover:rotate-90"
         >
@@ -35,7 +78,7 @@ export function ProjectDetail({
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
             {p.award ? `★ ${p.award}` : p.year ? `Project · ${p.year}` : "Project"}
           </div>
-          <h3 className="font-serif text-[clamp(36px,4.4vw,56px)] -tracking-[0.02em] leading-[1.02] mt-3 mb-2 bg-gradient-to-br from-ink to-violet bg-clip-text text-transparent">
+          <h3 id="project-detail-title" className="font-serif text-[clamp(36px,4.4vw,56px)] -tracking-[0.02em] leading-[1.02] mt-3 mb-2 bg-gradient-to-br from-ink to-violet bg-clip-text text-transparent">
             {p.name}
           </h3>
           <p className="text-ink-soft text-[17px] leading-[1.5] max-w-[720px]">{p.summary}</p>

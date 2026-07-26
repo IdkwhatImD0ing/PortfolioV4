@@ -22,14 +22,16 @@ export function ProjectCard({
   className?: string;
 }) {
   return (
-    // The card's click target is the title button's stretched ::after overlay,
-    // not this element. A `role="button"` wrapper would have made the heading
-    // and summary presentational to assistive tech; a real <button> can't
-    // legally wrap them either (flow content). The overlay keeps the whole
-    // card clickable while leaving one properly-named button in the tab order.
+    // Pointer users click the card; keyboard users get the real <button> around
+    // the title below. A `role="button"` wrapper would have made the heading and
+    // summary presentational to assistive tech, and a real <button> can't wrap
+    // them either — they're flow content. Keeping the click on the <article>
+    // (rather than stretching the button over the card with an ::after overlay)
+    // leaves the summary and tags selectable, as they were before.
     <article
       data-cursor-hover
       data-project-card
+      onClick={() => onOpen(p.id)}
       className={cn(
         "group/card rounded-3xl bg-gradient-to-b from-card to-card-2 border border-line relative overflow-hidden flex flex-col cursor-pointer transition-[transform,opacity,filter] duration-[350ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
         "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
@@ -60,19 +62,23 @@ export function ProjectCard({
         <span className="absolute bottom-3 left-3.5 font-mono text-[11px] tracking-[0.14em] uppercase text-ink-soft bg-black/40 px-2 py-1 rounded backdrop-blur-sm z-[1]">
           /{p.id}
         </span>
-        <span className="absolute right-3.5 top-3.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-ink px-2.5 py-1 rounded-full bg-[rgba(168,85,247,0.22)] border border-[rgba(168,85,247,0.4)] opacity-0 -translate-y-1 transition-[opacity,transform] duration-[250ms] group-hover/card:opacity-100 group-hover/card:translate-y-0 z-[1]">
+        {/* focus-within as well as hover: this badge is the only thing that says
+            what activating the card does, and a keyboard user never hovers. */}
+        <span className="absolute right-3.5 top-3.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-ink px-2.5 py-1 rounded-full bg-[rgba(168,85,247,0.22)] border border-[rgba(168,85,247,0.4)] opacity-0 -translate-y-1 transition-[opacity,transform] duration-[250ms] group-hover/card:opacity-100 group-hover/card:translate-y-0 group-focus-within/card:opacity-100 group-focus-within/card:translate-y-0 z-[1]">
           ↗ deep dive
         </span>
       </div>
       <div className="px-6 pt-5 pb-6 flex flex-col gap-2.5 flex-1">
         <h4 className="text-[26px] -tracking-[0.02em] font-semibold m-0">
-          {/* ::after stretches over the whole card so a pointer anywhere on it
-              still opens the deep dive. z-[2] clears the badges in the poster,
-              which sit at z-[1]. The focus ring is drawn on the card instead. */}
+          {/* stopPropagation so a click here doesn't also fire the card's own
+              handler. The focus ring is drawn on the card, not on this button. */}
           <button
             type="button"
-            onClick={() => onOpen(p.id)}
-            className="text-left cursor-pointer focus-visible:outline-none after:content-[''] after:absolute after:inset-0 after:z-[2]"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(p.id);
+            }}
+            className="text-left cursor-pointer focus-visible:outline-none"
           >
             {p.name}
           </button>

@@ -1,20 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { EDUCATION } from "@/lib/portfolio-data";
 import { REVEAL_BASE, REVEAL_IN, useReveal } from "@/hooks/use-reveal";
 import { cn } from "@/lib/utils";
 
-/** The flip affordance itself, plus a stretched ::after that turns the rest of
- *  the face into the same hit target. The focus ring is drawn on the card. */
+/** The flip affordance. The card itself carries the pointer click; this is the
+ *  keyboard equivalent. The focus ring is drawn on the card. */
 const flipBtn =
-  "font-mono text-[10.5px] tracking-[0.14em] uppercase inline-flex items-center gap-1.5 cursor-pointer focus-visible:outline-none after:content-[''] after:absolute after:inset-0 after:z-[1]";
+  "font-mono text-[10.5px] tracking-[0.14em] uppercase inline-flex items-center gap-1.5 cursor-pointer focus-visible:outline-none";
 
 export function EducationSection() {
   const items = EDUCATION;
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
   const { ref, revealed } = useReveal<HTMLDivElement>();
+
+  // Flipping marks the face holding the just-activated button `inert`, and
+  // making an element inert blurs whatever inside it had focus — so without
+  // this, activating FLIP drops focus to <body> and the keyboard user falls out
+  // of the tab order after one flip. Hand focus to the face being revealed.
+  const faceBtns = useRef<Record<string, HTMLButtonElement | null>>({});
+  const pendingFocus = useRef<string | null>(null);
+  useEffect(() => {
+    const key = pendingFocus.current;
+    if (!key) return;
+    pendingFocus.current = null;
+    faceBtns.current[key]?.focus();
+  }, [flipped]);
+
+  const toggle = (i: number) => {
+    const next = !flipped[i];
+    pendingFocus.current = `${i}:${next ? "back" : "front"}`;
+    setFlipped((f) => ({ ...f, [i]: next }));
+  };
 
   return (
     <section
@@ -41,13 +60,14 @@ export function EducationSection() {
         style={{ perspective: "1400px" }}
       >
         {items.map((e, i) => (
-          // The click target is the FLIP / BACK button's stretched ::after, so
-          // the whole card stays clickable while the tab order gets one real,
-          // properly-named button per card. The face turned away is `inert`:
+          // Pointer users click the card, as before; the FLIP / BACK
+          // affordances are real buttons so the tab order gets one properly
+          // named entry per card. The face turned away is `inert` —
           // backface-visibility hides it visually but leaves it focusable.
           <div
             key={e.school}
             data-cursor-hover
+            onClick={() => toggle(i)}
             className={cn(
               "relative h-[460px] rounded-[22px] will-change-transform transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] [transform-style:preserve-3d] cursor-pointer",
               "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
@@ -79,7 +99,13 @@ export function EducationSection() {
               </div>
               <button
                 type="button"
-                onClick={() => setFlipped((f) => ({ ...f, [i]: !f[i] }))}
+                ref={(el) => {
+                  faceBtns.current[`${i}:front`] = el;
+                }}
+                onClick={(ev) => {
+                  ev.stopPropagation(); // the card handles the pointer click
+                  toggle(i);
+                }}
                 aria-label={`Flip to ${e.school} notes`}
                 className={cn(flipBtn, "text-muted")}
               >
@@ -100,7 +126,13 @@ export function EducationSection() {
               </div>
               <button
                 type="button"
-                onClick={() => setFlipped((f) => ({ ...f, [i]: !f[i] }))}
+                ref={(el) => {
+                  faceBtns.current[`${i}:back`] = el;
+                }}
+                onClick={(ev) => {
+                  ev.stopPropagation(); // the card handles the pointer click
+                  toggle(i);
+                }}
                 aria-label={`Back to ${e.school} overview`}
                 className={cn(flipBtn, "text-muted")}
               >
