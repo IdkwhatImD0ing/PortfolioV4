@@ -146,8 +146,9 @@ export function ProjectDetail({
           <div className="flex flex-col gap-[18px]">
             <div className="grid grid-cols-[60px_1fr] gap-x-3.5 gap-y-2.5 px-[18px] py-[18px] border border-line rounded-xl bg-[rgba(15,12,28,0.4)] text-[13.5px]">
               {/* Archived projects from the Pinecone corpus carry no year —
-                  drop the row rather than render an empty cell. */}
-              {p.year !== undefined && (
+                  drop the row rather than render an empty cell. Truthiness, to
+                  match the eyebrow above: a 0 is not a year worth printing. */}
+              {!!p.year && (
                 <>
                   <span className="font-mono text-[10.5px] tracking-[0.18em] uppercase text-muted self-center">
                     Year

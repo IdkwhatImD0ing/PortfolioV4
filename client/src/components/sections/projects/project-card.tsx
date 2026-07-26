@@ -98,7 +98,9 @@ export function ProjectCard({
               #{t}
             </span>
           ))}
-          {p.year !== undefined && (
+          {/* Truthiness, matching the detail modal: archived projects carry no
+              year, and a 0 is not a year worth printing either. */}
+          {!!p.year && (
             <span className="font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase ml-auto">
               {p.year}
             </span>
