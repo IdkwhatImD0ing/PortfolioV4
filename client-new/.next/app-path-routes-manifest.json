@@ -1,8 +1,0 @@
-{
-  "/api/create-web-call/route": "/api/create-web-call",
-  "/sitemap.xml/route": "/sitemap.xml",
-  "/_not-found/page": "/_not-found",
-  "/page": "/",
-  "/twitter-image/route": "/twitter-image",
-  "/opengraph-image/route": "/opengraph-image"
-}
