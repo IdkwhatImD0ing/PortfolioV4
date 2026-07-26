@@ -1,0 +1,8 @@
+{
+  "/api/create-web-call/route": "app/api/create-web-call/route.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/twitter-image/route": "app/twitter-image/route.js",
+  "/opengraph-image/route": "app/opengraph-image/route.js"
+}

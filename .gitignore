@@ -10,3 +10,7 @@ node_modules
 # Playwright MCP debug artifacts (screenshots, snapshots, console logs)
 .playwright-mcp/
 mobile-hero.png
+
+# Personal resume-tailoring skill + its generated outputs (never commit)
+.claude/skills/tailor-resume/
+client-new/tailored-resumes/
