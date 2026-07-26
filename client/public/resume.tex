@@ -101,7 +101,7 @@
 %----------HEADING----------
 \begin{center}
     {\Huge\bfseries Bill Zhang} \\ \vspace{1pt}
-    \small 408-585-8267 $|$ \href{mailto:jzhang71@usc.edu}{\underline{jzhang71@usc.edu}} $|$ 
+    \small 408-585-8267 $|$ \href{mailto:billzhangsc@gmail.com}{\underline{billzhangsc@gmail.com}} $|$
     \href{https://www.linkedin.com/in/bill-zhang1/}{\underline{in/bill-zhang1/}} $|$
     \href{https://github.com/IdkwhatImD0ing/}{\underline{github.com/IdkwhatImD0ing/}} $|$ 
     \href{https://billzhang.tech/}{\underline{billzhang.tech}}
@@ -123,13 +123,15 @@
   \resumeSubHeadingListStart
 
     \resumeSubheading
-      {Applied AI Engineer}{June 2025 -- Present}
+      {Applied AI Engineer (Forward-Deployed)}{June 2025 -- July 2026}
       {Scale AI}{San Francisco, CA}
       \resumeItemListStart
-          \resumeItem{Led agent design for the \textbf{TIME AI Agent} on a \textbf{3-person team} (frontend, backend, applied AI); built the agent loop, tool use, prompt hillclimbing, and evals for RAG search, summarization, and 13-language translation across TIME's 102-year archive at \textbf{$\sim$10 req/min}.}
-          \resumeItem{Added TIME production guardrails (input filtering, refusal logic, prompt-injection defenses) and raised adversarial prompt blocking \textbf{30\%\,$\rightarrow$\,95\%}.}
-          \resumeItem{Designed the medical claims agent on a \textbf{3-person team}; built multi-agent routing, structured tool schemas, and prompt/tool hillclimbing that improved accuracy \textbf{30\%\,$\rightarrow$\,90\%}.}
-          \resumeItem{Built and ran the medical agent evals (\textbf{300 golden traces} + judge-LLM rubric) to resolve \textbf{20,000+ claims/week} with \textbf{$\sim$90\%} audit accuracy and only \textbf{$\sim$10\% requiring human review}.}
+          \resumeItem{Shipped a production \textbf{multi-agent LLM system automating denied-claim investigations} for a PE-backed healthcare-claims company: an orchestrator routing \textbf{3 specialized sub-agents} across \textbf{20 denial-code policy workflows}, serving \textbf{300--500 weekly users} on up to \textbf{20K claims/week}.}
+          \resumeItem{Designed and owned the \textbf{LLM-as-judge evaluation framework} (3-dimension rubric + error-analysis loop) that raised QA-audit accuracy \textbf{64\%\,$\rightarrow$\,88\%}; quality results helped close a \textbf{seven-figure} contract expansion.}
+          \resumeItem{Owned evaluation, quality, and cost for an \textbf{LLM clinical decision-support agent at Mayo Clinic} (eight-figure account); built per-patient token/cost accounting and cut full validation-run cost \textbf{$\sim$4$\times$} (\$4.6K\,$\rightarrow$\,$\sim$\$1.2K), validating a \textbf{23$\times$-cheaper} critic model via A/B evals.}
+          \resumeItem{Root-caused a scoring-rubric artifact that was masking true agent quality at Mayo, recovering the evidence-grounding metric \textbf{81\,$\rightarrow$\,93}; rebuilt the clinical citation pipeline from \textbf{$\sim$0\% resolved sources to fully resolved}, clearing a pilot blocker.}
+          \resumeItem{Led agent design for the \textbf{TIME AI Agent} (publicly launched Nov 2025); built the agent loop, tool use, and evals for RAG search, summarization, and \textbf{13-language} translation across TIME's 102-year archive, with production guardrails raising adversarial prompt blocking \textbf{30\%\,$\rightarrow$\,95\%}.}
+          \resumeItem{Hardened Cengage's production EdTech agents against \textbf{prompt-injection and jailbreak attacks}, closing \textbf{every finding} from an internal red-team audit and supporting a \textbf{multi-million-dollar} account expansion.}
       \resumeItemListEnd
 
     \resumeSubheading
@@ -140,21 +142,13 @@
           \resumeItem{Improved accuracy \textbf{90\%\,$\rightarrow$\,95\%} and cut agent hand-offs \textbf{40\%\,$\rightarrow$\,13\%} by adding rubric-based retrieval scoring and weekly monitoring (\textbf{20} Looker dashboards).}
       \resumeItemListEnd
 
-    \resumeSubheading
-      {Software Engineer Intern}{June 2023 -- August 2023}
-      {RingCentral}{Belmont, CA}
-      \resumeItemListStart
-        \resumeItem{Shipped an LLM support chatbot with retrieval (Weaviate + embeddings), improving first-contact resolution \textbf{5\%\,$\rightarrow$\,50\%}.}
-        \resumeItem{Won \textbf{1st place} in an internal hackathon building a webinar networking/contact-card product; secured adoption buy-in from \textbf{2 C-level execs} and \textbf{5 PMs} via stakeholder demos.}
-      \resumeItemListEnd
-
   \resumeSubHeadingListEnd
 
 %-----------PROJECTS-----------
 \section{Projects}
     \resumeSubHeadingListStart
       \resumeProjectHeading
-          {\textbf{\href{https://www.slugloop.com/}{\underline{Slug Loop}}} $|$ \emph{React, Material UI, ExpressJS, C, Azure}}{March 2023 -- Present}
+          {\textbf{\href{https://www.slugloop.tech/}{\underline{Slug Loop}}} $|$ \emph{React, Material UI, ExpressJS, C, Azure}}{March 2023 -- Present}
           \resumeItemListStart
             \resumeItem{Served \textbf{20,000+ users} by shipping a real-time UCSC bus tracking web app with a React frontend, ExpressJS APIs, and Azure deployment.}
             \resumeItem{Placed \textbf{Global Top 10} in the Google Solution Challenge out of \textbf{2,000+ projects} (2023).}
@@ -165,21 +159,16 @@
             \resumeItem{Built and demoed a low-latency voice agent for emergency call intake + escalation (Twilio + FastAPI + NextJS), including intent routing and structured handoff to responders.}
             \resumeItem{Won \textbf{Grand Prize (\$50k)} at UC Berkeley AI Hackathon (\textbf{900+ participants}) by integrating RetellAI + Hume and deploying a real-time pipeline (fine-tuned Mistral 7B).}
           \resumeItemListEnd
-      \resumeProjectHeading
-          {\textbf{\href{https://talktuah.art3m1s.me/}{\underline{TalkToABank}}} $|$ \emph{NextJS, OpenAI, RetellAI}}{November 2024}
-          \resumeItemListStart
-            \resumeItem{Won \textbf{1st Overall} at HackUTD (\textbf{1,000+ participants}) by building a phone-based AI banking assistant with multi-agent routing (NextJS, OpenAI, RetellAI).}
-          \resumeItemListEnd
     \resumeSubHeadingListEnd
 
 %-----------TECHNICAL SKILLS-----------
 \section{Technical Skills}
  \begin{itemize}[leftmargin=0.15in, label={}]
     \small{\item{
-     \textbf{Languages}{:  Python, JavaScript, TypeScript, C/C++, Java, HTML, CSS, Dart} \\
-     \textbf{Machine Learning}{: PyTorch, TensorFlow, Keras, NumPy, Pandas, Scikit Learn, Matplotlib, OpenCV} \\
-     \textbf{WebDev/Cloud}{: React, NextJS, Vue, Angular, Flask, FastAPI, ExpressJS, Azure, GCP, AWS, PostgreSQL, GraphQL} \\
-     \textbf{Tools and Libraries}{: OpenAI, LangChain, LlamaIndex, Git, Docker, Firebase, Supabase, MongoDB}
+     \textbf{Languages}{: Python, TypeScript/JavaScript, SQL, Bash} \\
+     \textbf{LLM / Agents}{: multi-agent orchestration, LLM-as-judge \& evaluation design, RAG, prompt engineering, prompt-injection/jailbreak defense, cost \& latency optimization} \\
+     \textbf{Models}{: OpenAI GPT, Google Gemini / Vertex AI, Anthropic Claude} \\
+     \textbf{Infra/Web}{: GCP, Azure/AKS, Kubernetes, Docker, CI/CD, FastAPI, React, NextJS, PostgreSQL}
     }}
  \end{itemize}
 
