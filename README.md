@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://art3m1s.me">
-    <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&pause=1000&color=7C3AED&center=true&vCenter=true&width=720&lines=Hi%2C+I'm+Bill+%E2%80%94+AI+Engineer+at+Scale+AI;This+portfolio+is+a+real-time+voice+agent;Click+%E2%80%9CStart+Voice%E2%80%9D+%E2%80%94+then+just+talk;Powered+by+Retell+%2B+OpenAI+%2B+Pinecone" alt="typing"/>
+    <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&pause=1000&color=7C3AED&center=true&vCenter=true&width=720&lines=Hi%2C+I'm+Bill+%E2%80%94+AI+Engineer+at+Pinterest;This+portfolio+is+a+real-time+voice+agent;Click+%E2%80%9CStart+Voice%E2%80%9D+%E2%80%94+then+just+talk;Powered+by+Retell+%2B+OpenAI+%2B+Pinecone" alt="typing"/>
   </a>
 </p>
 

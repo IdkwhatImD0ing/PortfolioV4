@@ -6,7 +6,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     role: "Software Engineer II, AI Solutions",
     where: "Pinterest · San Francisco",
     link: "https://www.pinterest.com/",
-    body: "Building and deploying LLM agent systems for internal and partner-facing workflows — agent design, tool use, RAG integration, and production guardrails — and setting the evaluation, quality, and cost bar each solution clears before it launches.",
+    body: "Building and deploying LLM agent systems for internal and partner-facing workflows — agent design, tool use, RAG integration, and production guardrails — and partnering with product and engineering teams to set the evaluation, quality, and cost bar each solution must clear before launch.",
     badge: "Now",
   },
   {
@@ -21,21 +21,21 @@ export const EXPERIENCE: ExperienceEntry[] = [
     role: "AI Engineer",
     where: "RingCentral · Remote",
     link: "https://www.ringcentral.com/",
-    body: "Built an LLM analytics and evaluation pipeline that grew coverage of 10,000+ weekly support chats from 1–2% to 100% while cutting processing from 8 hours to 1. Rubric-based retrieval scoring and 20 monitoring dashboards lifted accuracy 90% → 95% and dropped human hand-offs 40% → 13%.",
+    body: "Started as a senior AI intern, then built an LLM analytics and evaluation pipeline that grew coverage of 10,000+ weekly support chats from 1–2% to 100% while cutting processing from 8 hours to 1. Rubric-based retrieval scoring and 20 monitoring dashboards lifted accuracy 90% → 95% and dropped human hand-offs 40% → 13%.",
   },
   {
     when: "Jun 2024 — Dec 2024",
     role: "Co-founder + CFO",
     where: "Dispatch AI · Remote",
     link: "https://dispatchai.art3m1s.me/",
-    body: "Built an emergency-response AI platform with Berkeley SkyDeck funding. Solo-engineered the low-latency voice agent and telephony behind the dispatcher demo — intent routing, emotion signals, structured handoff to responders — which took the $50K Grand Prize at the UC Berkeley AI Hackathon against 900+ participants.",
+    body: "Built an emergency-response AI platform with Berkeley SkyDeck funding, solo-engineering the low-latency voice agent and telephony behind the dispatcher demo — intent routing, emotion signals, structured handoff to responders. Dispatch AI won the $50K Grand Prize at the UC Berkeley AI Hackathon against 900+ participants.",
   },
   {
     when: "Feb 2023 — Jun 2024",
     role: "Founder",
     where: "SlugLoop · Santa Cruz",
     link: "https://www.slugloop.tech/",
-    body: "Founded and shipped UCSC's real-time bus tracker, now serving 20,000+ students. Placed Global Top 10 out of 2,000+ projects in the Google Solution Challenge.",
+    body: "Founded and shipped UCSC's real-time bus tracker, which served 20,000+ users. Placed Global Top 10 out of 2,000+ projects in the Google Solution Challenge.",
   },
   {
     when: "Jun 2022 — Dec 2023",
