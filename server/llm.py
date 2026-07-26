@@ -258,7 +258,7 @@ class LlmClient:
                 self._log(f"Guardrail triggered: Request blocked due to security check")
                 yield ResponseResponse(
                     response_id=response_id,
-                    content="I can only share information about my background, education, projects, and professional experience. Feel free to ask me about my hackathon wins, work at RingCentral, or any of my technical projects!",
+                    content="I can only share information about my background, education, projects, and professional experience. Feel free to ask me about my hackathon wins, my work at Pinterest, or any of my technical projects!",
                     content_complete=True,
                     end_call=False,
                 )
@@ -369,7 +369,7 @@ class LlmClient:
                 self._log(f"Guardrail triggered: Request blocked due to security check")
                 yield TextChatStreamChunk(
                     type="content",
-                    content="I can only share information about my background, education, projects, and professional experience. Feel free to ask me about my hackathon wins, work at RingCentral, or any of my technical projects!",
+                    content="I can only share information about my background, education, projects, and professional experience. Feel free to ask me about my hackathon wins, my work at Pinterest, or any of my technical projects!",
                 )
                 yield TextChatStreamChunk(type="done")
                 return
