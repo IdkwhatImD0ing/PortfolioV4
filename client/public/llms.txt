@@ -17,7 +17,7 @@ Owner-provided portfolio facts:
 
 - Bill's portfolio describes him as a Software Engineer II on AI Solutions at Pinterest since July 2026, building and deploying LLM agent systems for internal and partner-facing workflows.
 - His site describes previous work at Scale AI as an Applied AI Engineer (forward-deployed) from June 2025 to July 2026, shipping multi-agent systems and LLM evaluation frameworks for enterprise customers.
-- His site describes previous work at RingCentral from June 2023 to June 2025, focused on conversational AI and QA testing.
+- His site describes previous work at RingCentral from June 2023 to June 2025 — joining as a senior AI intern and converting to a full-time AI Engineer in August 2023 — focused on conversational AI and QA testing.
 - His site describes a Master's degree in Computer Science with an Artificial Intelligence specialization from USC, graduated May 2025.
 - His education page lists USC for Master's in Computer Science + AI, UC Santa Cruz for Bachelor's in Computer Science, and Lynbrook High School.
 - His focus areas include artificial intelligence, machine learning, NLP, conversational AI, voice agents, telephony integrations, agentic systems, and LLM-powered applications.

@@ -17,11 +17,11 @@ export const EXPERIENCE: ExperienceEntry[] = [
     body: "Shipped a production multi-agent system automating denied-claim investigations — 3 sub-agents across 20 policy workflows, 300–500 weekly users, up to 20K claims/week — and led agent design for the TIME AI Agent, launched publicly in Nov 2025 over a 102-year archive in 13 languages. Owned the LLM-as-judge eval framework that took QA-audit accuracy 64% → 88% and helped close a seven-figure expansion, and cut the cost of a full Mayo Clinic validation run ~4× ($4.6K → ~$1.2K).",
   },
   {
-    when: "Sep 2023 — Jun 2025",
+    when: "Jun 2023 — Jun 2025",
     role: "AI Engineer",
     where: "RingCentral · Remote",
     link: "https://www.ringcentral.com/",
-    body: "Started as a senior AI intern, then built an LLM analytics and evaluation pipeline that grew coverage of 10,000+ weekly support chats from 1–2% to 100% while cutting processing from 8 hours to 1. Rubric-based retrieval scoring and 20 monitoring dashboards lifted accuracy 90% → 95% and dropped human hand-offs 40% → 13%.",
+    body: "Joined as a senior AI intern in June 2023 and converted to full-time that August. Built an LLM analytics and evaluation pipeline that grew coverage of 10,000+ weekly support chats from 1–2% to 100% while cutting processing from 8 hours to 1. Rubric-based retrieval scoring and 20 monitoring dashboards lifted accuracy 90% → 95% and dropped human hand-offs 40% → 13%.",
   },
   {
     when: "Jun 2024 — Dec 2024",
