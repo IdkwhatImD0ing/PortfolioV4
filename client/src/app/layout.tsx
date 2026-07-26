@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   title: "Bill Zhang | Voice-Driven Portfolio v2026",
   description:
-    "Bill Zhang is an Applied AI Engineer at Scale AI building voice-first and multi-agent systems. Talk to this portfolio.",
+    "Bill Zhang is an AI engineer at Pinterest building voice-first and multi-agent systems. Talk to this portfolio.",
   keywords: [
     "AI Engineer",
     "Bill Zhang",
@@ -49,13 +49,13 @@ export const metadata: Metadata = {
     siteName: "Bill Zhang — art3m1s.me",
     title: "Bill Zhang — Voice-driven AI portfolio",
     description:
-      "Applied AI Engineer at Scale AI. Voice-first, agent-shaped systems. Talk to this portfolio.",
+      "AI engineer at Pinterest. Voice-first, agent-shaped systems. Talk to this portfolio.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Bill Zhang — Voice-driven AI portfolio",
     description:
-      "Applied AI Engineer at Scale AI. Voice-first, agent-shaped systems. Talk to this portfolio.",
+      "AI engineer at Pinterest. Voice-first, agent-shaped systems. Talk to this portfolio.",
   },
   icons: {
     icon: [
@@ -83,10 +83,10 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Person",
               name: "Bill Zhang",
-              jobTitle: "Applied AI Engineer",
+              jobTitle: "Software Engineer II, AI Solutions",
               worksFor: {
                 "@type": "Organization",
-                name: "Scale AI",
+                name: "Pinterest",
               },
               alumniOf: [
                 {

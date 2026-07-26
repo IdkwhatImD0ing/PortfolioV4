@@ -92,8 +92,8 @@ export function HeroSection() {
         </h1>
 
         <p className="mt-7 max-w-[640px] text-[19px] leading-[1.5] text-ink-soft max-[700px]:mt-5 max-[700px]:text-[16.5px]">
-          I&apos;m <b className="text-ink font-semibold">Bill Zhang</b>, Applied AI Engineer
-          at Scale, voice-first builder, serial hackathon winner. This site listens. Talk to it,
+          I&apos;m <b className="text-ink font-semibold">Bill Zhang</b>, AI engineer
+          at Pinterest, voice-first builder, serial hackathon winner. This site listens. Talk to it,
           scroll it, drag it around. It&apos;ll rearrange.
         </p>
 
