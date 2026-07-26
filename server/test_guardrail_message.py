@@ -7,6 +7,7 @@ import asyncio
 from dotenv import load_dotenv
 from custom_types import ResponseRequiredRequest, Utterance
 from llm import LlmClient
+from prompts import guardrail_refusal_message
 
 # Load environment variables
 load_dotenv()
@@ -45,9 +46,10 @@ async def test_guardrail_messages():
         
         full_response = "".join(responses)
         if full_response:
-            # Check if it's a guardrail message
-            if "I can only" in full_response or "my background" in full_response:
-                print(f"   [BLOCKED] Guardrail message (first person): Yes")
+            # Compare against the real message rather than a hardcoded phrase —
+            # matching on old wording reported blocked turns as [ALLOWED].
+            if full_response.strip() == guardrail_refusal_message:
+                print("   [BLOCKED] Guardrail message (first person): Yes")
             else:
                 print(f"   [ALLOWED] Response: {full_response[:60]}...")
         print()

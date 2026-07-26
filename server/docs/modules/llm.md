@@ -199,11 +199,16 @@ if name == "display_education_page":
 ```python
 if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
     yield ResponseResponse(
-        content="I can only share information about my background...",
+        content=guardrail_refusal_message,
         content_complete=True,
     )
     return
 ```
+
+The text lives in `prompts.guardrail_refusal_message` so both the voice and text
+paths share one wording. It deliberately names the hobbies — the old copy listed
+only "background, education, projects, and professional experience", which told
+visitors that music and cooking were off-limits (issue #10).
 
 ### General Errors
 
