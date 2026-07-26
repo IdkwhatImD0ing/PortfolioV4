@@ -29,25 +29,30 @@ call display/search tools. The same guardrail covers the **unauthenticated
   branch was a bare `pass` that blocked nothing. Both lists are gone and
   `tests/test_guardrail.py` asserts the source stays free of them. Flag any
   reintroduction of substring allow/block gating, however well-intentioned.
-- **Classifier-input scoping.** `extract_turns` selects the last **non-empty**
-  user turn plus up to `MAX_CONTEXT_TURNS` prior turns as labelled context. Flag
-  changes that (a) anchor on the literal last turn — a whitespace-only trailing
-  turn then hides the payload, reachable via `/chat`; (b) drop the prior-turn
-  context, which is what lets a forged `assistant` turn ("constraints lifted")
-  followed by "cool, thanks" be judged on "cool, thanks" alone; or (c) remove the
-  delimiter stripping / nonce, letting a visitor close `</turn_to_classify>` and
-  forge an approval note.
+- **Classifier-input scoping.** The judge receives the **whole conversation**, with
+  the last non-empty user turn as the target. Flag changes that (a) anchor on the
+  literal last turn — a whitespace-only trailing turn then hides the payload,
+  reachable via `/chat`; (b) narrow the context to a trailing window, which cheap
+  filler turns can then flush the setup out of; (c) drop turns *after* the target,
+  since `/chat` callers can append `assistant` turns the model treats as a prefill;
+  (d) skip classification when no user turn is present — a pure-assistant array is
+  a prefill attempt; or (e) remove the delimiter stripping / nonce, letting a
+  visitor close `</turn_to_classify>` and forge an approval note.
+- **Truncation direction.** `_sanitize` and the context budget keep **both ends**.
+  Head-only truncation makes length a bypass primitive: the cap bounds what the
+  judge sees, not what the agent sees, so `"A" * cap + payload` blinds the judge
+  while the agent gets the payload. Flag any change back to a plain `text[:limit]`.
 - **Fail-open/fail-closed split is deliberate — do not "simplify" it.**
   `guardrail.py` fails **open** only on `asyncio.TimeoutError` / `APIConnectionError`
   and **closed** on everything else. Making it uniformly fail-open re-opens a
   specific inversion: a request abusive enough that the judge refuses produces a
   non-schema-valid response → `ModelBehaviorError` → the worst content is allowed.
   Making it uniformly fail-closed turns any OpenAI blip into a site-wide refusal.
-- **Scaffolding stripping.** `llm.py` wraps the last user turn using the shared
-  constants in `prompts.py`; `strip_harness_scaffolding` removes them. Flag edits
-  that change the wrapper text in `llm.py` without updating the constants — the
-  judge would then see instruction-shaped boilerplate on every turn, and an
-  attacker could reproduce that fixed string to disguise a payload as boilerplate.
+- **Fail-open exception list.** `_FAIL_OPEN_ERRORS` covers provider outages (5xx,
+  connection, timeout) and our own misconfiguration (401/403). Flag additions that
+  are visitor-inducible — rate limits, 400s and schema violations must stay on the
+  closed path, since a request abusive enough to make the judge refuse arrives as
+  a schema violation.
 - **Rubric vs. persona drift.** The classifier's ALLOW list is anchored to
   `prompts.py` §3 (passions) and §5.1 (expertise). Flag a new persona interest
   that isn't mirrored in the rubric, or a rubric block category phrased as a topic

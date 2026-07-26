@@ -1,19 +1,3 @@
-# Harness scaffolding wrapped around the last user turn before the agent runs.
-# `llm.py` applies these; `guardrail.py` strips them back off so the classifier
-# judges the visitor's actual words instead of our own instruction-shaped
-# boilerplate. Keep the two in sync — they are shared constants for that reason.
-user_question_prefix = "User question:"
-
-voice_turn_suffix = (
-    "Always respond in plain conversational text. No special symbols or markdown."
-    "This is a VOICE conversation - every character you type will be spoken aloud."
-)
-
-text_turn_suffix = (
-    "This is a TEXT chat. Use markdown formatting: **bold** for emphasis, "
-    "`code` for tech terms, and bullet points for lists."
-)
-
 # Appended as a user-role turn when the visitor goes quiet. It is the harness
 # talking to the model, not visitor input, so the guardrail skips it rather than
 # classifying our own sentinel.

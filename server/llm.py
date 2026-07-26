@@ -29,10 +29,7 @@ from prompts import (
     guardrail_refusal_message,
     reminder_prompt,
     text_system_prompt,
-    text_turn_suffix,
-    user_question_prefix,
     voice_system_prompt,
-    voice_turn_suffix,
 )
 
 from text_utils import clean_markdown
@@ -142,7 +139,9 @@ class LlmClient:
 
         if last_user_message:
             last_user_message = (
-                f"{user_question_prefix}{last_user_message}\n\n{voice_turn_suffix}"
+                f"User question:{last_user_message}\n\n"
+                "Always respond in plain conversational text. No special symbols or markdown."
+                "This is a VOICE conversation - every character you type will be spoken aloud."
             )
             prompt[last_user_message_index]["content"] = last_user_message
 
@@ -257,7 +256,7 @@ class LlmClient:
         except Exception as e:
             # Check if it's a guardrail tripwire trigger
             if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
-                self._log(f"Guardrail triggered: Request blocked due to security check")
+                self._log("Guardrail triggered: Request blocked due to security check")
                 yield ResponseResponse(
                     response_id=response_id,
                     content=guardrail_refusal_message,
@@ -316,7 +315,7 @@ class LlmClient:
             if i == len(messages) - 1 and msg.get("role") == "user":
                 processed_messages.append({
                     "role": "user",
-                    "content": f"{user_question_prefix} {msg['content']}\n\n{text_turn_suffix}",
+                    "content": f"User question: {msg['content']}\n\nThis is a TEXT chat. Use markdown formatting: **bold** for emphasis, `code` for tech terms, and bullet points for lists.",
                 })
             else:
                 processed_messages.append(msg)
@@ -368,7 +367,7 @@ class LlmClient:
         except Exception as e:
             # Check if it's a guardrail tripwire trigger
             if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
-                self._log(f"Guardrail triggered: Request blocked due to security check")
+                self._log("Guardrail triggered: Request blocked due to security check")
                 yield TextChatStreamChunk(
                     type="content",
                     content=guardrail_refusal_message,
@@ -388,4 +387,4 @@ class LlmClient:
 
         # Signal completion
         yield TextChatStreamChunk(type="done")
-        self._log(f"text chat response complete", flush=True)
+        self._log("text chat response complete", flush=True)
