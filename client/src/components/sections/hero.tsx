@@ -1,7 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+// Aliased: the bare name would shadow the DOM MouseEvent that the mousemove
+// handler below is typed against.
+import { useRef, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect } from "react";
 import { useRafScroll, useRafWindowEvent } from "@/hooks/use-raf-listener";
+import { usePrefersReducedMotion } from "@/hooks/use-media-query";
 import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
 
 const HERO_CHIPS = [
@@ -19,8 +23,15 @@ export function HeroSection() {
   const glowB = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLHeadingElement>(null);
 
+  // Both effects below write transforms from rAF, which the reduced-motion CSS
+  // block cannot reach — it only clamps animation and transition durations. A
+  // drifting glow and a parallaxing headline are exactly the vestibular
+  // triggers that setting exists to suppress, so gate them here.
+  const reduceMotion = usePrefersReducedMotion();
+
   // The two blurred glows drift opposite the pointer.
   useRafWindowEvent<MouseEvent>("mousemove", (e) => {
+    if (reduceMotion) return;
     const x = (e.clientX / window.innerWidth - 0.5) * 60;
     const y = (e.clientY / window.innerHeight - 0.5) * 40;
     if (glowA.current) glowA.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
@@ -29,9 +40,20 @@ export function HeroSection() {
 
   // Headline parallax against the page scroll.
   useRafScroll(() => {
+    if (reduceMotion) return;
     const y = window.scrollY * 0.18;
     if (headRef.current) headRef.current.style.transform = `translate3d(0, ${y}px, 0)`;
   });
+
+  // The hooks above only stop *updating* the transforms. useMediaQuery reports
+  // false until after mount, and the setting can be toggled mid-session, so
+  // clear whatever was already written.
+  useEffect(() => {
+    if (!reduceMotion) return;
+    for (const ref of [glowA, glowB, headRef]) {
+      if (ref.current) ref.current.style.transform = "";
+    }
+  }, [reduceMotion]);
 
   const onChip = (chip: string) => {
     const lower = chip.toLowerCase();
@@ -48,6 +70,16 @@ export function HeroSection() {
     } else {
       scrollToSection("about");
     }
+  };
+
+  const onResume = (e: ReactMouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    scrollToSection("resume");
+    // Scrolling alone leaves focus on <body>, so a screen-reader user gets no
+    // signal that the viewport just moved ~10,000px. The section carries
+    // tabIndex={-1} to accept this. preventScroll so the focus call doesn't
+    // snap past the smooth scroll we just started.
+    document.getElementById("resume")?.focus({ preventScroll: true });
   };
 
   return (
@@ -97,7 +129,43 @@ export function HeroSection() {
           scroll it, drag it around. It&apos;ll rearrange.
         </p>
 
-        <div className="mt-9 flex flex-wrap gap-2.5">
+        {/* Resume shortcut, using the same href + preventDefault pattern as
+            the footer links. The bare `href` is a real no-JS fallback, but the
+            click is intercepted on purpose: native fragment navigation
+            resolves the target offset *before* hydration, and `projects`
+            server-renders its taller desktop layout before `useIsMobile`
+            swaps in the mobile carousel — so letting `#resume` into the URL
+            lands phone visitors ~850px past the heading on any reload or
+            shared link. scrollToSection runs post-hydration against real
+            offsets, and honors prefers-reduced-motion.
+
+            Solid `bg-violet` rather than `var(--grad)`: white on the
+            gradient's #e879f9 midpoint measures 2.46:1, well under the 4.5:1
+            WCAG AA floor for 14px text, while #7f5af0 clears it at 4.54:1.
+            Staying off the gradient also keeps this visually distinct from the
+            real download button, which is gradient-filled. */}
+        <div className="mt-8 flex flex-wrap items-center gap-3 max-[700px]:mt-6 max-[700px]:gap-2.5">
+          <a
+            href="#resume"
+            onClick={onResume}
+            data-cursor-hover
+            className="inline-flex items-center px-[22px] py-3 rounded-full text-[14px] font-medium text-white bg-violet border border-transparent shadow-[0_10px_30px_rgba(127,90,240,0.35)] touch-manipulation transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent max-[700px]:px-[18px] max-[700px]:py-2.5 max-[700px]:text-[13.5px]"
+          >
+            View resume
+          </a>
+          <a
+            href="/resume.pdf"
+            download="Bill-Zhang-Resume.pdf"
+            type="application/pdf"
+            data-cursor-hover
+            className="inline-flex items-center gap-2 px-[18px] py-3 rounded-full text-[14px] text-ink-soft border border-line bg-white/[0.02] touch-manipulation transition-[background-color,border-color,color] duration-200 hover:bg-[rgba(168,85,247,0.1)] hover:border-violet hover:text-ink active:bg-[rgba(168,85,247,0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent max-[700px]:px-[15px] max-[700px]:py-2.5 max-[700px]:text-[13.5px]"
+          >
+            Download PDF
+            <span className="text-muted text-[12px]">113&nbsp;KB</span>
+          </a>
+        </div>
+
+        <div className="mt-7 flex flex-wrap gap-2.5 max-[700px]:mt-6">
           {HERO_CHIPS.map((c) => (
             <button
               key={c}

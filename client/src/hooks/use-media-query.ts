@@ -21,3 +21,12 @@ function useMediaQuery(query: string): boolean {
 export function useIsMobile(): boolean {
   return useMediaQuery("(max-width: 768px)");
 }
+
+/** True when the user asked the OS for less motion. Gate JS-driven animation on
+ *  this — the reduced-motion block in globals.css can only clamp CSS animations
+ *  and transitions, so anything written from rAF has to opt out itself.
+ *  (`prefersReducedMotion()` in lib/voice-bus is the one-shot equivalent for
+ *  non-React call sites.) */
+export function usePrefersReducedMotion(): boolean {
+  return useMediaQuery("(prefers-reduced-motion: reduce)");
+}

@@ -12,8 +12,12 @@ export function ResumeSection() {
   return (
     <section
       id="resume"
+      // Lets the hero's "View resume" shortcut move focus here so the jump is
+      // announced. -1 keeps it out of the tab order; the ring is suppressed
+      // because this is a scroll destination, not a control.
+      tabIndex={-1}
       data-screen-label="07 Resume"
-      className="px-[8vw] pt-[140px] pb-[160px] border-t border-line-soft bg-[radial-gradient(circle_at_80%_20%,rgba(232,67,147,0.08),transparent_50%)] bg-bg max-[700px]:px-5 max-[700px]:pt-20 max-[700px]:pb-24"
+      className="px-[8vw] pt-[140px] pb-[160px] border-t border-line-soft bg-[radial-gradient(circle_at_80%_20%,rgba(232,67,147,0.08),transparent_50%)] bg-bg outline-none max-[700px]:px-5 max-[700px]:pt-20 max-[700px]:pb-24"
     >
       <div className="max-w-[1240px] mx-auto">
         <div className="max-w-[720px] mb-[60px] max-[700px]:mb-10">
@@ -35,15 +39,25 @@ export function ResumeSection() {
         </div>
 
         <div className="grid grid-cols-[1.5fr_1fr] gap-9 items-start max-[900px]:grid-cols-1">
-          <div className="border border-line rounded-2xl overflow-hidden bg-[#0a0814] shadow-[0_30px_80px_rgba(168,85,247,0.15)]">
+          <div className="flex flex-col border border-line rounded-2xl overflow-hidden bg-[#0a0814] shadow-[0_30px_80px_rgba(168,85,247,0.15)]">
             <div className="aspect-[8.5/11] w-full bg-[#f5f3ee] max-[700px]:aspect-auto max-[700px]:h-[440px]">
+              {/* Lazy: this sits ~10,000px down the page, and eagerly fetching
+                  113 KB of PDF on every visit costs the mobile visitors who
+                  never scroll this far. Browsers without iframe lazy-loading
+                  simply fall back to eager. */}
               <iframe
                 src="/resume.pdf#toolbar=0&navpanes=0&view=FitH"
                 title="Bill Zhang Resume"
+                loading="lazy"
                 className="w-full h-full border-0"
               />
             </div>
-            <div className="flex justify-between items-center gap-4 px-[18px] py-3.5 border-t border-line bg-[rgba(15,12,28,0.7)] max-[700px]:flex-col max-[700px]:items-stretch max-[700px]:gap-3">
+            {/* On phones this row moves above the preview. Android Chrome has
+                no inline PDF viewer, so the iframe renders as an empty box and
+                these buttons — the only way to actually reach the file — would
+                otherwise sit below the fold for anyone arriving from the
+                hero's shortcut. */}
+            <div className="flex justify-between items-center gap-4 px-[18px] py-3.5 border-t border-line bg-[rgba(15,12,28,0.7)] max-[700px]:order-first max-[700px]:flex-col max-[700px]:items-stretch max-[700px]:gap-3 max-[700px]:border-t-0 max-[700px]:border-b">
               <span className="font-mono text-[11px] tracking-[0.14em] uppercase text-muted">
                 resume.pdf · last updated July 26, 2026
               </span>

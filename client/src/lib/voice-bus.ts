@@ -22,12 +22,23 @@ export const VoiceBus = {
   },
 };
 
+/** True when the user has asked the OS for less motion. Every animated scroll
+ *  in the app should gate on this — the global reduced-motion CSS block only
+ *  clamps animation/transition durations, which does nothing for scrolling. */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
 export function scrollToSection(id: string): void {
   if (typeof window === "undefined") return;
   const el = document.getElementById(id);
   if (!el) return;
   const y = el.getBoundingClientRect().top + window.scrollY;
-  window.scrollTo({ top: y, behavior: "smooth" });
+  // "instant" — not "auto". Per CSSOM-View "auto" defers to the computed
+  // `scroll-behavior`, which globals.css sets to `smooth` on <html>, so "auto"
+  // would still animate and this branch would silently do nothing.
+  window.scrollTo({ top: y, behavior: prefersReducedMotion() ? "instant" : "smooth" });
 }
 
 /** Navigation metadata shape emitted by the server via Retell's metadata

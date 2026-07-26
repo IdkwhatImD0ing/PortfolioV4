@@ -1,9 +1,40 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   metaToNavigationAction,
   PAGE_TO_SECTION,
+  prefersReducedMotion,
   type NavigationMeta,
 } from "./voice-bus";
+
+// The suite runs in vitest's `node` environment, so there is no `window` unless
+// we install one. That is exactly the SSR path the guard exists for.
+const g = globalThis as { window?: { matchMedia?: (q: string) => { matches: boolean } } };
+
+describe("prefersReducedMotion", () => {
+  afterEach(() => {
+    delete g.window;
+  });
+
+  it("returns false when there is no window (server render)", () => {
+    expect(prefersReducedMotion()).toBe(false);
+  });
+
+  it("returns true when the reduce query matches", () => {
+    g.window = { matchMedia: (q) => ({ matches: q === "(prefers-reduced-motion: reduce)" }) };
+    expect(prefersReducedMotion()).toBe(true);
+  });
+
+  it("returns false when the query does not match", () => {
+    g.window = { matchMedia: () => ({ matches: false }) };
+    expect(prefersReducedMotion()).toBe(false);
+  });
+
+  it("returns false when matchMedia is unavailable", () => {
+    // Older Safari and stripped test DOMs; the optional call must not throw.
+    g.window = {};
+    expect(prefersReducedMotion()).toBe(false);
+  });
+});
 
 describe("metaToNavigationAction", () => {
   it("returns null for null/undefined/missing-page payloads", () => {

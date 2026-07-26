@@ -1,5 +1,6 @@
 import { BgStage } from "@/components/bg-stage";
 import { CustomCursor } from "@/components/custom-cursor";
+import { HashLanding } from "@/components/hash-landing";
 import { ScrollProgressBar } from "@/components/scroll-progress-bar";
 import { Topbar } from "@/components/topbar";
 import { VoiceOrb } from "@/components/voice-orb";
@@ -20,6 +21,7 @@ export default function Home() {
       <BgStage />
       <ScrollProgressBar />
       <CustomCursor />
+      <HashLanding />
       <Topbar />
 
       <main>
