@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PROJECTS, findProject, type Project } from "@/lib/portfolio-data";
 import { loadFallbackProject } from "@/lib/project-fallback";
-import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
+import { prefersReducedMotion, VoiceBus, scrollToSection } from "@/lib/voice-bus";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { PROJECT_HASH_PREFIX, STANDOUT_PROJECT_IDS } from "./constants";
@@ -278,7 +278,11 @@ export function ProjectsSection() {
   const scrollToCard = (i: number) => {
     const el = carouselRef.current;
     const card = el?.children[i] as HTMLElement | undefined;
-    card?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    card?.scrollIntoView({
+      behavior: prefersReducedMotion() ? "instant" : "smooth",
+      inline: "center",
+      block: "nearest",
+    });
   };
 
   // When a filter/focus changes the mobile rail, snap back to the first card.
