@@ -7,10 +7,18 @@
 node_modules
 .vercel
 
+# Next.js build output and TypeScript incremental caches, at any depth.
+# client/.gitignore covers these under client/; these rules catch strays
+# elsewhere in the tree (see issue #9).
+.next/
+*.tsbuildinfo
+
 # Playwright MCP debug artifacts (screenshots, snapshots, console logs)
 .playwright-mcp/
 mobile-hero.png
 
-# Personal resume-tailoring skill + its generated outputs (never commit)
+# Personal resume-tailoring skill + its generated outputs (never commit).
+# Path-agnostic on purpose: the old client-new/tailored-resumes/ rule stopped
+# matching when client-new/ was renamed to client/.
 .claude/skills/tailor-resume/
-client-new/tailored-resumes/
+tailored-resumes/
