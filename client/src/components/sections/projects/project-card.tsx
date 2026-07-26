@@ -22,11 +22,19 @@ export function ProjectCard({
   className?: string;
 }) {
   return (
+    // Pointer users click the card; keyboard users get the real <button> around
+    // the title below. A `role="button"` wrapper would have made the heading and
+    // summary presentational to assistive tech, and a real <button> can't wrap
+    // them either — they're flow content. Keeping the click on the <article>
+    // (rather than stretching the button over the card with an ::after overlay)
+    // leaves the summary and tags selectable, as they were before.
     <article
       data-cursor-hover
+      data-project-card
       onClick={() => onOpen(p.id)}
       className={cn(
         "group/card rounded-3xl bg-gradient-to-b from-card to-card-2 border border-line relative overflow-hidden flex flex-col cursor-pointer transition-[transform,opacity,filter] duration-[350ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
         !match && "opacity-[0.32] [filter:saturate(0.4)_blur(0.5px)]",
         isFocus &&
           "shadow-[0_30px_80px_rgba(162,89,255,0.45),0_0_0_1px_rgba(232,121,249,0.65)] -translate-y-1.5 scale-[1.015]",
@@ -54,12 +62,27 @@ export function ProjectCard({
         <span className="absolute bottom-3 left-3.5 font-mono text-[11px] tracking-[0.14em] uppercase text-ink-soft bg-black/40 px-2 py-1 rounded backdrop-blur-sm z-[1]">
           /{p.id}
         </span>
-        <span className="absolute right-3.5 top-3.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-ink px-2.5 py-1 rounded-full bg-[rgba(168,85,247,0.22)] border border-[rgba(168,85,247,0.4)] opacity-0 -translate-y-1 transition-[opacity,transform] duration-[250ms] group-hover/card:opacity-100 group-hover/card:translate-y-0 z-[1]">
+        {/* focus-within as well as hover: this badge is the only thing that says
+            what activating the card does, and a keyboard user never hovers. */}
+        <span className="absolute right-3.5 top-3.5 font-mono text-[10.5px] tracking-[0.14em] uppercase text-ink px-2.5 py-1 rounded-full bg-[rgba(168,85,247,0.22)] border border-[rgba(168,85,247,0.4)] opacity-0 -translate-y-1 transition-[opacity,transform] duration-[250ms] group-hover/card:opacity-100 group-hover/card:translate-y-0 group-focus-within/card:opacity-100 group-focus-within/card:translate-y-0 z-[1]">
           ↗ deep dive
         </span>
       </div>
       <div className="px-6 pt-5 pb-6 flex flex-col gap-2.5 flex-1">
-        <h4 className="text-[26px] -tracking-[0.02em] font-semibold m-0">{p.name}</h4>
+        <h4 className="text-[26px] -tracking-[0.02em] font-semibold m-0">
+          {/* stopPropagation so a click here doesn't also fire the card's own
+              handler. The focus ring is drawn on the card, not on this button. */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(p.id);
+            }}
+            className="text-left cursor-pointer focus-visible:outline-none"
+          >
+            {p.name}
+          </button>
+        </h4>
         <p className="text-[14px] leading-[1.45] text-ink-soft m-0 flex-1">{p.summary}</p>
         <div className="flex flex-wrap gap-1.5 mt-auto">
           {p.tags.map((t) => (
@@ -75,9 +98,13 @@ export function ProjectCard({
               #{t}
             </span>
           ))}
-          <span className="font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase ml-auto">
-            {p.year}
-          </span>
+          {/* Truthiness, matching the detail modal: archived projects carry no
+              year, and a 0 is not a year worth printing either. */}
+          {!!p.year && (
+            <span className="font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase ml-auto">
+              {p.year}
+            </span>
+          )}
         </div>
       </div>
     </article>

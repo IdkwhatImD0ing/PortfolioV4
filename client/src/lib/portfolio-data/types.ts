@@ -4,7 +4,9 @@ export interface Project {
    *  the agent uses when emitting navigation metadata. */
   aliases?: string[];
   name: string;
-  year: number;
+  /** Optional only on the archived fallback path — the Pinecone corpus doesn't
+   *  carry a year. Every curated project in PROJECTS has one. */
+  year?: number;
   summary: string;
   tags: string[];
   award?: string;

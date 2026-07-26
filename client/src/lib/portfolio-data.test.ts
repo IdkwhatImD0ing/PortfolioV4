@@ -32,6 +32,13 @@ describe("findProject", () => {
     expect(findProject("")).toBeUndefined();
   });
 
+  it("gives every curated project a year", () => {
+    // `year` is optional on the Project type only so the archived Pinecone
+    // fallback can omit it. The curated rail filters and renders by year, so
+    // nothing in PROJECTS may rely on that escape hatch.
+    expect(PROJECTS.filter((p) => typeof p.year !== "number").map((p) => p.id)).toEqual([]);
+  });
+
   it("never resolves the same alias to two different projects", () => {
     const allIds = PROJECTS.flatMap((p) => [p.id, ...(p.aliases ?? [])]);
     const dupes = allIds.filter((id, i) => allIds.indexOf(id) !== i);

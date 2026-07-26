@@ -13,6 +13,8 @@ export function ExperienceSection() {
   const { ref, revealed } = useReveal<HTMLDivElement>();
 
   // Draw the timeline spine in as the section passes through the viewport.
+  // `resize` because the start/end thresholds are fractions of the viewport
+  // height, which a resize invalidates without any scroll happening.
   useRafScroll(() => {
     const el = wrapRef.current;
     const line = lineRef.current;
@@ -22,7 +24,7 @@ export function ExperienceSection() {
     const end = -r.height + window.innerHeight * 0.3;
     const p = Math.max(0, Math.min(1, (start - r.top) / Math.max(1, start - end)));
     line.style.transform = `scaleY(${p})`;
-  });
+  }, true);
 
   return (
     <section

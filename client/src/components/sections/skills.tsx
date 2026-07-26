@@ -11,6 +11,8 @@ export function SkillsSection() {
   const words = SKILLS_LINE;
 
   // Light up the sentence word by word as the sticky block scrolls past.
+  // `resize` because the travel distance is measured against the viewport
+  // height, which a resize invalidates without any scroll happening.
   useRafScroll(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -18,7 +20,7 @@ export function SkillsSection() {
     const dist = el.offsetHeight - window.innerHeight;
     const p = Math.max(0, Math.min(1, -r.top / Math.max(1, dist)));
     setActive(Math.round(p * (words.length - 1)));
-  });
+  }, true);
 
   return (
     <section

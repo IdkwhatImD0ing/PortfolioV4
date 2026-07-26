@@ -1,15 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { EDUCATION } from "@/lib/portfolio-data";
 import { REVEAL_BASE, REVEAL_IN, useReveal } from "@/hooks/use-reveal";
 import { cn } from "@/lib/utils";
 
+/** The flip affordance. The card itself carries the pointer click; this is the
+ *  keyboard equivalent. The focus ring is drawn on the card. */
+const flipBtn =
+  "font-mono text-[10.5px] tracking-[0.14em] uppercase inline-flex items-center gap-1.5 cursor-pointer focus-visible:outline-none";
+
 export function EducationSection() {
   const items = EDUCATION;
   const [flipped, setFlipped] = useState<Record<number, boolean>>({});
   const { ref, revealed } = useReveal<HTMLDivElement>();
+
+  // Flipping marks the face holding the just-activated button `inert`, and
+  // making an element inert blurs whatever inside it had focus — so without
+  // this, activating FLIP drops focus to <body> and the keyboard user falls out
+  // of the tab order after one flip. Hand focus to the face being revealed.
+  const faceBtns = useRef<Record<string, HTMLButtonElement | null>>({});
+  const pendingFocus = useRef<string | null>(null);
+  useEffect(() => {
+    const key = pendingFocus.current;
+    if (!key) return;
+    pendingFocus.current = null;
+    faceBtns.current[key]?.focus();
+  }, [flipped]);
+
+  const toggle = (i: number) => {
+    const next = !flipped[i];
+    pendingFocus.current = `${i}:${next ? "back" : "front"}`;
+    setFlipped((f) => ({ ...f, [i]: next }));
+  };
 
   return (
     <section
@@ -36,16 +60,24 @@ export function EducationSection() {
         style={{ perspective: "1400px" }}
       >
         {items.map((e, i) => (
+          // Pointer users click the card, as before; the FLIP / BACK
+          // affordances are real buttons so the tab order gets one properly
+          // named entry per card. The face turned away is `inert` —
+          // backface-visibility hides it visually but leaves it focusable.
           <div
             key={e.school}
-            onClick={() => setFlipped((f) => ({ ...f, [i]: !f[i] }))}
             data-cursor-hover
+            onClick={() => toggle(i)}
             className={cn(
               "relative h-[460px] rounded-[22px] will-change-transform transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] [transform-style:preserve-3d] cursor-pointer",
+              "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
               flipped[i] && "[transform:rotateY(180deg)]",
             )}
           >
-            <div className="absolute inset-0 rounded-[22px] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] bg-gradient-to-b from-card to-card-2 border border-line p-7 flex flex-col justify-between overflow-hidden">
+            <div
+              inert={flipped[i] || undefined}
+              className="absolute inset-0 rounded-[22px] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] bg-gradient-to-b from-card to-card-2 border border-line p-7 flex flex-col justify-between overflow-hidden"
+            >
               <div className="absolute -right-20 -top-20 w-60 h-60 rounded-full bg-[radial-gradient(circle,rgba(192,132,252,0.4),transparent_70%)] blur-[20px]" />
               <div className="w-20 h-20 rounded-2xl bg-white p-2 grid place-items-center">
                 <Image
@@ -65,12 +97,26 @@ export function EducationSection() {
                 <div className="font-mono text-[12px] text-accent tracking-[0.06em]">{e.degree}</div>
                 <div className="font-mono text-[11.5px] text-muted mt-2">{e.when}</div>
               </div>
-              <div className="font-mono text-[10.5px] tracking-[0.14em] text-muted uppercase inline-flex items-center gap-1.5">
+              <button
+                type="button"
+                ref={(el) => {
+                  faceBtns.current[`${i}:front`] = el;
+                }}
+                onClick={(ev) => {
+                  ev.stopPropagation(); // the card handles the pointer click
+                  toggle(i);
+                }}
+                aria-label={`Flip to ${e.school} notes`}
+                className={cn(flipBtn, "text-muted")}
+              >
                 FLIP <span className="text-magenta">↻</span>
-              </div>
+              </button>
             </div>
 
-            <div className="absolute inset-0 rounded-[22px] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:rotateY(180deg)] bg-gradient-to-b from-[#1f1432] to-[#140b22] border border-line p-7 flex flex-col justify-between overflow-hidden">
+            <div
+              inert={!flipped[i] || undefined}
+              className="absolute inset-0 rounded-[22px] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:rotateY(180deg)] bg-gradient-to-b from-[#1f1432] to-[#140b22] border border-line p-7 flex flex-col justify-between overflow-hidden"
+            >
               <div>
                 <div className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">
                   {e.school} · NOTES
@@ -78,9 +124,20 @@ export function EducationSection() {
                 <h4 className="text-2xl -tracking-[0.02em] mt-4 mb-1 font-medium">{e.degree}</h4>
                 <p className="mt-3.5 text-[15px] leading-[1.5] text-ink-soft">{e.detail}</p>
               </div>
-              <div className="font-mono text-[10.5px] tracking-[0.14em] text-muted uppercase inline-flex items-center gap-1.5">
+              <button
+                type="button"
+                ref={(el) => {
+                  faceBtns.current[`${i}:back`] = el;
+                }}
+                onClick={(ev) => {
+                  ev.stopPropagation(); // the card handles the pointer click
+                  toggle(i);
+                }}
+                aria-label={`Back to ${e.school} overview`}
+                className={cn(flipBtn, "text-muted")}
+              >
                 BACK <span className="text-magenta">↺</span>
-              </div>
+              </button>
             </div>
           </div>
         ))}
