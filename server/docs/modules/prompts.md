@@ -27,7 +27,7 @@ The system prompt has 15 sections:
 - Name: Bill Zhang
 - Background: San Jose, Bay Area, Lynbrook High School
 - Education: UC Santa Cruz (BS), USC (MS, May 2025)
-- Career: RingCentral → Scale AI
+- Career: RingCentral → Scale AI → Pinterest
 - Hackathons: ~50 attended, ~35 won
 ```
 

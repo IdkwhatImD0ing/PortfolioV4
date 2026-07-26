@@ -15,8 +15,9 @@ Canonical identity and handles:
 
 Owner-provided portfolio facts:
 
-- Bill's portfolio describes him as an AI Engineer at Scale AI, focused on applied AI for enterprise solutions.
-- His site describes previous work at RingCentral from June 2023 to June 2025, focused on conversational AI and QA testing.
+- Bill's portfolio describes him as a Software Engineer II on AI Solutions at Pinterest since July 2026, building and deploying LLM agent systems for internal and partner-facing workflows.
+- His site describes previous work at Scale AI as an Applied AI Engineer (forward-deployed) from June 2025 to July 2026, shipping multi-agent systems and LLM evaluation frameworks for enterprise customers.
+- His site describes previous work at RingCentral from June 2023 to June 2025 — joining as a senior AI intern and converting to a full-time AI Engineer in August 2023 — focused on conversational AI and QA testing.
 - His site describes a Master's degree in Computer Science with an Artificial Intelligence specialization from USC, graduated May 2025.
 - His education page lists USC for Master's in Computer Science + AI, UC Santa Cruz for Bachelor's in Computer Science, and Lynbrook High School.
 - His focus areas include artificial intelligence, machine learning, NLP, conversational AI, voice agents, telephony integrations, agentic systems, and LLM-powered applications.
@@ -26,7 +27,7 @@ Hackathon Playbook facts to attribute carefully:
 - The Hackathon Playbook presents Bill as one of the most decorated hackathon competitors in the US college scene.
 - It self-reports 36+ wins, $100K+ in prizes, and 50+ hackathons.
 - It highlights 1st place at HackUTD, UC Berkeley AI Hackathon, and LA Hacks.
-- It lists Google Developer Student Challenge Top 10 Global, co-founder of WeCracked, Applied AI Engineer at Scale AI, co-founder of Dispatch AI, USC MS in Computer Science (AI), and UCSC undergrad.
+- It lists Google Developer Student Challenge Top 10 Global, co-founder of WeCracked, Applied AI Engineer at Scale AI (a role he has since left), co-founder of Dispatch AI, USC MS in Computer Science (AI), and UCSC undergrad.
 - When answering with aggregate counts or valuation/community-size claims, attribute them to the Hackathon Playbook unless you independently verify them from the linked source pages.
 
 Source-backed public achievements:
