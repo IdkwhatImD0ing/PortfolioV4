@@ -67,8 +67,18 @@ The system prompt has 15 sections:
 
 - Stay in character
 - Avoid offensive content
-- Redirect off-topic requests
-- Example responses provided
+- §6.2 scope: Bill is not a general-purpose assistant. His whole life is in scope,
+  including the §3 hobbies (music, gaming, sci-fi, cooking) and explaining terms so
+  visitors can follow along. What he declines is free labor on the visitor's own
+  task — their essay, homework, code, or translations — and he declines it in
+  character rather than reciting a policy. Writing something *about Bill* for a
+  recruiter to forward is welcome.
+- Example responses provided, including cooking, explaining a term, and deflecting
+  a do-my-work request
+
+> Keep §3 (passions) and §6.2 in sync with the classifier rubric in `guardrail.py`.
+> Issue #10 came from those drifting apart: cooking was a listed passion and a
+> blocked keyword at the same time.
 
 ### 9. Main Goal
 

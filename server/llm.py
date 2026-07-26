@@ -24,7 +24,16 @@ from custom_types import (
     Utterance,
 )
 
-from prompts import begin_sentence, voice_system_prompt, text_system_prompt
+from prompts import (
+    begin_sentence,
+    guardrail_refusal_message,
+    reminder_prompt,
+    text_system_prompt,
+    text_turn_suffix,
+    user_question_prefix,
+    voice_system_prompt,
+    voice_turn_suffix,
+)
 
 from text_utils import clean_markdown
 from guardrail import security_guardrail, JailbreakCheckOutput
@@ -133,19 +142,12 @@ class LlmClient:
 
         if last_user_message:
             last_user_message = (
-                f"User question:{last_user_message}\n\n"
-                "Always respond in plain conversational text. No special symbols or markdown."
-                "This is a VOICE conversation - every character you type will be spoken aloud."
+                f"{user_question_prefix}{last_user_message}\n\n{voice_turn_suffix}"
             )
             prompt[last_user_message_index]["content"] = last_user_message
 
         if request.interaction_type == "reminder_required":
-            prompt.append(
-                {
-                    "role": "user",
-                    "content": "(Now the user has not responded in a while, you would say:)",
-                }
-            )
+            prompt.append({"role": "user", "content": reminder_prompt})
         return prompt
 
     def prepare_functions(self) -> List[Any]:
@@ -258,7 +260,7 @@ class LlmClient:
                 self._log(f"Guardrail triggered: Request blocked due to security check")
                 yield ResponseResponse(
                     response_id=response_id,
-                    content="I can only share information about my background, education, projects, and professional experience. Feel free to ask me about my hackathon wins, my work at Pinterest, or any of my technical projects!",
+                    content=guardrail_refusal_message,
                     content_complete=True,
                     end_call=False,
                 )
@@ -314,7 +316,7 @@ class LlmClient:
             if i == len(messages) - 1 and msg.get("role") == "user":
                 processed_messages.append({
                     "role": "user",
-                    "content": f"User question: {msg['content']}\n\nThis is a TEXT chat. Use markdown formatting: **bold** for emphasis, `code` for tech terms, and bullet points for lists."
+                    "content": f"{user_question_prefix} {msg['content']}\n\n{text_turn_suffix}",
                 })
             else:
                 processed_messages.append(msg)
@@ -369,7 +371,7 @@ class LlmClient:
                 self._log(f"Guardrail triggered: Request blocked due to security check")
                 yield TextChatStreamChunk(
                     type="content",
-                    content="I can only share information about my background, education, projects, and professional experience. Feel free to ask me about my hackathon wins, my work at Pinterest, or any of my technical projects!",
+                    content=guardrail_refusal_message,
                 )
                 yield TextChatStreamChunk(type="done")
                 return

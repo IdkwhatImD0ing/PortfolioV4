@@ -23,10 +23,11 @@ report concrete, exploitable issues — not generic advice.
   `Access-Control-Allow-Origin` from `NEXT_PUBLIC_APP_URL`. Flag wildcard
   origins with credentials, regex that over-matches (e.g. `art3m1s.me.evil.com`),
   or missing origin locking.
-- **Prompt injection / guardrail**: `server/llm.py` runs a guardrail agent over
-  user turns (speech-to-text, untrusted). Flag user/transcript text that reaches
-  tools, navigation, or system prompts without passing the guardrail, and any
-  tool whose arguments are used unsafely (e.g. `display_project` id).
+- **Prompt injection / guardrail**: `server/guardrail.py` runs an LLM-judge
+  guardrail over user turns (speech-to-text, untrusted; also the unauthenticated
+  `/chat` message array). Flag user/transcript text that reaches tools,
+  navigation, or system prompts without passing the guardrail, and any tool whose
+  arguments are used unsafely (e.g. `display_project` id).
 - **WebSocket path**: the LLM socket path is obfuscated via `OBFUSCATED_WS_PATH`.
   Flag logging that leaks it or call_ids in a way that enables hijacking.
 - **Injection sinks**: any `eval`, shell, SQL, or path built from request data.

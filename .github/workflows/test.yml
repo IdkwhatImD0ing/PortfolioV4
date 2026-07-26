@@ -40,7 +40,10 @@ jobs:
           RETELL_API_KEY: test-key
           OPENAI_API_KEY: test-key
           PINECONE_API_KEY: test-key
-        run: uv run pytest tests/ -v --tb=short
+        # `-m "not integration"` because OPENAI_API_KEY here is a placeholder.
+        # conftest.py uses os.environ.setdefault, so the key is always set under
+        # pytest and a key-presence skipif can never fire on its own.
+        run: uv run pytest tests/ -m "not integration" -v --tb=short
 
   frontend-tests:
     name: Frontend Tests
