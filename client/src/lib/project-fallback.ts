@@ -18,10 +18,11 @@ function mapPineconeToProject(entry: PineconeEntry): Project {
     long: entry.details,
     github: entry.github,
     demo: entry.demo,
-    // Defaults for fields Pinecone doesn't carry. The full curated set lives
-    // in portfolio-data.ts; this fallback is only for archived projects
-    // surfaced by the agent but not displayed on the projects rail.
-    year: 0,
+    // Fields Pinecone doesn't carry. `year` is left undefined rather than
+    // coerced to 0 — the detail modal renders it, and "Project · 0" is worse
+    // than no year at all. The full curated set lives in portfolio-data.ts;
+    // this fallback is only for archived projects surfaced by the agent but
+    // not displayed on the projects rail.
     tags: [],
   };
 }

@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// FocusEvent is aliased so it doesn't shadow the DOM type of the same name.
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent as ReactFocusEvent,
+} from "react";
 import { PROJECTS, findProject, type Project } from "@/lib/portfolio-data";
 import { loadFallbackProject } from "@/lib/project-fallback";
 import { prefersReducedMotion, VoiceBus, scrollToSection } from "@/lib/voice-bus";
@@ -19,10 +27,12 @@ const STANDOUT_PROJECTS: Project[] = STANDOUT_PROJECT_IDS.map((id) =>
 
 export function ProjectsSection() {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
+  const railFocusRaf = useRef(0);
 
   const isMobile = useIsMobile();
 
@@ -224,9 +234,10 @@ export function ProjectsSection() {
     // Mobile uses a native scroll-snap carousel, not the scroll-jacked rail.
     if (isMobile) return;
     const wrap = wrapRef.current;
+    const sticky = stickyRef.current;
     const track = trackRef.current;
     const prog = progressRef.current;
-    if (!wrap || !track) return;
+    if (!wrap || !sticky || !track) return;
 
     let raf = 0;
     const update = () => {
@@ -241,15 +252,111 @@ export function ProjectsSection() {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(update);
     };
+    // The sticky box is `overflow-hidden`, which still makes it programmatically
+    // scrollable: focusing a card that the rail has translated off-screen makes
+    // the browser scroll *it* to reveal the card, on top of the transform we
+    // already apply. Pin it back to the origin — onRailFocus below drives the
+    // page scroll instead, which is what actually moves the rail.
+    const pinSticky = () => {
+      if (sticky.scrollLeft) sticky.scrollLeft = 0;
+      if (sticky.scrollTop) sticky.scrollTop = 0;
+    };
+
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
+    sticky.addEventListener("scroll", pinSticky);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+      sticky.removeEventListener("scroll", pinSticky);
     };
   }, [railProjects.length, isMobile]);
+
+  /** Keyboard equivalent of the scroll-jacked rail: Tab moves focus through the
+   *  cards, and the rail's horizontal offset is a pure function of page scroll,
+   *  so translate "bring this card into view" into the page scroll that does it.
+   *  Only the desktop rail needs this — the mobile carousel is a real scroll
+   *  container, where the browser's own scroll-into-view is already correct. */
+  const onRailFocus = (e: ReactFocusEvent<HTMLDivElement>) => {
+    const card = (e.target as HTMLElement).closest<HTMLElement>("[data-project-card]");
+    if (!card) return;
+
+    // Measured only once the page has stopped moving. The browser runs its own
+    // scroll-into-view for the newly focused card, and globals.css sets
+    // `scroll-behavior: smooth`, so that runs as an animation lasting many
+    // frames. Worse, it is a *vertical* scroll, which is exactly what drives
+    // this rail sideways — bringing a below-the-fold card into view can push it
+    // out of view horizontally. Measuring before it settles reads a position
+    // the browser is still animating away from.
+    cancelAnimationFrame(railFocusRaf.current);
+    let frames = 0;
+    let lastY = NaN;
+    let stable = 0;
+    let moved = false;
+    const step = () => {
+      const wrap = wrapRef.current;
+      const sticky = stickyRef.current;
+      const track = trackRef.current;
+      if (!wrap || !sticky || !track || !card.isConnected) return;
+
+      const y = window.scrollY;
+      if (y === lastY) {
+        stable++;
+      } else {
+        if (!Number.isNaN(lastY)) moved = true;
+        stable = 0;
+        lastY = y;
+      }
+
+      // Two identical frames means nothing is animating *right now* — but the
+      // browser's scroll may not have started yet, which looks identical. So a
+      // still page only ends the watch once it has actually moved.
+      if (stable >= 2) {
+        // Undo any scroll the browser applied to the clipped sticky box, so the
+        // measurement below reflects the rail transform alone.
+        sticky.scrollLeft = 0;
+        sticky.scrollTop = 0;
+
+        const margin = 32;
+        const r = card.getBoundingClientRect();
+        // How far the card is outside the viewport: positive = off to the right.
+        const overflowX =
+          r.right > window.innerWidth - margin
+            ? r.right - (window.innerWidth - margin)
+            : r.left < margin
+              ? r.left - margin
+              : 0;
+
+        if (overflowX) {
+          // Solve for an absolute scroll position rather than nudging by a
+          // delta. update() clamps p to [0,1], so while the page sits outside
+          // the rail's travel the rail doesn't move at all and a relative nudge
+          // silently does nothing — which is exactly where focus lands when you
+          // Tab in from above. Mirror update()'s mapping and invert it:
+          //   p = clamp((scrollY - wrapTop) / dist),  translate = -p * max
+          const dist = wrap.offsetHeight - window.innerHeight;
+          const max = Math.max(0, track.scrollWidth - window.innerWidth + 32);
+          if (dist <= 0 || max <= 0) return;
+          const wrapTop = wrap.getBoundingClientRect().top + window.scrollY;
+          const clamp = (v: number) => Math.max(0, Math.min(1, v));
+          const translateNow = -clamp((window.scrollY - wrapTop) / dist) * max;
+          const pTarget = clamp(-(translateNow - overflowX) / max);
+          window.scrollTo({
+            top: wrapTop + pTarget * dist,
+            behavior: prefersReducedMotion() ? "instant" : "smooth",
+          });
+          return;
+        }
+        if (moved) return; // settled after a real scroll with the card in view
+      }
+      // ~750ms cap: long enough for the browser's smooth scroll-into-view,
+      // short enough not to outlive the focus that started it.
+      if (++frames < 45) railFocusRaf.current = requestAnimationFrame(step);
+    };
+    railFocusRaf.current = requestAnimationFrame(step);
+  };
 
   // Mobile carousel: track which card is centered for the pagination dots.
   const onCarouselScroll = () => {
@@ -273,7 +380,13 @@ export function ProjectsSection() {
     });
   };
 
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(railFocusRaf.current);
+    },
+    [],
+  );
 
   const scrollToCard = (i: number) => {
     const el = carouselRef.current;
@@ -377,7 +490,7 @@ export function ProjectsSection() {
         </div>
       ) : (
         <div ref={wrapRef} className="relative" style={{ height: railHeight }}>
-          <div className="sticky top-0 h-screen flex flex-col overflow-hidden">
+          <div ref={stickyRef} className="sticky top-0 h-screen flex flex-col overflow-hidden">
             <div className="flex-none px-[8vw] pt-[5vh] pb-[18px] flex justify-between items-end gap-6 z-[5] bg-gradient-to-b from-[rgba(7,6,13,0.85)] from-0% via-[rgba(7,6,13,0.6)] via-70% to-transparent to-100% backdrop-blur-md">
               <div>
                 <span className="inline-flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] uppercase text-accent px-3 py-1.5 border border-[rgba(192,132,252,0.35)] rounded-full bg-[rgba(192,132,252,0.08)]">
@@ -411,6 +524,7 @@ export function ProjectsSection() {
 
             <div
               ref={trackRef}
+              onFocus={onRailFocus}
               className="flex-auto flex items-center gap-6 px-[8vw] will-change-transform min-h-0"
             >
               {railProjects.map((p) => (

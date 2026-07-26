@@ -33,7 +33,7 @@ export function ProjectDetail({
         <div className="px-9 pt-2 -mt-10 max-[800px]:px-6">
           <div className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.18em] uppercase text-violet">
             <span className="w-1.5 h-1.5 rounded-full bg-magenta shadow-[0_0_10px_var(--magenta)]" />
-            {p.award ? `★ ${p.award}` : `Project · ${p.year}`}
+            {p.award ? `★ ${p.award}` : p.year ? `Project · ${p.year}` : "Project"}
           </div>
           <h3 className="font-serif text-[clamp(36px,4.4vw,56px)] -tracking-[0.02em] leading-[1.02] mt-3 mb-2 bg-gradient-to-br from-ink to-violet bg-clip-text text-transparent">
             {p.name}
@@ -102,10 +102,16 @@ export function ProjectDetail({
           </div>
           <div className="flex flex-col gap-[18px]">
             <div className="grid grid-cols-[60px_1fr] gap-x-3.5 gap-y-2.5 px-[18px] py-[18px] border border-line rounded-xl bg-[rgba(15,12,28,0.4)] text-[13.5px]">
-              <span className="font-mono text-[10.5px] tracking-[0.18em] uppercase text-muted self-center">
-                Year
-              </span>
-              <span>{p.year}</span>
+              {/* Archived projects from the Pinecone corpus carry no year —
+                  drop the row rather than render an empty cell. */}
+              {p.year !== undefined && (
+                <>
+                  <span className="font-mono text-[10.5px] tracking-[0.18em] uppercase text-muted self-center">
+                    Year
+                  </span>
+                  <span>{p.year}</span>
+                </>
+              )}
               <span className="font-mono text-[10.5px] tracking-[0.18em] uppercase text-muted self-center">
                 ID
               </span>

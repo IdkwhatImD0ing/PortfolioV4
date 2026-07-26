@@ -22,11 +22,17 @@ export function ProjectCard({
   className?: string;
 }) {
   return (
+    // The card's click target is the title button's stretched ::after overlay,
+    // not this element. A `role="button"` wrapper would have made the heading
+    // and summary presentational to assistive tech; a real <button> can't
+    // legally wrap them either (flow content). The overlay keeps the whole
+    // card clickable while leaving one properly-named button in the tab order.
     <article
       data-cursor-hover
-      onClick={() => onOpen(p.id)}
+      data-project-card
       className={cn(
         "group/card rounded-3xl bg-gradient-to-b from-card to-card-2 border border-line relative overflow-hidden flex flex-col cursor-pointer transition-[transform,opacity,filter] duration-[350ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
         !match && "opacity-[0.32] [filter:saturate(0.4)_blur(0.5px)]",
         isFocus &&
           "shadow-[0_30px_80px_rgba(162,89,255,0.45),0_0_0_1px_rgba(232,121,249,0.65)] -translate-y-1.5 scale-[1.015]",
@@ -59,7 +65,18 @@ export function ProjectCard({
         </span>
       </div>
       <div className="px-6 pt-5 pb-6 flex flex-col gap-2.5 flex-1">
-        <h4 className="text-[26px] -tracking-[0.02em] font-semibold m-0">{p.name}</h4>
+        <h4 className="text-[26px] -tracking-[0.02em] font-semibold m-0">
+          {/* ::after stretches over the whole card so a pointer anywhere on it
+              still opens the deep dive. z-[2] clears the badges in the poster,
+              which sit at z-[1]. The focus ring is drawn on the card instead. */}
+          <button
+            type="button"
+            onClick={() => onOpen(p.id)}
+            className="text-left cursor-pointer focus-visible:outline-none after:content-[''] after:absolute after:inset-0 after:z-[2]"
+          >
+            {p.name}
+          </button>
+        </h4>
         <p className="text-[14px] leading-[1.45] text-ink-soft m-0 flex-1">{p.summary}</p>
         <div className="flex flex-wrap gap-1.5 mt-auto">
           {p.tags.map((t) => (
@@ -75,9 +92,11 @@ export function ProjectCard({
               #{t}
             </span>
           ))}
-          <span className="font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase ml-auto">
-            {p.year}
-          </span>
+          {p.year !== undefined && (
+            <span className="font-mono text-[10.5px] px-2 py-1 rounded border border-line-soft text-ink-soft lowercase ml-auto">
+              {p.year}
+            </span>
+          )}
         </div>
       </div>
     </article>

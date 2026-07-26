@@ -20,6 +20,8 @@ export function PersonalSection() {
   const portRef = useRef<HTMLDivElement>(null);
   const { ref, revealed } = useReveal<HTMLDivElement>();
 
+  // `resize` because every offset below is normalised against the viewport
+  // height, which a resize invalidates without any scroll happening.
   useRafScroll(() => {
     // Parallax is driven by the section's position in the viewport, not the
     // absolute page scroll — otherwise a section this far down the page gets
@@ -41,7 +43,7 @@ export function PersonalSection() {
         portRef.current.style.transform = `translate3d(0, ${center * -0.06}px, 0)`;
       }
     }
-  });
+  }, true);
 
   return (
     <section
