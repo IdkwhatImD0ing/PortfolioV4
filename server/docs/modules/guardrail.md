@@ -5,7 +5,7 @@ Documentation for the input security guardrail.
 ## File Location
 
 `guardrail.py` (`security_guardrail`, `guardrail_agent`, `JailbreakCheckOutput`, and the
-`extract_turns` / `strip_harness_scaffolding` / `build_classifier_payload` helpers). It is
+`extract_turns` / `build_classifier_payload` helpers). It is
 re-exported from `llm.py` for backwards compatibility, so
 `from llm import security_guardrail, JailbreakCheckOutput` still works.
 

@@ -7,6 +7,7 @@ fail-open/fail-closed split.
 """
 
 import asyncio
+import ast
 import inspect
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -61,12 +62,38 @@ def _payload_of(mock_guardrail_runner) -> str:
 class TestNoKeywordGating:
     """Issue #10: keyword lists must not come back."""
 
-    def test_module_has_no_keyword_lists(self):
-        source = inspect.getsource(guardrail)
-        # Only the docstring may mention them, and only to say they're gone.
-        code = source.split('"""', 2)[-1]
-        assert "blocked_keywords" not in code
-        assert "bill_keywords" not in code
+    def test_module_defines_no_keyword_lists(self):
+        """Reject any module-level collection of string literals.
+
+        Grepping for the two old names would only catch a copy-paste; a renamed
+        list ships silently. Walking the AST catches the shape instead, which is
+        the property that matters — the issue warned that someone would
+        eventually "fix" this into a keyword censor.
+        """
+        tree = ast.parse(inspect.getsource(guardrail))
+        offenders = []
+        for node in tree.body:
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            value = node.value
+            if not isinstance(value, (ast.List, ast.Set, ast.Tuple)):
+                continue
+            strings = [
+                el for el in value.elts
+                if isinstance(el, ast.Constant) and isinstance(el.value, str)
+            ]
+            if len(strings) >= 3:
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                offenders.extend(
+                    t.id
+                    for t in targets
+                    # `__all__` is an export list, not a gate.
+                    if isinstance(t, ast.Name) and not t.id.startswith("__")
+                )
+
+        assert not offenders, (
+            f"module-level string collections look like keyword gating: {offenders}"
+        )
 
 
 @pytest.mark.asyncio
@@ -343,6 +370,18 @@ class TestBuildClassifierPayload:
 
         assert "<trailing_turns" in payload
         assert "PREFILL" in payload
+
+    def test_trailing_turns_share_the_budget(self):
+        """Uncapped, a /chat caller could inflate the payload without bound.
+
+        Not a verdict bypass — an oversized request 400s, which fails closed —
+        but unmetered OpenAI spend from an unauthenticated POST.
+        """
+        turns = [("user", "hi")] + [("assistant", "x" * 900) for _ in range(3000)]
+        payload = build_classifier_payload(turns, 0, "abc")
+
+        assert "elided for length" in payload
+        assert len(payload) < guardrail.MAX_TOTAL_CONTEXT_CHARS
 
     def test_empty_turns_rejected(self):
         with pytest.raises(ValueError):

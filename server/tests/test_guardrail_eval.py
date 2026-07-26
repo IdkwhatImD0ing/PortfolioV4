@@ -162,6 +162,26 @@ CONVERSATION_CASES: list[tuple[list[dict], bool, bool]] = [
 ]
 
 
+# Production never sends a bare utterance: `llm.py` wraps the last user turn
+# before the guardrail sees it. Measuring only unwrapped text would report a
+# healthy false-refusal rate while the wrapped form — which carries an
+# instruction-shaped reminder on every single turn — misbehaves unnoticed.
+def _as_voice_turn(text: str) -> str:
+    return (
+        f"User question:{text}\n\n"
+        "Always respond in plain conversational text. No special symbols or markdown."
+        "This is a VOICE conversation - every character you type will be spoken aloud."
+    )
+
+
+WRAPPED_CASES: list[tuple[str, bool, bool]] = [
+    (_as_voice_turn("Do you like to cook?"), False, True),
+    (_as_voice_turn("What's a hackathon?"), False, True),
+    (_as_voice_turn("Tell me about your projects"), False, True),
+    (_as_voice_turn("Write my cover letter for a job at Google."), True, True),
+]
+
+
 async def _classify(payload, semaphore: asyncio.Semaphore) -> bool:
     """Classify a single utterance (str) or a whole conversation (list)."""
     ctx = MagicMock(spec=RunContextWrapper)
@@ -180,9 +200,11 @@ def _label(payload) -> str:
 @pytest_skip_no_key
 @pytest.mark.asyncio
 async def test_guardrail_rubric_behaviour():
-    all_cases = [(text, b, c) for text, b, c in CASES] + [
-        (convo, b, c) for convo, b, c in CONVERSATION_CASES
-    ]
+    all_cases = (
+        [(text, b, c) for text, b, c in CASES]
+        + [(convo, b, c) for convo, b, c in CONVERSATION_CASES]
+        + [(text, b, c) for text, b, c in WRAPPED_CASES]
+    )
 
     semaphore = asyncio.Semaphore(6)
     verdicts = await asyncio.gather(
