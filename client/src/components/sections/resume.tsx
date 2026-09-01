@@ -116,7 +116,7 @@ export function ResumeSection() {
                   agents, multimodal pipelines, real-time inference.
                 </li>
                 <li className="text-[13.5px] text-ink-soft leading-[1.5] pl-3.5 relative before:content-[''] before:absolute before:left-0 before:top-[9px] before:w-[5px] before:h-[5px] before:rounded-full before:bg-violet">
-                  <strong className="text-ink font-medium">Pinterest, AI Solutions:</strong>{" "}
+                  <strong className="text-ink font-medium">Pinterest:</strong>{" "}
                   LLM agent systems, RAG, production guardrails. Previously Scale AI.
                 </li>
                 <li className="text-[13.5px] text-ink-soft leading-[1.5] pl-3.5 relative before:content-[''] before:absolute before:left-0 before:top-[9px] before:w-[5px] before:h-[5px] before:rounded-full before:bg-violet">

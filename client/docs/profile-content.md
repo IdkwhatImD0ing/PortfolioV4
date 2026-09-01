@@ -3,7 +3,7 @@
 Profile facts are centralized in `src/lib/portfolio-data.ts` and reflected in the hero, resume, and experience sections.
 
 - Use the owner's confirmed LinkedIn profile as the career source of truth.
-- Current role: Software Engineer II (AI Solutions), Pinterest, since July 2026.
+- Current role: Software Engineer II, Pinterest, since July 2026.
 - Previous role: Applied AI Engineer (Forward-Deployed), Scale AI, June 2025 — July 2026.
 - Current location for this portfolio: San Francisco / Bay Area.
 - Education dates are owner-confirmed: USC `Aug 2023 — May 2025`, UC Santa Cruz `Sep 2020 — Mar 2023`, Lynbrook `2016 — 2020`.

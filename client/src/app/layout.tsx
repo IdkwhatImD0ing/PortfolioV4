@@ -83,7 +83,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Person",
               name: "Bill Zhang",
-              jobTitle: "Software Engineer II, AI Solutions",
+              jobTitle: "Software Engineer II",
               worksFor: {
                 "@type": "Organization",
                 name: "Pinterest",
