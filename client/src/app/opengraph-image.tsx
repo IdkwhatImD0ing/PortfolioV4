@@ -80,7 +80,7 @@ export default async function OpengraphImage() {
             color: "#b9b3cc",
           }}
         >
-          <span>Software Engineer II, AI Solutions · Pinterest</span>
+          <span>Software Engineer II · Pinterest</span>
           <span style={{ color: "#6c6885" }}>Voice-driven portfolio · 2026</span>
         </div>
       </div>

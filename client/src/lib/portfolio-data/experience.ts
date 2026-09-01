@@ -3,7 +3,7 @@ import type { ExperienceEntry } from "./types";
 export const EXPERIENCE: ExperienceEntry[] = [
   {
     when: "Jul 2026 — Now",
-    role: "Software Engineer II, AI Solutions",
+    role: "Software Engineer II",
     where: "Pinterest · San Francisco",
     link: "https://www.pinterest.com/",
     body: "Building and deploying LLM agent systems for internal and partner-facing workflows — agent design, tool use, RAG integration, and production guardrails — and partnering with product and engineering teams to set the evaluation, quality, and cost bar each solution must clear before launch.",
