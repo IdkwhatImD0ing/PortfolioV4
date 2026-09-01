@@ -14,7 +14,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     role: "Applied AI Engineer (Forward-Deployed)",
     where: "Scale AI · San Francisco",
     link: "https://scale.com/",
-    body: "Shipped a production multi-agent system automating denied-claim investigations — 3 sub-agents across 20 policy workflows, 300–500 weekly users, up to 20K claims/week — and led agent design for the TIME AI Agent, launched publicly in Nov 2025 over a 102-year archive in 13 languages. Owned the LLM-as-judge eval framework that took QA-audit accuracy 64% → 88% and helped close a seven-figure expansion, and cut the cost of a full Mayo Clinic validation run ~4× ($4.6K → ~$1.2K).",
+    body: "Shipped a production multi-agent system automating denied-claim investigations — 3 sub-agents across 20 policy workflows, 300–500 weekly users, up to 20K claims/week — and led agent design for a major news publisher's AI agent, launched publicly in Nov 2025 over a 102-year archive in 13 languages. Owned the LLM-as-judge eval framework that took QA-audit accuracy 64% → 88% and helped close a seven-figure expansion, and cut the cost of a full health-system validation run ~4× ($4.6K → ~$1.2K).",
   },
   {
     when: "Jun 2023 — Jun 2025",
