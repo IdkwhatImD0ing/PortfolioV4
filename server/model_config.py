@@ -18,6 +18,16 @@ misconfigured security gate. `or` alone cannot tell the two cases apart, so
 
 import os
 
+from dotenv import load_dotenv
+
+# Load `.env` here rather than relying on the entrypoint to do it first. These
+# constants resolve at import time, and `main.py` imports `llm` (and so this
+# module) several lines *before* its own `load_dotenv()` — so without this, a
+# model set in `server/.env` would never reach them while the startup log, which
+# runs after dotenv, still reported the override as active. `override=True`
+# matches main.py and debug_agent.py: `.env` wins over the ambient environment.
+load_dotenv(override=True)
+
 __all__ = [
     "AGENT_MODEL",
     "GUARDRAIL_MODEL",

@@ -13,9 +13,6 @@ def validate_environment_variables():
     optional_vars = {
         "OBFUSCATED_WS_PATH": "WebSocket path obfuscation (defaults to 'ws-default')",
         "LLM_DEBUG": "Enable debug logging for LLM (0 or 1, defaults to 0)",
-        "AGENT_MODEL": "Override the conversational agent model (see model_config.py)",
-        "GUARDRAIL_MODEL": "Override the jailbreak classifier model (see model_config.py)",
-        "SUMMARY_MODEL": "Override the post-call summary model (see model_config.py)",
     }
 
     missing_required = []
@@ -39,3 +36,13 @@ def validate_environment_variables():
             print(f"  ✓ {var} is set to: {value}")
         else:
             print(f"  ℹ {var} not set ({description})")
+
+    # Print what model_config actually resolved, not the raw env vars. Reading
+    # the env here would report an override that the constants may not have
+    # picked up, which is precisely the failure this is meant to make visible.
+    from model_config import AGENT_MODEL, GUARDRAIL_MODEL, REASONING_EFFORT, SUMMARY_MODEL
+
+    print(f"Models in use (reasoning effort: {REASONING_EFFORT}):")
+    print(f"  · agent:     {AGENT_MODEL}")
+    print(f"  · guardrail: {GUARDRAIL_MODEL}")
+    print(f"  · summary:   {SUMMARY_MODEL}")
