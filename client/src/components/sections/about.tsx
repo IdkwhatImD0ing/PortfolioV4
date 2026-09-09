@@ -11,18 +11,18 @@ const ABOUT = [
   },
   {
     num: "02 / WHAT",
-    title: "Voice-first, agent-shaped systems.",
-    body: "A 911 console that triages live calls, a bank you can reach from any phone, a food-rescue network that dispatches by voice, game tape you can question mid-replay. Several of them work over an ordinary phone call, because that is the interface almost everyone already owns.",
+    title: "Software you can talk to.",
+    body: "A 911 console that triages live calls, a bank you can reach from any phone, a food-rescue network that dispatches by voice, game tape you can question mid-replay. Several of them work over an ordinary phone call.",
   },
   {
     num: "03 / HOW",
     title: "One idea, end to end, in 36 hours.",
-    body: "Thirty-six hackathon wins is a lot of weekends. The clock forces the same call every time: build one idea all the way through. Dispatch AI was a phone line, a fine-tuned triage model, and a dispatcher screen, and it took the $50K grand prize at Berkeley against 900+ participants.",
+    body: "At a hackathon, I focus on getting one idea working. Dispatch AI was a phone line, a fine-tuned triage model, and a dispatcher screen, and it took the $50K grand prize at Berkeley against 900+ participants.",
   },
   {
     num: "04 / WHY",
     title: "Talking is the interface most people already have.",
-    body: "Everyone speaks faster than they type, and plenty of people never learned to type at all. 1.7 billion adults have no bank account to log into either, which is why TalkTuahBank answers an ordinary phone call with no app and no data plan.",
+    body: "A phone call can be easier than navigating an app, and 1.7 billion adults have no bank account to log into in the first place. That is why TalkTuahBank answers an ordinary phone call with no app and no data plan.",
   },
 ];
 

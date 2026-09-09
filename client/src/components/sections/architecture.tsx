@@ -96,15 +96,9 @@ export function ArchitectureSection() {
             </em>
           </h2>
           <p className="text-[19px] leading-[1.55] text-ink-soft mt-6 text-pretty">
-            Talk to this page and the agent answers out loud while calling tools on the
-            server. Seven of its nine tools navigate:{" "}
-            <em className="font-serif italic text-ink">display_project</em>,{" "}
-            <em className="font-serif italic text-ink">display_resume_page</em>, and five more.
-            Each call comes back as a navigation metadata event that the browser maps to a
-            section id, so the layout moves while the answer is still playing. The other two,{" "}
-            <em className="font-serif italic text-ink">search_projects</em> and{" "}
-            <em className="font-serif italic text-ink">get_project_details</em>, query the
-            project index instead.
+            Ask about a project and the agent can look it up, describe it, and open it on the
+            page. Retell handles the audio; a Python backend runs the agent and sends
+            navigation events to the browser.
           </p>
         </div>
 

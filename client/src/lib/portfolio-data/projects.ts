@@ -150,7 +150,7 @@ export const PROJECTS: Project[] = [
     projectUrl: "https://devpost.com/software/maybe-zc19va",
     stack: ["NLX.ai", "AWS", "Next.js", "Google Flights"],
     role: "Solo builder · voice navigation + web guidance",
-    long: "SoundSearch makes complex websites easier to use through real-time voice guidance over a phone call. The caller describes what they need, the assistant synchronizes with the page, highlights relevant sections, and walks through forms, filters, and navigation step by step. It was built for the people a page fails first: low vision, or not fluent in the language the site is written in.",
+    long: "SoundSearch makes complex websites easier to use through real-time voice guidance over a phone call. The caller describes what they need, the assistant synchronizes with the page, highlights relevant sections, and walks through forms, filters, and navigation step by step. It was built for people with low vision or limited fluency in the site's language.",
   },
   {
     id: "swarmaid",
@@ -258,6 +258,6 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/instarizz.webp",
     stack: ["Ray-Ban Meta", "OpenCV", "Magic Loops", "GPT-4", "Streamlit"],
     role: "Pipeline + ethics framing",
-    long: "InstaRizz explores the intersection of AI, social interaction, and wearable technology. Ray-Ban smart glasses stream live video to Instagram, OpenCV captures frames and recognizes faces, a custom identity search matches people from a database, and Magic Loops plus GPT-4 generate a short bio and three pickup lines in real time. Latency and privacy controls were treated as core constraints.",
+    long: "Ray-Ban smart glasses stream live video to Instagram, OpenCV captures frames and recognizes faces, a custom identity search matches people from a database, and Magic Loops plus GPT-4 generate a short bio and three pickup lines in real time. Latency and privacy controls were treated as core constraints.",
   },
 ];

@@ -39,7 +39,7 @@ export function HackathonsSection() {
           </h2>
           <p className="mt-4 text-[18px] leading-[1.5] text-ink-soft max-w-[640px]">
             Every one of these was built in a weekend and defended in front of judges.
-            Thirty-six wins, $150k+ in prizes, most of them during college. Top row is the
+            $150k+ in prizes, most of them during college. Top row is the
             flagship and grand-prize run, bottom row the earlier and smaller ones.
           </p>
         </div>
