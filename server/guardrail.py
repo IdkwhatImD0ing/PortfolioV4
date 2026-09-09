@@ -23,19 +23,16 @@ from openai import (
 )
 from pydantic import BaseModel
 
-from openai.types.shared import Reasoning
-
 from agents import (
     Agent,
     GuardrailFunctionOutput,
-    ModelSettings,
     RunContextWrapper,
     Runner,
     TResponseInputItem,
     input_guardrail,
 )
 
-from model_config import GUARDRAIL_MODEL, REASONING_EFFORT
+from model_config import GUARDRAIL_MODEL
 from prompts import reminder_prompt
 
 __all__ = [
@@ -258,12 +255,14 @@ guardrail_agent = Agent(
     instructions=GUARDRAIL_INSTRUCTIONS,
     output_type=JailbreakCheckOutput,
     model=GUARDRAIL_MODEL,
-    # Reasoning off: the visitor waits on this call, and a timeout fails OPEN
-    # (asyncio.TimeoutError is in _FAIL_OPEN_ERRORS), so a slow judge does not
-    # refuse the turn — it waves it through unjudged. Latency here is a security
-    # property, not a cost one. The judge returns a one-sentence rationale
-    # instead of thinking.
-    model_settings=ModelSettings(reasoning=Reasoning(effort=REASONING_EFFORT)),
+    # No explicit reasoning setting. The default GUARDRAIL_MODEL is gpt-4o-mini,
+    # which has no reasoning phase to configure, and sending it a Reasoning
+    # object risks a 400 — which fails CLOSED here, refusing every visitor.
+    # Overriding GUARDRAIL_MODEL to a GPT-5.x model therefore gets that model's
+    # own default effort rather than "none", which the eval says is what this
+    # gate needs; the measurements are in model_config.py. Latency still matters
+    # either way: a timeout fails OPEN (asyncio.TimeoutError is in
+    # _FAIL_OPEN_ERRORS), so a slow judge waves the turn through unjudged.
 )
 
 

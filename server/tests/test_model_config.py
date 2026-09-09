@@ -42,7 +42,7 @@ def test_defaults_when_unset(clean_model_env):
     mc = _reload_model_config()
 
     assert mc.AGENT_MODEL == "gpt-5.6-terra"
-    assert mc.GUARDRAIL_MODEL == "gpt-5.6-terra"
+    assert mc.GUARDRAIL_MODEL == "gpt-4o-mini"
     assert mc.SUMMARY_MODEL == "gpt-5.6-luna"
     assert mc.REASONING_EFFORT == "none"
 
@@ -52,7 +52,7 @@ def test_env_var_overrides_default(clean_model_env, monkeypatch):
     mc = _reload_model_config()
 
     assert mc.AGENT_MODEL == "gpt-5.6-sol"
-    assert mc.GUARDRAIL_MODEL == "gpt-5.6-terra"  # others untouched
+    assert mc.GUARDRAIL_MODEL == "gpt-4o-mini"  # others untouched
 
 
 def test_surrounding_whitespace_is_stripped(clean_model_env, monkeypatch):

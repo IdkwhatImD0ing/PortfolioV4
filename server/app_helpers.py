@@ -42,7 +42,7 @@ def validate_environment_variables():
     # picked up, which is precisely the failure this is meant to make visible.
     from model_config import AGENT_MODEL, GUARDRAIL_MODEL, REASONING_EFFORT, SUMMARY_MODEL
 
-    print(f"Models in use (reasoning effort: {REASONING_EFFORT}):")
-    print(f"  · agent:     {AGENT_MODEL}")
-    print(f"  · guardrail: {GUARDRAIL_MODEL}")
-    print(f"  · summary:   {SUMMARY_MODEL}")
+    print("Models in use:")
+    print(f"  · agent:     {AGENT_MODEL} (reasoning: {REASONING_EFFORT})")
+    print(f"  · guardrail: {GUARDRAIL_MODEL} (reasoning: model default)")
+    print(f"  · summary:   {SUMMARY_MODEL} (reasoning: {REASONING_EFFORT})")

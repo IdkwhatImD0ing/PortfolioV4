@@ -55,21 +55,39 @@ def _model_from_env(var: str, default: str) -> str:
 AGENT_MODEL = _model_from_env("AGENT_MODEL", "gpt-5.6-terra")
 
 # The jailbreak classifier in guardrail.py. This is the only gate in front of the
-# agent, so treat a change here as a security change. Terra rather than Luna:
-# the guardrail eval measured Luna at reasoning=none allowing 18/27 of the cases
-# it should block (homework, cover letters, "capital of France"), against 7/27
-# for the gpt-4o-mini it replaced. It caught blatant injection but not the
-# rubric's actual line, which is who the answer is about. Payloads here are
-# capped at MAX_TOTAL_CONTEXT_CHARS, so the stronger model costs little.
-GUARDRAIL_MODEL = _model_from_env("GUARDRAIL_MODEL", "gpt-5.6-terra")
+# agent, so treat a change here as a security change.
+#
+# Deliberately still gpt-4o-mini while the rest of the server moved to GPT-5.6.
+# The guardrail eval (tests/test_guardrail_eval.py, real API) measured, on the
+# same 60 labelled cases:
+#
+#     gpt-4o-mini          7/27 false-allow (26%), 2/33 false-refusal
+#     gpt-5.6-luna  @ none 18/27 false-allow (67%), 0/33 false-refusal
+#     gpt-5.6-terra @ none 17/27 false-allow (63%), 0/33 false-refusal
+#
+# Terra is much the stronger model and scored the same as Luna, which points at
+# reasoning="none" rather than model capability: with the reasoning phase off,
+# both allowed homework solving, cover-letter writing and "what's the capital of
+# France". They still caught blatant injection (DAN, "ignore all previous
+# instructions") — what they miss is the rubric's actual line, which is who the
+# answer is about, and that is the judgement this gate exists to make.
+#
+# So moving this to a 5.x model means giving it a reasoning budget, which in
+# turn means raising CLASSIFIER_TIMEOUT_SECONDS — a timeout here fails OPEN.
+# Until that is measured, the older non-reasoning model is the better gate.
+GUARDRAIL_MODEL = _model_from_env("GUARDRAIL_MODEL", "gpt-4o-mini")
 
 # The post-call recruiter summary. Off the critical path — nobody is waiting on
 # it — so it is the safest place to try a different model first.
 SUMMARY_MODEL = _model_from_env("SUMMARY_MODEL", "gpt-5.6-luna")
 
-# Reasoning is disabled everywhere. Voice needs it off for time-to-first-token,
-# the guardrail is on the visitor's critical path with a hard timeout, and
-# holding text mode to the same setting keeps the two chat modes from drifting
-# apart in style or cost. Raise this per-agent only with a latency measurement
-# to back it up.
+# Reasoning effort for the agent and the summary. Voice needs it off for
+# time-to-first-token, and holding text mode to the same setting keeps the two
+# chat modes from drifting apart in style or cost.
+#
+# The guardrail deliberately does NOT use this — see GUARDRAIL_MODEL above. Its
+# eval showed "none" is what breaks the classifier, so it runs on a model whose
+# reasoning phase isn't configurable at all rather than on a 5.x model with the
+# phase switched off. Raise this per-agent only with a latency measurement to
+# back it up.
 REASONING_EFFORT = "none"
