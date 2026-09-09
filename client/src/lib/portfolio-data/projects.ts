@@ -132,7 +132,7 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/vocalyze.webp",
     stack: ["Retell AI", "OpenAI GPT-4", "Letta", "Supabase"],
     role: "Conversational architect",
-    long: "Vocalyze simplifies banking applications with a conversational voice assistant. Retell AI handles live calls, GPT-4 parses and explains the user intent, Letta maintains state across the application flow, and Supabase syncs form data in real time. The plan after the hackathon was multilingual support and financial-literacy guidance inside the same call.",
+    long: "Vocalyze simplifies banking applications with a conversational voice assistant. Retell AI handles live calls, GPT-4 parses and explains the user intent, Letta maintains state across the application flow, and Supabase syncs form data in real time.",
   },
   {
     id: "soundsearch",
@@ -181,7 +181,7 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/secway.webp",
     stack: ["Gemini 2.5 Turbo", "Google Safe Browsing", "PhishTank", "Chrome Extension API"],
     role: "Privacy UX + AI guidance",
-    long: "SecWay explains what a site is asking for at the moment it asks. Gemini writes the explanation in a sentence or two, Google Safe Browsing and PhishTank supply the reputation signal, and the extension stays small enough that it never becomes a second browser UI.",
+    long: "SecWay explains what a site is asking for at the moment it asks. Gemini writes the explanation, Google Safe Browsing and PhishTank supply the reputation signal, and the extension stays small enough that it never becomes a second browser UI.",
   },
   {
     id: "slugmeditate",
@@ -210,7 +210,7 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/talktuahduck.webp",
     stack: ["Sycamore", "SingleStore", "Retell", "Next.js", "RAG pipeline"],
     role: "RAG + retrieval engineer",
-    long: "TalkTuahDuck is rubber-duck debugging for coursework. Upload the messy notes and a retrieval-backed voice assistant lets you explain the material back to it, quoting your own slides when you get something wrong.",
+    long: "TalkTuahDuck is rubber-duck debugging for coursework. Upload the messy notes and a retrieval-backed voice assistant lets you explain the material back to it, quoting your own notes when you get something wrong.",
   },
   {
     id: "tft",
@@ -242,7 +242,7 @@ export const PROJECTS: Project[] = [
     projectUrl: "https://devpost.com/software/splatnft",
     stack: ["Solana", "Anyone Protocol", "Gaussian Splatting", "Next.js", "Node.js"],
     role: "Frontend + minting flow",
-    long: "SplatNFT turns a phone video into a Gaussian splat you can spin around, then mints it as a Solana NFT with the asset itself stored on IPFS. Node, Express, and FFmpeg run the processing pipeline; the frontend is Next.js.",
+    long: "SplatNFT turns your own video into a Gaussian splat you can spin around, then mints it as a Solana NFT with the asset itself stored on IPFS. Node, Express, and FFmpeg run the processing pipeline; the frontend is Next.js.",
   },
   {
     id: "instarizz",
@@ -258,6 +258,6 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/instarizz.webp",
     stack: ["Ray-Ban Meta", "OpenCV", "Magic Loops", "GPT-4", "Streamlit"],
     role: "Pipeline + ethics framing",
-    long: "InstaRizz explores the intersection of AI, social interaction, and wearable technology. Ray-Ban smart glasses stream live video to Instagram, OpenCV captures frames and recognizes faces, a custom identity search matches people from a database, and Magic Loops plus GPT-4 generate a short bio and three pickup lines in real time. Latency and privacy controls were the hard parts.",
+    long: "InstaRizz explores the intersection of AI, social interaction, and wearable technology. Ray-Ban smart glasses stream live video to Instagram, OpenCV captures frames and recognizes faces, a custom identity search matches people from a database, and Magic Loops plus GPT-4 generate a short bio and three pickup lines in real time. Latency and privacy controls were treated as core constraints.",
   },
 ];

@@ -93,7 +93,7 @@ export function ArchitectureSection() {
           </h2>
           <p className="text-[19px] leading-[1.55] text-ink-soft mt-6 text-pretty">
             Talk to this page and the agent replies twice: once out loud, and once in tool
-            calls — <em className="font-serif italic text-ink">filter_projects</em>,{" "}
+            calls: <em className="font-serif italic text-ink">filter_projects</em>,{" "}
             <em className="font-serif italic text-ink">focus_project</em>,{" "}
             <em className="font-serif italic text-ink">open_project</em>,{" "}
             <em className="font-serif italic text-ink">scroll_to</em>. Every section listens on

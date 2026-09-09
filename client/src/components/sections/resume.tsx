@@ -33,7 +33,7 @@ export function ResumeSection() {
             version.
           </h2>
           <p className="text-[18px] leading-[1.55] text-ink-soft mt-5">
-            Same information, one page, no talking required. Read it below or take the PDF —
+            Same information, one page, no talking required. Read it below or take the PDF;
             both match what the rest of this site says.
           </p>
         </div>
