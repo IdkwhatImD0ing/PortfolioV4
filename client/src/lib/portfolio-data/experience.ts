@@ -49,6 +49,6 @@ export const EXPERIENCE: ExperienceEntry[] = [
     role: "Hackathon Mainstay",
     where: "36 wins across the hackathon circuit",
     link: "https://www.thehackathonplaybook.dev/",
-    body: "Mainly competed during college and still jumps into select events. Most of the projects on this page started as weekend builds.",
+    body: "Competed mostly during college; still enter a few events a year. Most of the projects on this page started as weekend builds.",
   },
 ];

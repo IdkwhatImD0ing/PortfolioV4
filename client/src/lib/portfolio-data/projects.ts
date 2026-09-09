@@ -31,7 +31,7 @@ export const PROJECTS: Project[] = [
       "Supabase",
     ],
     role: "Lead AI engineer · audio detection + LLM superintendent",
-    long: "SentinelAI turns a building into an always-on safety partner. Edge audio models detect screams, glass breaks, stampedes, and alarms; a streaming Llama 3.3 superintendent speaks calm evacuation or lockdown guidance through phones and intercoms; simulated smart doors, alarms, signage, and lights react by zone. Human operators keep override control from a live 3D command dashboard.",
+    long: "SentinelAI wires a building's audio into a response loop. Edge audio models detect screams, glass breaks, stampedes, and alarms; a streaming Llama 3.3 superintendent speaks calm evacuation or lockdown guidance through phones and intercoms; simulated smart doors, alarms, signage, and lights react by zone. Human operators keep override control from a live 3D command dashboard.",
   },
   {
     id: "courtvision",
@@ -64,7 +64,7 @@ export const PROJECTS: Project[] = [
     projectUrl: "https://dispatchai.art3m1s.me/",
     stack: ["Mistral (fine-tuned)", "Twilio", "Hume EVI", "Retell", "Intel Dev Cloud", "Next.js"],
     role: "Co-creator · model fine-tuning + agent runtime",
-    long: "DispatchAI reimagines emergency response for understaffed call centers. It aggregates simultaneous 911 calls onto one dispatcher platform, filters them by severity, captures location, time, and caller emotion from the live call, and recommends actions such as dispatching an ambulance. A human-in-the-loop design keeps dispatchers as the final decision makers while a fine-tuned Mistral model and Intel IPEX optimization cut inference from minutes to seconds.",
+    long: "DispatchAI is built for understaffed 911 call centers. It aggregates simultaneous 911 calls onto one dispatcher platform, filters them by severity, captures location, time, and caller emotion from the live call, and recommends actions such as dispatching an ambulance. A human-in-the-loop design keeps dispatchers as the final decision makers while a fine-tuned Mistral model and Intel IPEX optimization cut inference from minutes to seconds.",
   },
   {
     id: "talktuahbank",
@@ -81,7 +81,7 @@ export const PROJECTS: Project[] = [
     projectUrl: "https://talktuah.art3m1s.me/",
     stack: ["Retell AI", "OpenAI Swarm", "Pinata (IPFS)", "Next.js", "Tailwind", "ShadCN"],
     role: "Voice + multi-agent backend",
-    long: "TalkTuahBank is a multi-agent banking assistant for the 1.7 billion adults without bank access. A real phone call routes through Retell AI into a FastAPI/OpenAI Swarm backend, while the operator console reflects balances, transfers, bill pay, and agent handoffs in real time. The repo also ships a Next.js project site with demo, console, architecture, and build walkthrough routes.",
+    long: "TalkTuahBank is a multi-agent banking assistant for the 1.7 billion adults without bank access. A real phone call routes through Retell AI into a FastAPI/OpenAI Swarm backend, while the operator console reflects balances, transfers, bill pay, and agent handoffs in real time.",
   },
   {
     id: "adapted",
@@ -98,7 +98,7 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/adapted.webp",
     stack: ["Gemini 1.5 Pro", "Fetch.ai", "Hume EVI", "Intel Dev Cloud", "Auth0", "MongoDB"],
     role: "Agent runtime + slide-state engine",
-    long: "AdaptEd is a hackathon-winning AI lecture showcase. The original LA Hacks stack paired FastAPI, LangChain, Retell AI, Gemini, Hume, Fetch.ai, Auth0, MongoDB, and Intel Dev Cloud; the repo now preserves that backend as an artifact and ships a production-style Next.js frontend with a scripted Red-Black Trees lecture, pre-rendered voice clips, dynamic slides, transcript, research timeline, and interruptible prompt chips.",
+    long: "AdaptEd delivers a lecture out loud and rebuilds its slides as it goes. The LA Hacks build ran on FastAPI, LangChain, Retell, Gemini, Hume, Fetch.ai, Auth0, MongoDB, and Intel Dev Cloud. What's live now is a Next.js version of the same demo: a scripted Red-Black Trees lecture with dynamic slides, a transcript, and prompt chips you can cut in with.",
   },
   {
     id: "slugloop",
@@ -123,7 +123,7 @@ export const PROJECTS: Project[] = [
     name: "Vocalyze",
     year: 2025,
     summary:
-      "Conversational AI for banking applications. Phone calls become filled forms, synced data, and clearer financial choices.",
+      "Conversational AI for bank applications. Answer the questions on a call and the form fills itself in as you talk.",
     tags: ["voice", "fintech", "ai", "winner"],
     award: "Letta + Finance, HackMerced X",
     github: "https://github.com/IdkwhatImD0ing/idkwhatthisprojectis",
@@ -132,7 +132,7 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/vocalyze.webp",
     stack: ["Retell AI", "OpenAI GPT-4", "Letta", "Supabase"],
     role: "Conversational architect",
-    long: "Vocalyze simplifies banking applications with a conversational voice assistant. Retell AI handles live calls, GPT-4 parses and explains the user intent, Letta maintains state across the application flow, and Supabase syncs form data in real time. The README frames the goal as making banking easier, more inclusive, and ready for multilingual expansion and financial-literacy guidance.",
+    long: "Vocalyze simplifies banking applications with a conversational voice assistant. Retell AI handles live calls, GPT-4 parses and explains the user intent, Letta maintains state across the application flow, and Supabase syncs form data in real time. The plan after the hackathon was multilingual support and financial-literacy guidance inside the same call.",
   },
   {
     id: "soundsearch",
@@ -150,7 +150,7 @@ export const PROJECTS: Project[] = [
     projectUrl: "https://devpost.com/software/maybe-zc19va",
     stack: ["NLX.ai", "AWS", "Next.js", "Google Flights"],
     role: "Solo builder · voice navigation + web guidance",
-    long: "SoundSearch makes complex websites easier to use through real-time voice guidance over a phone call. The caller describes what they need, the assistant synchronizes with the page, highlights relevant sections, and walks through forms, filters, and navigation step by step. The Devpost page frames it around accessibility for users who have trouble seeing or are not proficient in the website's language.",
+    long: "SoundSearch makes complex websites easier to use through real-time voice guidance over a phone call. The caller describes what they need, the assistant synchronizes with the page, highlights relevant sections, and walks through forms, filters, and navigation step by step. It was built for the people a page fails first: low vision, or not fluent in the language the site is written in.",
   },
   {
     id: "swarmaid",
@@ -181,7 +181,7 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/secway.webp",
     stack: ["Gemini 2.5 Turbo", "Google Safe Browsing", "PhishTank", "Chrome Extension API"],
     role: "Privacy UX + AI guidance",
-    long: "SecWay focuses on user-centric security design: empowerment over scare tactics. It watches browser permission risk, uses conversational Gemini-powered guidance to educate users in context, and stays lightweight enough to feel like a companion instead of browser bloat. The goal is simple privacy decisions, explained at the moment they matter.",
+    long: "SecWay explains what a site is asking for at the moment it asks. Gemini writes the explanation in a sentence or two, Google Safe Browsing and PhishTank supply the reputation signal, and the extension stays small enough that it never becomes a second browser UI.",
   },
   {
     id: "slugmeditate",
@@ -210,7 +210,7 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/talktuahduck.webp",
     stack: ["Sycamore", "SingleStore", "Retell", "Next.js", "RAG pipeline"],
     role: "RAG + retrieval engineer",
-    long: "TalkTuahDuck applies the classic 'rubber ducking' technique to studying. It ingests messy learning materials, builds a retrieval-backed knowledge base, and lets students reason out loud with a voice assistant that can cite the source material instead of drifting into generic tutoring.",
+    long: "TalkTuahDuck is rubber-duck debugging for coursework. Upload the messy notes and a retrieval-backed voice assistant lets you explain the material back to it, quoting your own slides when you get something wrong.",
   },
   {
     id: "tft",
@@ -242,7 +242,7 @@ export const PROJECTS: Project[] = [
     projectUrl: "https://devpost.com/software/splatnft",
     stack: ["Solana", "Anyone Protocol", "Gaussian Splatting", "Next.js", "Node.js"],
     role: "Frontend + minting flow",
-    long: "SplatNFT combines Gaussian Splatting and NFTs. The frontend uses React, TypeScript, Next.js, Tailwind, and shadcn/ui; the backend uses Node, Express, OpenAI, FFmpeg, Solana, and IPFS. Users upload personal video, process it into an interactive 3D splat, preview it, and mint it as a Solana-backed NFT stored through decentralized infrastructure.",
+    long: "SplatNFT turns a phone video into a Gaussian splat you can spin around, then mints it as a Solana NFT with the asset itself stored on IPFS. Node, Express, and FFmpeg run the processing pipeline; the frontend is Next.js.",
   },
   {
     id: "instarizz",
@@ -258,6 +258,6 @@ export const PROJECTS: Project[] = [
     poster: "/project-posters/instarizz.webp",
     stack: ["Ray-Ban Meta", "OpenCV", "Magic Loops", "GPT-4", "Streamlit"],
     role: "Pipeline + ethics framing",
-    long: "InstaRizz explores the intersection of AI, social interaction, and wearable technology. Ray-Ban smart glasses stream live video to Instagram, OpenCV captures frames and recognizes faces, a custom identity search matches people from a database, and Magic Loops plus GPT-4 generate a short bio and three pickup lines in real time. The repo also calls out latency optimization and privacy controls as core ethical constraints.",
+    long: "InstaRizz explores the intersection of AI, social interaction, and wearable technology. Ray-Ban smart glasses stream live video to Instagram, OpenCV captures frames and recognizes faces, a custom identity search matches people from a database, and Magic Loops plus GPT-4 generate a short bio and three pickup lines in real time. Latency and privacy controls were the hard parts.",
   },
 ];

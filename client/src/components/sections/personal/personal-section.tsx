@@ -57,7 +57,7 @@ export function PersonalSection() {
           off the clock · off the clock · off the clock
         </div>
         <div ref={refL2} className={cn(decorBase, "top-1/2 -right-[4%]")}>
-          music · climbing · coffee
+          drums · piano · good noodles
         </div>
         <div ref={refL3} className={cn(decorBase, "bottom-[6%] left-[5%]")}>
           made in san francisco

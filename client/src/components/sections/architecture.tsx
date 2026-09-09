@@ -12,7 +12,7 @@ const FLOW = [
   {
     k: "02",
     title: "LLM agent",
-    body: "Retell agent runs an instruction-tuned model with this site's content + a small tool registry as its world.",
+    body: "Retell runs an instruction-tuned model with this site's content in context and four tools it can call.",
   },
   {
     k: "03",
@@ -32,7 +32,7 @@ const FLOW = [
   {
     k: "06",
     title: "Voice reply",
-    body: "The agent confirms in spoken English while the page settles. The user keeps both hands free.",
+    body: "The agent says what it did while the scroll is still finishing, so the answer and the page land together.",
   },
 ];
 
@@ -92,10 +92,12 @@ export function ArchitectureSection() {
             </em>
           </h2>
           <p className="text-[19px] leading-[1.55] text-ink-soft mt-6 text-pretty">
-            Most portfolios are read-only documents. This one is an agent. You speak, and the
-            structured tool calls coming back from the LLM rearrange the page in real time:
-            filter projects, scroll, expand a deep-dive, jump to a specific section. The voice
-            agent <em className="font-serif italic text-ink">is</em> the navigation.
+            Talk to this page and the agent replies twice: once out loud, and once in tool
+            calls — <em className="font-serif italic text-ink">filter_projects</em>,{" "}
+            <em className="font-serif italic text-ink">focus_project</em>,{" "}
+            <em className="font-serif italic text-ink">open_project</em>,{" "}
+            <em className="font-serif italic text-ink">scroll_to</em>. Every section listens on
+            the same bus, so the layout rearranges while the answer is still playing.
           </p>
         </div>
 

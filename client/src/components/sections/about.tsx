@@ -6,23 +6,23 @@ import { cn } from "@/lib/utils";
 const ABOUT = [
   {
     num: "01 / WHO",
-    title: "I make AI feel like a real product.",
-    body: "Most AI demos crumble under a real conversation. I obsess over the seams: latency, interruption handling, tool-use, fallback. The work that survives contact with users is the work I want to do.",
+    title: "Most of my work is failure handling.",
+    body: "Latency, interrupted sentences, tool calls that half-fail, a model that answers the wrong question with total confidence. At RingCentral my eval pipeline moved retrieval accuracy from 90% to 95% and dropped human hand-offs from 40% to 13% — almost all of that came out of the failure cases, not the happy path.",
   },
   {
     num: "02 / WHAT",
     title: "Voice-first, agent-shaped systems.",
-    body: "Phones. Smart glasses. Browser sidebars. Pinned terminals. Wherever the interface is least visual, I'm trying to make it more useful: for banking, education, public safety, food rescue, sports tape.",
+    body: "A 911 console that triages live calls, a bank you can reach from a flip phone, a food-rescue network that dispatches by voice, game tape you can question mid-replay. Most of it runs over a plain phone call, because that is the interface almost everyone already owns.",
   },
   {
     num: "03 / HOW",
-    title: "Ship a startup-grade product every weekend.",
-    body: "Thirty-six hackathon wins is a lot of weekends. The discipline of 36 hours sharpens the instinct: pick the smallest demo that proves the hypothesis, build the spine first, decorate last.",
+    title: "One idea, end to end, in 36 hours.",
+    body: "Thirty-six hackathon wins is a lot of weekends. The clock forces the same call every time: build one idea all the way through. Dispatch AI was a phone line, a fine-tuned triage model, and a dispatcher screen, and it took the $50K grand prize at Berkeley against 900+ participants.",
   },
   {
     num: "04 / WHY",
-    title: "The next billion users will talk to software.",
-    body: "Most people on Earth still type slower than they speak, and a lot of them never learned to type at all. Every product I touch tries to bend the floor of access a little closer to the ground.",
+    title: "Talking is the interface most people already have.",
+    body: "Everyone speaks faster than they type, and plenty of people never learned to type at all. 1.7 billion adults have no bank account to log into either, which is why TalkTuahBank answers an ordinary phone call — no app, no data plan.",
   },
 ];
 

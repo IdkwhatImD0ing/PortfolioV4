@@ -33,8 +33,8 @@ export function ResumeSection() {
             version.
           </h2>
           <p className="text-[18px] leading-[1.55] text-ink-soft mt-5">
-            Same story, traditional format. Click through below or grab the PDF; both stay in
-            lock-step with everything else on this page.
+            Same information, one page, no talking required. Read it below or take the PDF —
+            both match what the rest of this site says.
           </p>
         </div>
 
