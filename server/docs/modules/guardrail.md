@@ -110,13 +110,42 @@ Split deliberately, because the judge is now the only gate:
   refusal is not schema-valid, raises `ModelBehaviorError`, and failing open there would allow
   exactly the worst content.
 
-`GUARDRAIL_MODEL` (default `gpt-5.6-luna`, declared in `model_config.py`) is
+`GUARDRAIL_MODEL` (default `gpt-4o-mini`, declared in `model_config.py`) is
 validated non-empty at import, so a misconfiguration is loud rather than a
-silently disabled gate. The judge runs
-with `reasoning.effort="none"`: the visitor waits on this call, and a timeout
-fails **open** (`asyncio.TimeoutError` is in `_FAIL_OPEN_ERRORS`), so a slow
-judge waves the turn through unjudged rather than refusing it. Latency here is
-a security property, not just a cost one.
+silently disabled gate. The judge is sent no explicit reasoning setting, so a
+GPT-5.x override runs at that model's own default effort. Latency still matters:
+the visitor waits on this call, and a timeout fails **open**
+(`asyncio.TimeoutError` is in `_FAIL_OPEN_ERRORS`), so a slow judge waves the
+turn through unjudged rather than refusing it. That makes latency here a
+security property, not just a cost one.
+
+## Rubric shape
+
+`GUARDRAIL_INSTRUCTIONS` is five numbered BLOCK categories (B1-B5), worked in
+order, each with its own **Block** and **Allow** clause. The shape follows Llama
+Guard's taxonomy format (arXiv 2312.06674): a category states the violation
+first, and its allowances live *inside* it.
+
+An earlier version inverted this — it led with "ALLOW is the default", listed
+allowed topics, and buried block cases as `Block only ...` exceptions
+subordinate to those allow-rules. The eval showed all five of those nested
+exceptions leaking (trivia, on-demand jokes, translating visitor text,
+summarizing visitor documents, debugging visitor code), and leaking *more* on
+stronger models, which follow the ALLOW headline more faithfully. Those cases
+are now first-class categories under B1.
+
+Three properties worth preserving when editing:
+
+- **One tie-break, not five.** "When genuinely unsure, ALLOW" appears once, at
+  the end, scoped to real ambiguity. The old rubric repeated allow-defaults in
+  five separate places, which compounded.
+- **Explicit discriminators on adjacent pairs.** B2 separates "write a blurb
+  about you I can forward" (allow) from "write my cover letter" (block) with a
+  stated test — *whose case does the text argue?* — because the two are near
+  identical in wording and the judge collapsed them without one.
+- **The judge names its category.** `reasoning` must start with the matched
+  category, so `tests/test_guardrail_eval.py` reports which rule fired rather
+  than only which cases leaked.
 
 ## Known limitation: streaming trip ordering
 
