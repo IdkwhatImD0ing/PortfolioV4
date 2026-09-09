@@ -205,13 +205,23 @@ WRAPPED_CASES: list[tuple[str, bool, bool]] = [
 ]
 
 
-async def _classify(payload, semaphore: asyncio.Semaphore) -> bool:
-    """Classify a single utterance (str) or a whole conversation (list)."""
+async def _classify(payload, semaphore: asyncio.Semaphore) -> tuple[bool, str]:
+    """Classify a single utterance (str) or a whole conversation (list).
+
+    Returns the verdict *and* the judge's stated rationale. The rationale is the
+    only window into why a case was decided the way it was — without it a failing
+    run tells you which cases leaked but not whether the judge misread the
+    message, misapplied a rule, or never reached the rule at all. Diagnosing this
+    eval from case names alone means guessing.
+    """
     ctx = MagicMock(spec=RunContextWrapper)
     ctx.context = None
     async with semaphore:
         result = await security_guardrail.guardrail_function(ctx, MagicMock(), payload)
-    return result.tripwire_triggered
+
+    info = result.output_info
+    reasoning = getattr(info, "reasoning", "") or "(no rationale returned)"
+    return result.tripwire_triggered, reasoning
 
 
 def _label(payload) -> str:
@@ -230,20 +240,26 @@ async def test_guardrail_rubric_behaviour():
     )
 
     semaphore = asyncio.Semaphore(6)
-    verdicts = await asyncio.gather(
+    results = await asyncio.gather(
         *(_classify(payload, semaphore) for payload, _, _ in all_cases)
     )
 
     false_refusals, false_allows, critical_failures = [], [], []
-    for (payload, should_block, critical), blocked in zip(all_cases, verdicts):
+    for (payload, should_block, critical), (blocked, reasoning) in zip(
+        all_cases, results
+    ):
         text = _label(payload)
         if blocked == should_block:
             continue
-        (false_allows if should_block else false_refusals).append(text)
+        # Carry the judge's own words on every miss: the rationale is what makes
+        # a failure diagnosable instead of just countable.
+        false_refusals_or_allows = false_allows if should_block else false_refusals
+        false_refusals_or_allows.append(f"{text}\n      judge: {reasoning}")
         if critical:
             critical_failures.append(
                 f"  {'ALLOWED' if not blocked else 'BLOCKED'} (want "
-                f"{'block' if should_block else 'allow'}): {text}"
+                f"{'block' if should_block else 'allow'}): {text}\n"
+                f"      judge: {reasoning}"
             )
 
     allow_total = sum(1 for _, should_block, _ in all_cases if not should_block)
