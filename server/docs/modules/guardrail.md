@@ -113,9 +113,10 @@ Split deliberately, because the judge is now the only gate:
 `GUARDRAIL_MODEL` (default `gpt-5.6-luna`, declared in `model_config.py`) is
 validated non-empty at import, so a misconfiguration is loud rather than a
 silently disabled gate. The judge runs
-with `reasoning.effort="none"`: the visitor waits on this call and it fails
-closed after `CLASSIFIER_TIMEOUT_SECONDS`, so latency here is a correctness
-concern, not just a cost one.
+with `reasoning.effort="none"`: the visitor waits on this call, and a timeout
+fails **open** (`asyncio.TimeoutError` is in `_FAIL_OPEN_ERRORS`), so a slow
+judge waves the turn through unjudged rather than refusing it. Latency here is
+a security property, not just a cost one.
 
 ## Known limitation: streaming trip ordering
 

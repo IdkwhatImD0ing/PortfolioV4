@@ -258,9 +258,11 @@ guardrail_agent = Agent(
     instructions=GUARDRAIL_INSTRUCTIONS,
     output_type=JailbreakCheckOutput,
     model=GUARDRAIL_MODEL,
-    # Reasoning off: the visitor waits on this call and it fails closed after
-    # CLASSIFIER_TIMEOUT_SECONDS, so latency here is a correctness concern, not
-    # just a cost one. The judge returns a one-sentence rationale instead.
+    # Reasoning off: the visitor waits on this call, and a timeout fails OPEN
+    # (asyncio.TimeoutError is in _FAIL_OPEN_ERRORS), so a slow judge does not
+    # refuse the turn — it waves it through unjudged. Latency here is a security
+    # property, not a cost one. The judge returns a one-sentence rationale
+    # instead of thinking.
     model_settings=ModelSettings(reasoning=Reasoning(effort=REASONING_EFFORT)),
 )
 

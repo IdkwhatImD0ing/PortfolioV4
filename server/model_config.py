@@ -45,8 +45,13 @@ def _model_from_env(var: str, default: str) -> str:
 AGENT_MODEL = _model_from_env("AGENT_MODEL", "gpt-5.6-terra")
 
 # The jailbreak classifier in guardrail.py. This is the only gate in front of the
-# agent, and it fails closed, so treat a change here as a security change.
-GUARDRAIL_MODEL = _model_from_env("GUARDRAIL_MODEL", "gpt-5.6-luna")
+# agent, so treat a change here as a security change. Terra rather than Luna:
+# the guardrail eval measured Luna at reasoning=none allowing 18/27 of the cases
+# it should block (homework, cover letters, "capital of France"), against 7/27
+# for the gpt-4o-mini it replaced. It caught blatant injection but not the
+# rubric's actual line, which is who the answer is about. Payloads here are
+# capped at MAX_TOTAL_CONTEXT_CHARS, so the stronger model costs little.
+GUARDRAIL_MODEL = _model_from_env("GUARDRAIL_MODEL", "gpt-5.6-terra")
 
 # The post-call recruiter summary. Off the critical path — nobody is waiting on
 # it — so it is the safest place to try a different model first.
