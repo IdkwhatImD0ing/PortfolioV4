@@ -12,9 +12,9 @@ export const PORTFOLIO = {
 
 export const PERSONAL_FACTS: PersonalFact[] = [
   { icon: "✦", line: "Finished a 4-year CS degree in <b>2.5 years</b>." },
-  { icon: "✦", line: "Won my first hackathon at <b>17</b>. Haven't slowed down." },
+  { icon: "✦", line: "Won my first hackathon at <b>17</b>." },
   { icon: "✦", line: "Speaks <b>Mandarin and English</b>; building agents in both." },
-  { icon: "✦", line: "If I'm not coding, I'm probably <b>making music</b> or chasing good noodles." },
-  { icon: "✦", line: "Plays <b>drums and piano</b> on the side." },
-  { icon: "✦", line: "Believe the next billion users will <b>talk to software</b>, not click it." },
+  { icon: "✦", line: "Plays <b>drums and piano</b> when the laptop is closed." },
+  { icon: "✦", line: "Still chasing the best bowl of <b>noodles</b> in San Francisco." },
+  { icon: "✦", line: "Would rather <b>talk to software</b> than tap through it. Hence this site." },
 ];

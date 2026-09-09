@@ -6,7 +6,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     role: "Software Engineer II",
     where: "Pinterest · San Francisco",
     link: "https://www.pinterest.com/",
-    body: "Building and deploying LLM agent systems for internal and partner-facing workflows — agent design, tool use, RAG integration, and production guardrails — and partnering with product and engineering teams to set the evaluation, quality, and cost bar each solution must clear before launch.",
+    body: "Building and deploying LLM agent systems for internal and partner-facing workflows: agent design, tool use, RAG integration, and production guardrails. Also partnering with product and engineering teams to set the evaluation, quality, and cost bar each solution must clear before launch.",
     badge: "Now",
   },
   {
@@ -14,7 +14,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     role: "Applied AI Engineer (Forward-Deployed)",
     where: "Scale AI · San Francisco",
     link: "https://scale.com/",
-    body: "Shipped a production multi-agent system automating denied-claim investigations — 3 sub-agents across 20 policy workflows, 300–500 weekly users, up to 20K claims/week — and led agent design for a major news publisher's AI agent, launched publicly in Nov 2025 over a 102-year archive in 13 languages. Owned the LLM-as-judge eval framework that took QA-audit accuracy 64% → 88% and helped close a seven-figure expansion, and cut the cost of a full health-system validation run ~4× ($4.6K → ~$1.2K).",
+    body: "Shipped a production multi-agent system automating denied-claim investigations: 3 sub-agents across 20 policy workflows, 300–500 weekly users, up to 20K claims/week. Led agent design for a major news publisher's AI agent, launched publicly in Nov 2025 over a 102-year archive in 13 languages. Owned the LLM-as-judge eval framework that took QA-audit accuracy 64% → 88% and helped close a seven-figure expansion, and cut the cost of a full health-system validation run ~4× ($4.6K → ~$1.2K).",
   },
   {
     when: "Jun 2023 — Jun 2025",
@@ -28,7 +28,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     role: "Co-founder + CFO",
     where: "Dispatch AI · Remote",
     link: "https://dispatchai.art3m1s.me/",
-    body: "Built an emergency-response AI platform with Berkeley SkyDeck funding, solo-engineering the low-latency voice agent and telephony behind the dispatcher demo — intent routing, emotion signals, structured handoff to responders. Dispatch AI won the $50K Grand Prize at the UC Berkeley AI Hackathon against 900+ participants.",
+    body: "Built an emergency-response AI platform with Berkeley SkyDeck funding, solo-engineering the low-latency voice agent and telephony behind the dispatcher demo: intent routing, emotion signals, structured handoff to responders. Dispatch AI won the $50K Grand Prize at the UC Berkeley AI Hackathon against 900+ participants.",
   },
   {
     when: "Feb 2023 — Jun 2024",
@@ -49,6 +49,6 @@ export const EXPERIENCE: ExperienceEntry[] = [
     role: "Hackathon Mainstay",
     where: "36 wins across the hackathon circuit",
     link: "https://www.thehackathonplaybook.dev/",
-    body: "Mainly competed during college and still jumps into select events. Most of the projects on this page started as weekend builds.",
+    body: "Competed mostly during college; still enter a few events a year. Most of the projects on this page started as weekend builds.",
   },
 ];

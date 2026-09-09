@@ -12,17 +12,17 @@ const FLOW = [
   {
     k: "02",
     title: "LLM agent",
-    body: "Retell agent runs an instruction-tuned model with this site's content + a small tool registry as its world.",
+    body: "Retell bridges the audio to a FastAPI backend, where an OpenAI Agents SDK agent runs with this site's content in context and nine registered tools.",
   },
   {
     k: "03",
     title: "Tool calls",
-    body: "Agent emits structured tool calls: filter_projects(tag), focus_project(id), open_project(id), scroll_to(section).",
+    body: "Agent emits structured tool calls: display_project(id), display_resume_page(), search_projects(query, ...), and six more.",
   },
   {
     k: "04",
     title: "VoiceBus",
-    body: "A pub-sub on window broadcasts each tool call. No prop drilling, no router. Sections opt in.",
+    body: "navigation.py turns each display_* call into a navigation metadata event; the browser converts it to a bus command. No prop drilling, no router. Sections opt in.",
   },
   {
     k: "05",
@@ -32,7 +32,7 @@ const FLOW = [
   {
     k: "06",
     title: "Voice reply",
-    body: "The agent confirms in spoken English while the page settles. The user keeps both hands free.",
+    body: "The agent says what it did while the scroll is still finishing, so the answer and the page land together.",
   },
 ];
 
@@ -53,18 +53,22 @@ const STACK = [
   },
 ];
 
-const SNIPPET = `// every section subscribes to the same bus
-VoiceBus.on((cmd) => {
-  if (cmd.type === "filter") setFilter(cmd.tag);
-  if (cmd.type === "focus")  setFocusId(cmd.id);
-  if (cmd.type === "open")   setOpenId(cmd.id);
-  if (cmd.type === "scroll") scrollToSection(cmd.id);
+const SNIPPET = `// server: navigation.py turns a display_* tool call into
+// { type: "navigation", page: "project", project_id: "dispatchai" }
+
+// browser: metadata event → bus command → scroll
+client.on("metadata", ({ metadata }) => {
+  const action = metaToNavigationAction(metadata);
+  if (!action) return;
+  VoiceBus.emit(action.command);
+  requestAnimationFrame(() => scrollToSection(action.scrollTo));
 });
 
-// the agent's tool calls become events
-agent.onToolCall("filter_projects", ({ tag }) =>
-  VoiceBus.emit({ type: "filter", tag })
-);`;
+// every section subscribes to the same bus
+VoiceBus.on((cmd) => {
+  if (cmd.type === "open")   setOpenId(cmd.id);
+  if (cmd.type === "scroll") scrollToSection(cmd.id);
+});`;
 
 // The snippet is a constant, so tokenize it once at module load rather than on
 // every render.
@@ -92,10 +96,9 @@ export function ArchitectureSection() {
             </em>
           </h2>
           <p className="text-[19px] leading-[1.55] text-ink-soft mt-6 text-pretty">
-            Most portfolios are read-only documents. This one is an agent. You speak, and the
-            structured tool calls coming back from the LLM rearrange the page in real time:
-            filter projects, scroll, expand a deep-dive, jump to a specific section. The voice
-            agent <em className="font-serif italic text-ink">is</em> the navigation.
+            Ask about a project and the agent can look it up, describe it, and open it on the
+            page. Retell handles the audio; a Python backend runs the agent and sends
+            navigation events to the browser.
           </p>
         </div>
 

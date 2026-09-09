@@ -38,9 +38,9 @@ export function HackathonsSection() {
             </em>
           </h2>
           <p className="mt-4 text-[18px] leading-[1.5] text-ink-soft max-w-[640px]">
-            Hackathon culture is a forge. You start with nothing, you ship something, you
-            defend it on a stage. These are selected public wins from a broader run with
-            $150k+ in prizes.
+            Every one of these was built in a weekend and defended in front of judges.
+            $150k+ in prizes, most of them during college. Top row is the
+            flagship and grand-prize run, bottom row the earlier and smaller ones.
           </p>
         </div>
       </div>

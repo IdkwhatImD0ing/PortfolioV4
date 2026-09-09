@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   title: "Bill Zhang | Voice-Driven Portfolio v2026",
   description:
-    "Bill Zhang is an AI engineer at Pinterest building voice-first and multi-agent systems. Talk to this portfolio.",
+    "Bill Zhang builds LLM agent systems at Pinterest, and voice-first projects on his own time. Talk to this portfolio.",
   keywords: [
     "AI Engineer",
     "Bill Zhang",
@@ -46,16 +46,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://art3m1s.me",
-    siteName: "Bill Zhang — art3m1s.me",
-    title: "Bill Zhang — Voice-driven AI portfolio",
+    siteName: "Bill Zhang · art3m1s.me",
+    title: "Bill Zhang | Voice-driven AI portfolio",
     description:
-      "AI engineer at Pinterest. Voice-first, agent-shaped systems. Talk to this portfolio.",
+      "LLM agent systems at Pinterest. Voice-first projects on the side. Talk to this portfolio.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bill Zhang — Voice-driven AI portfolio",
+    title: "Bill Zhang | Voice-driven AI portfolio",
     description:
-      "AI engineer at Pinterest. Voice-first, agent-shaped systems. Talk to this portfolio.",
+      "LLM agent systems at Pinterest. Voice-first projects on the side. Talk to this portfolio.",
   },
   icons: {
     icon: [
