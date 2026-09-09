@@ -12,17 +12,17 @@ const FLOW = [
   {
     k: "02",
     title: "LLM agent",
-    body: "Retell runs an instruction-tuned model with this site's content in context and four tools it can call.",
+    body: "Retell bridges the audio to a FastAPI backend, where an OpenAI Agents SDK agent runs with this site's content in context and nine registered tools.",
   },
   {
     k: "03",
     title: "Tool calls",
-    body: "Agent emits structured tool calls: filter_projects(tag), focus_project(id), open_project(id), scroll_to(section).",
+    body: "Agent emits structured tool calls: display_project(id), display_resume_page(), search_projects(query, ...), and six more.",
   },
   {
     k: "04",
     title: "VoiceBus",
-    body: "A pub-sub on window broadcasts each tool call. No prop drilling, no router. Sections opt in.",
+    body: "navigation.py turns each display_* call into a navigation metadata event; the browser converts it to a bus command. No prop drilling, no router. Sections opt in.",
   },
   {
     k: "05",
@@ -53,18 +53,22 @@ const STACK = [
   },
 ];
 
-const SNIPPET = `// every section subscribes to the same bus
-VoiceBus.on((cmd) => {
-  if (cmd.type === "filter") setFilter(cmd.tag);
-  if (cmd.type === "focus")  setFocusId(cmd.id);
-  if (cmd.type === "open")   setOpenId(cmd.id);
-  if (cmd.type === "scroll") scrollToSection(cmd.id);
+const SNIPPET = `// server: navigation.py turns a display_* tool call into
+// { type: "navigation", page: "project", project_id: "dispatchai" }
+
+// browser: metadata event → bus command → scroll
+client.on("metadata", ({ metadata }) => {
+  const action = metaToNavigationAction(metadata);
+  if (!action) return;
+  VoiceBus.emit(action.command);
+  requestAnimationFrame(() => scrollToSection(action.scrollTo));
 });
 
-// the agent's tool calls become events
-agent.onToolCall("filter_projects", ({ tag }) =>
-  VoiceBus.emit({ type: "filter", tag })
-);`;
+// every section subscribes to the same bus
+VoiceBus.on((cmd) => {
+  if (cmd.type === "open")   setOpenId(cmd.id);
+  if (cmd.type === "scroll") scrollToSection(cmd.id);
+});`;
 
 // The snippet is a constant, so tokenize it once at module load rather than on
 // every render.
@@ -92,12 +96,15 @@ export function ArchitectureSection() {
             </em>
           </h2>
           <p className="text-[19px] leading-[1.55] text-ink-soft mt-6 text-pretty">
-            Talk to this page and the agent replies twice: once out loud, and once in tool
-            calls: <em className="font-serif italic text-ink">filter_projects</em>,{" "}
-            <em className="font-serif italic text-ink">focus_project</em>,{" "}
-            <em className="font-serif italic text-ink">open_project</em>,{" "}
-            <em className="font-serif italic text-ink">scroll_to</em>. Every section listens on
-            the same bus, so the layout rearranges while the answer is still playing.
+            Talk to this page and the agent answers out loud while calling tools on the
+            server. Seven of its nine tools navigate:{" "}
+            <em className="font-serif italic text-ink">display_project</em>,{" "}
+            <em className="font-serif italic text-ink">display_resume_page</em>, and five more.
+            Each call comes back as a navigation metadata event that the browser maps to a
+            section id, so the layout moves while the answer is still playing. The other two,{" "}
+            <em className="font-serif italic text-ink">search_projects</em> and{" "}
+            <em className="font-serif italic text-ink">get_project_details</em>, query the
+            project index instead.
           </p>
         </div>
 
