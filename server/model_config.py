@@ -18,15 +18,26 @@ misconfigured security gate. `or` alone cannot tell the two cases apart, so
 
 import os
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
-# Load `.env` here rather than relying on the entrypoint to do it first. These
+# Read `.env` here rather than relying on the entrypoint to do it first. These
 # constants resolve at import time, and `main.py` imports `llm` (and so this
 # module) several lines *before* its own `load_dotenv()` — so without this, a
-# model set in `server/.env` would never reach them while the startup log, which
-# runs after dotenv, still reported the override as active. `override=True`
-# matches main.py and debug_agent.py: `.env` wins over the ambient environment.
-load_dotenv(override=True)
+# model set in `server/.env` would never reach them, while the startup log, which
+# runs after dotenv, still reported the override as active.
+#
+# `dotenv_values()` rather than `load_dotenv()`: this returns the file's contents
+# as a dict instead of writing them into `os.environ`. Mutating the environment
+# from an import is a booby trap — `tests/conftest.py` installs dummy API keys
+# before importing app modules, and a `load_dotenv(override=True)` here replaced
+# them with the real ones mid-collection, which flipped
+# `test_guardrail_eval.py`'s "is this a real key" check and pointed the live-API
+# suite at production during an ordinary `pytest` run. Reading into a dict keeps
+# the effect scoped to the three names below.
+#
+# Path resolution is relative to this file, not the process cwd, so `server/.env`
+# is found however the server was launched.
+_DOTENV = dotenv_values()
 
 __all__ = [
     "AGENT_MODEL",
@@ -37,11 +48,15 @@ __all__ = [
 
 
 def _model_from_env(var: str, default: str) -> str:
-    """Read a model name from `var`, falling back to `default` when unset.
+    """Resolve a model name: `.env` first, then the environment, then `default`.
 
-    Raises RuntimeError if `var` is set to a blank value — see module docstring.
+    `.env` outranks the ambient environment to match the `override=True` that
+    main.py and debug_agent.py pass to load_dotenv, so a developer's `.env` wins
+    the same way it does for every other setting.
+
+    Raises RuntimeError if the value is present but blank — see module docstring.
     """
-    raw = os.getenv(var)
+    raw = _DOTENV.get(var, os.getenv(var))
     if raw is not None and not raw.strip():
         raise RuntimeError(
             f"{var} is set but empty. Unset it to use the default "
