@@ -12,7 +12,6 @@ The policy line is *who the answer is about*, not *what topic it touches*.
 """
 
 import asyncio
-import os
 import re
 import uuid
 
@@ -24,18 +23,23 @@ from openai import (
 )
 from pydantic import BaseModel
 
+from openai.types.shared import Reasoning
+
 from agents import (
     Agent,
     GuardrailFunctionOutput,
+    ModelSettings,
     RunContextWrapper,
     Runner,
     TResponseInputItem,
     input_guardrail,
 )
 
+from model_config import GUARDRAIL_MODEL, REASONING_EFFORT
 from prompts import reminder_prompt
 
 __all__ = [
+    "GUARDRAIL_MODEL",
     "JailbreakCheckOutput",
     "build_classifier_payload",
     "extract_turns",
@@ -44,15 +48,10 @@ __all__ = [
 ]
 
 
-_guardrail_model_env = os.getenv("GUARDRAIL_MODEL")
-if _guardrail_model_env is not None and not _guardrail_model_env.strip():
-    # `or` alone would silently fall back on an empty value — the exact case this
-    # message describes — so check for "set but blank" before defaulting.
-    raise RuntimeError(
-        "GUARDRAIL_MODEL is set but empty. Unset it to use the default, or give "
-        "it a real model name — a misconfigured classifier disables the gate."
-    )
-GUARDRAIL_MODEL = (_guardrail_model_env or "gpt-4o-mini").strip()
+# GUARDRAIL_MODEL comes from model_config, which validates it non-empty at
+# import — a blank env var is a broken deploy, and silently defaulting would
+# hide a misconfigured gate. Re-exported here so `from guardrail import
+# GUARDRAIL_MODEL` keeps working.
 
 # The classifier is the only gate, so bound what reaches it. Without a cap, a
 # padded /chat message (that endpoint is unauthenticated and has no length limit)
@@ -259,6 +258,10 @@ guardrail_agent = Agent(
     instructions=GUARDRAIL_INSTRUCTIONS,
     output_type=JailbreakCheckOutput,
     model=GUARDRAIL_MODEL,
+    # Reasoning off: the visitor waits on this call and it fails closed after
+    # CLASSIFIER_TIMEOUT_SECONDS, so latency here is a correctness concern, not
+    # just a cost one. The judge returns a one-sentence rationale instead.
+    model_settings=ModelSettings(reasoning=Reasoning(effort=REASONING_EFFORT)),
 )
 
 

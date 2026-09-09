@@ -13,6 +13,9 @@ def validate_environment_variables():
     optional_vars = {
         "OBFUSCATED_WS_PATH": "WebSocket path obfuscation (defaults to 'ws-default')",
         "LLM_DEBUG": "Enable debug logging for LLM (0 or 1, defaults to 0)",
+        "AGENT_MODEL": "Override the conversational agent model (see model_config.py)",
+        "GUARDRAIL_MODEL": "Override the jailbreak classifier model (see model_config.py)",
+        "SUMMARY_MODEL": "Override the post-call summary model (see model_config.py)",
     }
 
     missing_required = []

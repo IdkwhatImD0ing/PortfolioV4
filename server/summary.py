@@ -1,12 +1,16 @@
 from typing import List
 
+from openai.types.shared import Reasoning
+
 from agents import (
     Agent,
+    ModelSettings,
     Runner,
     trace,
 )
 
 from custom_types import TextChatMessage
+from model_config import REASONING_EFFORT, SUMMARY_MODEL
 
 __all__ = [
     "generate_summary",
@@ -45,7 +49,8 @@ async def generate_summary(transcript: List[TextChatMessage]) -> str:
 
         If the conversation was short or lacked substance, provide a general summary of who Bill is based on his portfolio context,
         but prioritize the actual conversation content. Keep it professional, concise, and easy to read.""",
-        model="gpt-4o-mini",
+        model=SUMMARY_MODEL,
+        model_settings=ModelSettings(reasoning=Reasoning(effort=REASONING_EFFORT)),
     )
 
     try:

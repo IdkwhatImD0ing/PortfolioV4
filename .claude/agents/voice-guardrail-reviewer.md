@@ -16,7 +16,7 @@ User speech → Retell → FastAPI WebSocket → an OpenAI Agents SDK agent in
 `server/llm.py`. Every user turn passes through `security_guardrail` (an
 `@input_guardrail`) in `server/guardrail.py` before the main agent runs. There are
 **no keyword lists** — a `guardrail_agent` (`GUARDRAIL_MODEL`, default
-`gpt-4o-mini`) classifier is the only gate, returning
+`gpt-5.6-luna`) classifier is the only gate, returning
 `JailbreakCheckOutput(reasoning, is_jailbreak)`; a tripwire blocks the turn and
 returns `prompts.guardrail_refusal_message`. The main agent then answers and may
 call display/search tools. The same guardrail covers the **unauthenticated

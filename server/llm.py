@@ -32,6 +32,7 @@ from prompts import (
     voice_system_prompt,
 )
 
+from model_config import AGENT_MODEL, REASONING_EFFORT
 from text_utils import clean_markdown
 from guardrail import security_guardrail, JailbreakCheckOutput
 from summary import generate_summary
@@ -63,6 +64,7 @@ __all__ = [
     "display_project",
     "search_projects",
     "get_project_details",
+    "AGENT_MODEL",
 ]
 
 
@@ -71,23 +73,21 @@ class LlmClient:
         self.call_id = call_id
         self.mode = mode
 
-        # Select appropriate prompt and reasoning based on mode.
-        # Voice mode disables reasoning ("none") for minimum latency on GPT-5.x.
-        # Text mode uses "low" reasoning for slightly better answer quality.
+        # The prompt varies by mode; the model and reasoning effort do not —
+        # both come from model_config so there is one place to change them.
         system_prompt = voice_system_prompt if mode == "voice" else text_system_prompt
-        reasoning_effort = "none" if mode == "voice" else "low"
 
         # Create the main agent with input guardrails
         self.agent = Agent(
             name="portfolio_agent",
             instructions=system_prompt,
-            model="gpt-5.4-mini",
+            model=AGENT_MODEL,
             tools=self.prepare_functions(),
             input_guardrails=[security_guardrail],
             model_settings=ModelSettings(
                 verbosity="low",
                 reasoning=Reasoning(
-                    effort=reasoning_effort,
+                    effort=REASONING_EFFORT,
                     summary="auto",
                 ),
             ),
@@ -188,7 +188,7 @@ class LlmClient:
         response_id = request.response_id
 
         self._log(
-            f"draft_response: call_id={self.call_id} model=gpt-5.4-mini messages={len(messages)} last_user='{(request.transcript[-1].content if request.transcript else '')[:120]}'",
+            f"draft_response: call_id={self.call_id} model={AGENT_MODEL} messages={len(messages)} last_user='{(request.transcript[-1].content if request.transcript else '')[:120]}'",
             flush=True,
         )
 

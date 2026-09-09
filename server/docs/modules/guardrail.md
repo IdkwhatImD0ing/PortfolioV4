@@ -110,8 +110,12 @@ Split deliberately, because the judge is now the only gate:
   refusal is not schema-valid, raises `ModelBehaviorError`, and failing open there would allow
   exactly the worst content.
 
-`GUARDRAIL_MODEL` (default `gpt-4o-mini`) is validated non-empty at import, so a
-misconfiguration is loud rather than a silently disabled gate.
+`GUARDRAIL_MODEL` (default `gpt-5.6-luna`, declared in `model_config.py`) is
+validated non-empty at import, so a misconfiguration is loud rather than a
+silently disabled gate. The judge runs
+with `reasoning.effort="none"`: the visitor waits on this call and it fails
+closed after `CLASSIFIER_TIMEOUT_SECONDS`, so latency here is a correctness
+concern, not just a cost one.
 
 ## Known limitation: streaming trip ordering
 
