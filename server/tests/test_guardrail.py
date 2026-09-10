@@ -484,3 +484,92 @@ class TestGuardrailReasoningWiring:
             assert settings.reasoning.effort == "none"
         else:
             assert settings.reasoning is None
+
+
+class TestHeldOutCasesStayUnseen:
+    """The generalisation half of the eval only means something while it is unseen.
+
+    `test_guardrail_eval.py` scores two sets: cases lifted from the rubric's own
+    examples, and held-out cases phrased in words the rubric never uses. The
+    second set measures whether the judge learned the *policy*; it stops
+    measuring anything the moment a failing case gets pasted into
+    GUARDRAIL_INSTRUCTIONS as a new example, which is the obvious way to make a
+    red run go green.
+
+    Nothing stops that but a check, so this is the check. It is deliberately in
+    the unit file, not the eval: it needs no API key and should fail fast.
+    """
+
+    _NGRAM = 6
+
+    @staticmethod
+    def _words(text: str) -> list[str]:
+        import re
+
+        return re.findall(r"[a-z0-9']+", text.lower())
+
+    @classmethod
+    def _ngrams(cls, text: str) -> set[tuple[str, ...]]:
+        words = cls._words(text)
+        n = cls._NGRAM
+        return {tuple(words[i : i + n]) for i in range(len(words) - n + 1)}
+
+    def _held_out_texts(self):
+        """Every string the held-out set sends to the judge.
+
+        Wrapped cases included: they carry the app's own boilerplate, but the
+        visitor text inside them is a held-out case like any other and is just
+        as pasteable into the rubric.
+        """
+        from tests.test_guardrail_eval import (
+            HELD_OUT_CASES,
+            HELD_OUT_CONVERSATIONS,
+            HELD_OUT_WRAPPED,
+        )
+
+        for text, _, _ in list(HELD_OUT_CASES) + list(HELD_OUT_WRAPPED):
+            yield text
+        for convo, _, _ in HELD_OUT_CONVERSATIONS:
+            for message in convo:
+                yield message["content"]
+
+    def test_no_held_out_case_shares_a_phrase_with_the_rubric(self):
+        """No held-out case may share a six-word run with GUARDRAIL_INSTRUCTIONS.
+
+        Six words is long enough that an accidental collision on ordinary
+        English ("how would you write a") does not trip it, and short enough
+        that lightly reworded copy-paste does.
+        """
+        rubric = self._ngrams(guardrail.GUARDRAIL_INSTRUCTIONS)
+
+        leaked = []
+        for text in self._held_out_texts():
+            shared = self._ngrams(text) & rubric
+            if shared:
+                phrases = ", ".join(" ".join(p) for p in sorted(shared))
+                leaked.append(f"{text!r} shares: {phrases}")
+
+        assert not leaked, (
+            "held-out eval cases now appear in the rubric, so they no longer "
+            "measure generalisation. State the principle in the rubric instead "
+            "of the example, or retire the case:\n  " + "\n  ".join(leaked)
+        )
+
+    def test_held_out_set_covers_both_verdicts(self):
+        """A held-out set that drifted all-block or all-allow would report a rate
+        that looks fine while measuring one direction only. Both error types cost
+        something here: a false allow is a leak, a false refusal is issue #10.
+        """
+        from tests.test_guardrail_eval import (
+            HELD_OUT_CASES,
+            HELD_OUT_CONVERSATIONS,
+            HELD_OUT_WRAPPED,
+        )
+
+        labels = [
+            should_block
+            for group in (HELD_OUT_CASES, HELD_OUT_CONVERSATIONS, HELD_OUT_WRAPPED)
+            for _, should_block, _ in group
+        ]
+        assert labels.count(True) >= 10, "too few held-out block cases"
+        assert labels.count(False) >= 10, "too few held-out allow cases"
