@@ -70,13 +70,17 @@ pass prints only `PASSED` and you lose the rates.
 ### Two sets
 
 `test_guardrail_rubric_behaviour` runs 60 cases lifted nearly verbatim from the
-rubric's own examples. `test_guardrail_generalises_to_unseen_phrasings` runs 54
-cases testing the same policy lines in words that appear nowhere in the rubric.
+rubric's own examples. `test_guardrail_generalises_to_unseen_phrasings` runs 73
+cases in wording found in neither the rubric nor the seen set, with dedicated
+groups for Q2, Q5 and the payload-shaping bypasses. 133 cases total.
 
-They are scored and asserted separately. Averaging a memorisation score with a
-generalisation score reports a number that means neither; the **gap** between
-them is the signal, and it widening means the rubric is being fitted to its
-examples rather than to the policy.
+They are scored and asserted separately so one set's failures stay legible.
+**Do not read the difference between the two rates as a measurement** — an
+earlier version of these notes called the gap "the signal" and that was wrong.
+One case is 3-4% of a rate, each case runs once, and the smallest gap
+distinguishable from noise is larger than the pass thresholds. An audit also put
+54% of the held-out cases on instances the rubric names explicitly, so what the
+set really measures is robustness to rewording.
 
 `test_guardrail.py::TestHeldOutCasesStayUnseen` enforces the "unseen" half
 mechanically: no held-out case may share a six-word run with the rubric. It
@@ -141,7 +145,8 @@ judge explicitly.
 ### 2. Naming a rule is not returning a verdict
 
 The ladder failed once with the judge reaching the *correct* question and correct
-reasoning on every miss, then returning `is_jailbreak = false` anyway. The rubric
+reasoning on every miss, then returning `is_jailbreak = false` anyway. (That
+field is gone — see "The judge no longer returns a verdict" below.) The rubric
 said "the first YES decides the verdict" and never said **which** verdict each
 question carries.
 
@@ -222,6 +227,33 @@ keyword gating — "do you like to cook?" was refused because cooking was both a
 persona interest and a blocked keyword.
 
 ---
+
+### The judge no longer returns a verdict
+
+`ScreeningDecision` is `reasoning` + `rule` (Q1-Q5) and has no boolean.
+`rule_blocks()` does the mapping in code, and the rubric no longer tells the
+judge what a rule costs. Trap 2 above described the symptom; this removes the
+cause rather than compensating for it three times over.
+
+Two things to know if you touch this:
+
+- **Do not put the mapping at module scope.** `_BLOCKING = {"Q1","Q2","Q4"}` is a
+  module-level collection of three string literals, which is exactly the shape
+  the no-keyword-lists AST guard rejects. It lives inside `rule_blocks()`.
+- **Q5's wording is load-bearing.** The first draft of this change rewrote Q5 as
+  "none of the above applied" and added "do not reach backwards for a rule".
+  That turned Q5 into a catch-all: the judge started routing homework and trivia
+  there with rationales like "unrelated to Bill's life or work, so it reaches
+  Q5", skipping Q4's own list. Q5 now says outright that "it is not about Bill"
+  is not a route to it. False-allows went from 4-7% back to 0.
+
+### Timeouts are no longer counted as classifications
+
+`GuardrailVerdict.judged` is False for fail-open and fail-closed paths, and the
+eval prints end-to-end rates, classification-only rates, and an unjudged count
+separately. This is not bookkeeping: an observed run reported 5% false-allow
+end-to-end and 0% among turns actually judged — both "leaks" were timeouts.
+The long bypass cases push hardest against the 5s deadline.
 
 ## Known weaknesses
 

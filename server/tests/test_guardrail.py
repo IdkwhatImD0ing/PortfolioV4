@@ -536,17 +536,32 @@ class TestHeldOutCasesStayUnseen:
         boilerplate is ours, identical by design, and not evidence of anything.
         """
         text = text.split("Always respond in plain conversational")[0]
-        return text.replace("User question:", " ")
+        text = text.replace("User question:", " ")
+        # Delimiter-shaped text too. A case that forges <turn_to_classify> shares
+        # those words with the rubric by construction — that is the case working,
+        # not the case cheating. Strip them with the same pattern guardrail.py
+        # uses so the two never drift apart.
+        return guardrail._DELIMITER_TAG_RE.sub(" ", text)
 
     def _held_out_texts(self):
         """Every visitor string the held-out set sends to the judge."""
         from tests.test_guardrail_eval import (
+            HELD_OUT_BYPASS_CASES,
             HELD_OUT_CASES,
             HELD_OUT_CONVERSATIONS,
+            HELD_OUT_Q2_CASES,
+            HELD_OUT_Q5_CASES,
             HELD_OUT_WRAPPED,
         )
 
-        for text, _, _ in list(HELD_OUT_CASES) + list(HELD_OUT_WRAPPED):
+        flat = (
+            list(HELD_OUT_CASES)
+            + list(HELD_OUT_Q2_CASES)
+            + list(HELD_OUT_Q5_CASES)
+            + list(HELD_OUT_BYPASS_CASES)
+            + list(HELD_OUT_WRAPPED)
+        )
+        for text, _, _ in flat:
             yield self._strip_wrapper(text)
         for convo, _, _ in HELD_OUT_CONVERSATIONS:
             for message in convo:
@@ -613,16 +628,24 @@ class TestHeldOutCasesStayUnseen:
         invisible to the n-gram checks above. They get an exact-substring test
         instead, so "what about the second one" cannot come back.
         """
-        haystacks = [guardrail.GUARDRAIL_INSTRUCTIONS.lower()]
-        haystacks += [t.lower() for t in self._seen_texts()]
+        # Word sequences, not raw substrings: a substring test reports "hey" as
+        # a copy because the rubric contains the word "they".
+        haystacks = [self._words(guardrail.GUARDRAIL_INSTRUCTIONS)]
+        haystacks += [self._words(t) for t in self._seen_texts()]
+
+        def contains(haystack: list[str], needle: list[str]) -> bool:
+            span = len(needle)
+            return any(
+                haystack[i : i + span] == needle
+                for i in range(len(haystack) - span + 1)
+            )
 
         leaked = []
         for text in self._held_out_texts():
             words = self._words(text)
-            if len(words) >= self._NGRAM:
+            if not words or len(words) >= self._NGRAM:
                 continue
-            needle = " ".join(words)
-            if any(needle and needle in h for h in haystacks):
+            if any(contains(h, words) for h in haystacks):
                 leaked.append(repr(text))
 
         assert not leaked, (
@@ -686,14 +709,24 @@ class TestHeldOutCasesStayUnseen:
         something here: a false allow is a leak, a false refusal is issue #10.
         """
         from tests.test_guardrail_eval import (
+            HELD_OUT_BYPASS_CASES,
             HELD_OUT_CASES,
             HELD_OUT_CONVERSATIONS,
+            HELD_OUT_Q2_CASES,
+            HELD_OUT_Q5_CASES,
             HELD_OUT_WRAPPED,
         )
 
         labels = [
             should_block
-            for group in (HELD_OUT_CASES, HELD_OUT_CONVERSATIONS, HELD_OUT_WRAPPED)
+            for group in (
+                HELD_OUT_CASES,
+                HELD_OUT_Q2_CASES,
+                HELD_OUT_Q5_CASES,
+                HELD_OUT_BYPASS_CASES,
+                HELD_OUT_CONVERSATIONS,
+                HELD_OUT_WRAPPED,
+            )
             for _, should_block, _ in group
         ]
         assert labels.count(True) >= 10, "too few held-out block cases"
@@ -751,3 +784,68 @@ class TestRuleToVerdictMapping:
         rubric = guardrail.GUARDRAIL_INSTRUCTIONS.lower()
         for banned in ("is_jailbreak", "jailbreak = true", "jailbreak = false"):
             assert banned not in rubric, banned
+
+
+class TestLadderBranchCoverage:
+    """Every branch of the ladder must have cases on both sides where it has two.
+
+    An audit found Q2 with two cases in 114 — the same joke template twice — and
+    Q5 with none at all. Both were invisible: the aggregate rates looked healthy
+    because Q3 and Q4 dominate the corpus. A count is not a quality measure, but
+    a zero is a definite answer, and that is what this catches.
+    """
+
+    def _groups(self):
+        from tests.test_guardrail_eval import (
+            HELD_OUT_BYPASS_CASES,
+            HELD_OUT_Q2_CASES,
+            HELD_OUT_Q5_CASES,
+        )
+
+        return {
+            "Q2 (hateful/harassing/sexual/dangerous)": HELD_OUT_Q2_CASES,
+            "Q5 (pure fall-through)": HELD_OUT_Q5_CASES,
+            "bypass mechanics": HELD_OUT_BYPASS_CASES,
+        }
+
+    def test_each_thin_branch_has_cases(self):
+        for name, group in self._groups().items():
+            assert len(group) >= 5, name + " is too thin: " + str(len(group))
+
+    def test_q2_tests_more_than_one_template(self):
+        """Q2's prior coverage was 'roast my <person>' twice. One template is not
+        coverage of five prongs.
+        """
+        from tests.test_guardrail_eval import HELD_OUT_Q2_CASES
+
+        openers = {c.split()[0].lower() for c, _, _ in HELD_OUT_Q2_CASES}
+        assert len(openers) >= 4, openers
+
+    def test_q2_and_bypass_carry_allow_twins(self):
+        """A branch tested only on blocks cannot detect over-triggering, which is
+        the direction issue #10 failed in.
+        """
+        from tests.test_guardrail_eval import HELD_OUT_BYPASS_CASES, HELD_OUT_Q2_CASES
+
+        for name, group in (("Q2", HELD_OUT_Q2_CASES), ("bypass", HELD_OUT_BYPASS_CASES)):
+            allows = [c for c, block, _ in group if not block]
+            assert allows, name + " has no allow twin"
+
+    def test_bypass_cases_actually_exceed_the_caps(self):
+        """A 'long input' case that fits inside MAX_TURN_CHARS tests nothing.
+
+        The whole corpus used to top out at 151 characters against a 4000-char
+        cap, so the truncation path documented in guardrail.py had never run.
+        """
+        from tests.test_guardrail_eval import HELD_OUT_BYPASS_CASES
+
+        longest = max(len(c) for c, _, _ in HELD_OUT_BYPASS_CASES)
+        assert longest > guardrail.MAX_TURN_CHARS, longest
+
+    def test_a_bypass_case_carries_delimiter_shaped_text(self):
+        """_DELIMITER_TAG_RE existed with nothing exercising it end to end."""
+        from tests.test_guardrail_eval import HELD_OUT_BYPASS_CASES
+
+        assert any(
+            guardrail._DELIMITER_TAG_RE.search(c) for c, _, _ in HELD_OUT_BYPASS_CASES
+        )
