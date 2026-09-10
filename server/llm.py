@@ -34,7 +34,7 @@ from prompts import (
 
 from model_config import AGENT_MODEL, REASONING_EFFORT
 from text_utils import clean_markdown
-from guardrail import security_guardrail, JailbreakCheckOutput
+from guardrail import security_guardrail, GuardrailVerdict
 from summary import generate_summary
 from agent_tools import (
     display_education_page,
@@ -53,7 +53,7 @@ __all__ = [
     "LlmClient",
     "clean_markdown",
     "security_guardrail",
-    "JailbreakCheckOutput",
+    "GuardrailVerdict",
     "generate_summary",
     "display_education_page",
     "display_hackathons_page",

@@ -18,7 +18,7 @@ import guardrail
 from agents import RunContextWrapper
 from custom_types import ResponseRequiredRequest, Utterance
 from guardrail import build_classifier_payload, extract_turns
-from llm import LlmClient, security_guardrail, JailbreakCheckOutput
+from llm import LlmClient, security_guardrail, GuardrailVerdict
 from prompts import guardrail_refusal_message, reminder_prompt
 
 
@@ -36,10 +36,16 @@ def mock_guardrail_runner():
         yield mock
 
 
-def _classifier_result(is_jailbreak: bool, reasoning: str = "test"):
+def _classifier_result(should_block: bool, reasoning: str = "test"):
+    """Fake a judge decision by the rule it names, not by a verdict boolean.
+
+    The judge no longer returns a verdict — it names a rule and `rule_blocks()`
+    maps it. Mocking a rule rather than a boolean keeps these tests exercising
+    that mapping instead of bypassing the thing under test.
+    """
     result = MagicMock()
-    result.final_output_as.return_value = JailbreakCheckOutput(
-        reasoning=reasoning, is_jailbreak=is_jailbreak
+    result.final_output_as.return_value = guardrail.ScreeningDecision(
+        reasoning=reasoning, rule="Q4" if should_block else "Q3"
     )
     return result
 
@@ -119,13 +125,15 @@ class TestClassifierIsTheOnlyGate:
         result = await _run("Write my cover letter for a job at Google")
 
         assert result.tripwire_triggered is True
-        assert result.output_info.is_jailbreak is True
+        assert result.output_info.allowed is False
+        assert result.output_info.rule == "Q4"
+        assert result.output_info.judged is True
 
     async def test_output_info_is_always_the_model(self, mock_guardrail_runner):
         """No dict/model polymorphism — the fast path used to return a dict."""
         for input_data in ["hi", "", [{"role": "assistant", "content": "hello"}]]:
             result = await _run(input_data)
-            assert isinstance(result.output_info, JailbreakCheckOutput)
+            assert isinstance(result.output_info, GuardrailVerdict)
 
 
 @pytest.mark.asyncio
@@ -490,17 +498,21 @@ class TestHeldOutCasesStayUnseen:
     """The generalisation half of the eval only means something while it is unseen.
 
     `test_guardrail_eval.py` scores two sets: cases lifted from the rubric's own
-    examples, and held-out cases phrased in words the rubric never uses. The
-    second set measures whether the judge learned the *policy*; it stops
-    measuring anything the moment a failing case gets pasted into
-    GUARDRAIL_INSTRUCTIONS as a new example, which is the obvious way to make a
-    red run go green.
+    examples, and held-out cases phrased in words neither the rubric nor the seen
+    set uses. The second set stops measuring anything the moment a failing case
+    gets pasted into GUARDRAIL_INSTRUCTIONS as a new example, which is the obvious
+    way to make a red run go green.
 
-    Nothing stops that but a check, so this is the check. It is deliberately in
-    the unit file, not the eval: it needs no API key and should fail fast.
+    An audit of the first version of this guard found three contaminated cases it
+    could not see, so two things changed. The window is five words, not six —
+    the rubric's shortest examples are five words long ("what about the second
+    one"), and at n=6 no n-gram of them exists to compare. And held-out cases are
+    now compared against the **seen set** as well as the rubric, because a case
+    reworded from its sibling is just as memorisable as one reworded from the
+    policy.
     """
 
-    _NGRAM = 6
+    _NGRAM = 5
 
     @staticmethod
     def _words(text: str) -> list[str]:
@@ -514,13 +526,20 @@ class TestHeldOutCasesStayUnseen:
         n = cls._NGRAM
         return {tuple(words[i : i + n]) for i in range(len(words) - n + 1)}
 
-    def _held_out_texts(self):
-        """Every string the held-out set sends to the judge.
+    @staticmethod
+    def _strip_wrapper(text: str) -> str:
+        """Drop the app's own boilerplate, keeping the visitor's words.
 
-        Wrapped cases included: they carry the app's own boilerplate, but the
-        visitor text inside them is a held-out case like any other and is just
-        as pasteable into the rubric.
+        Wrapped cases carry the same ~25-word formatting reminder that production
+        appends to every turn. Comparing that against the seen set's wrapped cases
+        would report a collision on every pair and drown the real signal — the
+        boilerplate is ours, identical by design, and not evidence of anything.
         """
+        text = text.split("Always respond in plain conversational")[0]
+        return text.replace("User question:", " ")
+
+    def _held_out_texts(self):
+        """Every visitor string the held-out set sends to the judge."""
         from tests.test_guardrail_eval import (
             HELD_OUT_CASES,
             HELD_OUT_CONVERSATIONS,
@@ -528,18 +547,26 @@ class TestHeldOutCasesStayUnseen:
         )
 
         for text, _, _ in list(HELD_OUT_CASES) + list(HELD_OUT_WRAPPED):
-            yield text
+            yield self._strip_wrapper(text)
         for convo, _, _ in HELD_OUT_CONVERSATIONS:
             for message in convo:
-                yield message["content"]
+                yield self._strip_wrapper(message["content"])
+
+    def _seen_texts(self):
+        from tests.test_guardrail_eval import (
+            CASES,
+            CONVERSATION_CASES,
+            WRAPPED_CASES,
+        )
+
+        for text, _, _ in list(CASES) + list(WRAPPED_CASES):
+            yield self._strip_wrapper(text)
+        for convo, _, _ in CONVERSATION_CASES:
+            for message in convo:
+                yield self._strip_wrapper(message["content"])
 
     def test_no_held_out_case_shares_a_phrase_with_the_rubric(self):
-        """No held-out case may share a six-word run with GUARDRAIL_INSTRUCTIONS.
-
-        Six words is long enough that an accidental collision on ordinary
-        English ("how would you write a") does not trip it, and short enough
-        that lightly reworded copy-paste does.
-        """
+        """No held-out case may share a five-word run with GUARDRAIL_INSTRUCTIONS."""
         rubric = self._ngrams(guardrail.GUARDRAIL_INSTRUCTIONS)
 
         leaked = []
@@ -553,6 +580,104 @@ class TestHeldOutCasesStayUnseen:
             "held-out eval cases now appear in the rubric, so they no longer "
             "measure generalisation. State the principle in the rubric instead "
             "of the example, or retire the case:\n  " + "\n  ".join(leaked)
+        )
+
+    def test_no_held_out_case_is_reworded_from_a_seen_case(self):
+        """Nor may one share a five-word run with a case in the seen set.
+
+        The first version of this guard compared against the rubric only, and let
+        through a critical case that opened with the same five words as its seen
+        sibling. A held-out set reworded from the seen set measures the same thing
+        twice.
+        """
+        seen = set()
+        for text in self._seen_texts():
+            seen |= self._ngrams(text)
+
+        leaked = []
+        for text in self._held_out_texts():
+            shared = self._ngrams(text) & seen
+            if shared:
+                phrases = ", ".join(" ".join(p) for p in sorted(shared))
+                leaked.append(f"{text!r} shares: {phrases}")
+
+        assert not leaked, (
+            "held-out cases overlap the seen set, so the two sets are not "
+            "independent:\n  " + "\n  ".join(leaked)
+        )
+
+    def test_short_held_out_cases_are_not_verbatim_anywhere(self):
+        """Cases too short to have a five-word run still must not be copies.
+
+        Six held-out strings are under five words, which makes them structurally
+        invisible to the n-gram checks above. They get an exact-substring test
+        instead, so "what about the second one" cannot come back.
+        """
+        haystacks = [guardrail.GUARDRAIL_INSTRUCTIONS.lower()]
+        haystacks += [t.lower() for t in self._seen_texts()]
+
+        leaked = []
+        for text in self._held_out_texts():
+            words = self._words(text)
+            if len(words) >= self._NGRAM:
+                continue
+            needle = " ".join(words)
+            if any(needle and needle in h for h in haystacks):
+                leaked.append(repr(text))
+
+        assert not leaked, (
+            "short held-out cases appear verbatim in the rubric or the seen "
+            "set:\n  " + "\n  ".join(leaked)
+        )
+
+    # Above this, exact-match checks. A one-word substitution defeats every one
+    # of them -- "how do you record it" against the rubric's "how do you make
+    # it" shares no five-word run -- so the last check is fuzzy.
+    _SIMILARITY_MAX = 0.6
+
+    @classmethod
+    def _rubric_examples(cls) -> list[str]:
+        """The rubric's own worked examples: the quoted strings inside it."""
+        import re
+
+        quoted = re.findall('"([^"]{8,90})"', guardrail.GUARDRAIL_INSTRUCTIONS)
+        return [q for q in quoted if chr(10) not in q]
+
+    def test_no_held_out_case_is_a_light_rewording(self):
+        """No held-out case may closely resemble a rubric example or a seen case.
+
+        Token-level similarity, not character-level: at these lengths character
+        ratios are noise, scoring unrelated portfolio questions around 0.55 on
+        shared English alone. Against a random-pair baseline drawn from this
+        corpus, token similarity runs a median of 0.06 and a 99th percentile of
+        0.35. So 0.6 sits clear of ordinary shared vocabulary while staying well
+        under the 0.80 that an actual one-word substitution scored.
+        """
+        from difflib import SequenceMatcher
+
+        references = [(t, "seen case") for t in self._seen_texts()]
+        references += [(t, "rubric example") for t in self._rubric_examples()]
+
+        leaked = []
+        for text in self._held_out_texts():
+            mine = self._words(text)
+            if not mine:
+                continue
+            for ref, kind in references:
+                theirs = self._words(ref)
+                if not theirs:
+                    continue
+                ratio = SequenceMatcher(None, mine, theirs).ratio()
+                if ratio >= self._SIMILARITY_MAX:
+                    leaked.append(
+                        repr(text) + chr(10)
+                        + "      " + format(ratio, ".2f")
+                        + " vs " + kind + " " + repr(ref)
+                    )
+
+        assert not leaked, (
+            "held-out cases are light rewordings of material the judge has "
+            "already been shown:" + chr(10) + "  " + (chr(10) + "  ").join(leaked)
         )
 
     def test_held_out_set_covers_both_verdicts(self):
@@ -573,3 +698,56 @@ class TestHeldOutCasesStayUnseen:
         ]
         assert labels.count(True) >= 10, "too few held-out block cases"
         assert labels.count(False) >= 10, "too few held-out allow cases"
+
+
+class TestRuleToVerdictMapping:
+    """The judge names a rule; this mapping decides what it costs.
+
+    Moving the mapping out of the model is the whole point of the contract, so
+    it needs a test that does not go near a model.
+    """
+
+    def test_blocking_rules(self):
+        assert guardrail.rule_blocks("Q1") is True
+        assert guardrail.rule_blocks("Q2") is True
+        assert guardrail.rule_blocks("Q4") is True
+
+    def test_allowing_rules(self):
+        assert guardrail.rule_blocks("Q3") is False
+        assert guardrail.rule_blocks("Q5") is False
+
+    def test_every_declared_rule_is_mapped(self):
+        """No rule the judge can emit may fall through unmapped.
+
+        `rule_blocks` returns False for anything unrecognised, which is fail-open
+        — so a rule added to the Literal without being added here would silently
+        allow. Reading the Literal keeps the two in step.
+        """
+        import typing
+
+        declared = typing.get_args(
+            guardrail.ScreeningDecision.model_fields["rule"].annotation
+        )
+        assert set(declared) == {"Q1", "Q2", "Q3", "Q4", "Q5"}
+        blocking = {r for r in declared if guardrail.rule_blocks(r)}
+        assert blocking == {"Q1", "Q2", "Q4"}
+
+    def test_judge_cannot_return_a_verdict(self):
+        """There must be no verdict field on the judge's own output type.
+
+        If one is ever added back, the model regains a say in the mapping and the
+        failure this change removed comes back with it.
+        """
+        fields = set(guardrail.ScreeningDecision.model_fields)
+        assert fields == {"reasoning", "rule"}, fields
+
+    def test_rubric_does_not_mention_a_verdict_boolean(self):
+        """The rubric must not tell the judge what a rule costs.
+
+        Naming the consequence is what invited the judge to weigh whether a
+        politely-put request "deserved" blocking. It classifies; it does not
+        sentence.
+        """
+        rubric = guardrail.GUARDRAIL_INSTRUCTIONS.lower()
+        for banned in ("is_jailbreak", "jailbreak = true", "jailbreak = false"):
+            assert banned not in rubric, banned
