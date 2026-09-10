@@ -93,19 +93,31 @@ AGENT_MODEL = _model_from_env("AGENT_MODEL", "gpt-5.6-terra")
 #     gpt-5.6-luna  @ none 18/27 false-allow (67%), 0/33 false-refusal
 #     gpt-5.6-terra @ none 17/27 false-allow (63%), 0/33 false-refusal
 #
-# Terra is much the stronger model and scored the same as Luna, so capability
-# was never the axis. The five cases stated as nested exceptions were exactly
-# the five that leaked, and they leaked worse on the stronger models — which
-# follow an ALLOW headline more faithfully. GUARDRAIL_INSTRUCTIONS has since
-# been restructured into first-class Block/Allow categories, so those numbers
-# describe a prompt that no longer exists.
+# Those numbers describe a prompt that no longer exists: the rubric has since
+# been restructured into a priority ladder, and the judge no longer returns a
+# verdict boolean at all.
 #
-# Luna on the rewritten rubric is the current configuration. Reasoning stays at
-# REASONING_EFFORT ("none") deliberately: holding model and effort fixed at the
-# earlier 67% measurement isolates the rubric as the single changed variable. If
-# the rewrite did the work, this lands near or below the 20% threshold; if it
-# did not, the next lever is a reasoning budget here, which also means raising
-# CLASSIFIER_TIMEOUT_SECONDS, since a timeout fails OPEN.
+# An earlier version of this comment concluded from the table above that
+# "capability was never the axis". That was overstated, and the current numbers
+# contradict it. Terra and Luna failing alike on one bad prompt does not isolate
+# the prompt as the only variable — they shared the prompt, the output contract,
+# the effort setting and the harness. Measured on the current rubric across 133
+# cases per run, Terra is perfect over two runs while Luna needs four rubric
+# clarifications to get near it and still over-blocks context-free fragments.
+# Prompt structure mattered enormously; capability was not nothing.
+#
+# Luna is the current configuration by choice, not because it scores best.
+# gpt-5.6-terra measured 0% false-refusal and 0% false-allow over two full runs
+# of the 133-case eval, against Luna's 0-3% and one timeout-caused failure, at
+# the same wall-clock cost (39-45s per run for both). Terra was also perfect both
+# before and after the four rubric clarifications Luna needed, so it is markedly
+# less sensitive to rubric wording. If the gate starts misbehaving, switching
+# this to gpt-5.6-terra is the first thing to try and costs no latency.
+#
+# Reasoning stays at REASONING_EFFORT ("none"). Raising it means raising
+# CLASSIFIER_TIMEOUT_SECONDS in the same change, since a timeout fails OPEN and
+# timeouts already appear at the current 5s deadline under the eval's six-way
+# concurrency.
 GUARDRAIL_MODEL = _model_from_env("GUARDRAIL_MODEL", "gpt-5.6-luna")
 
 # The post-call recruiter summary. Off the critical path — nobody is waiting on
