@@ -42,7 +42,7 @@ def test_defaults_when_unset(clean_model_env):
     mc = _reload_model_config()
 
     assert mc.AGENT_MODEL == "gpt-5.6-terra"
-    assert mc.GUARDRAIL_MODEL == "gpt-4o-mini"
+    assert mc.GUARDRAIL_MODEL == "gpt-5.6-luna"
     assert mc.SUMMARY_MODEL == "gpt-5.6-luna"
     assert mc.REASONING_EFFORT == "none"
 
@@ -52,7 +52,7 @@ def test_env_var_overrides_default(clean_model_env, monkeypatch):
     mc = _reload_model_config()
 
     assert mc.AGENT_MODEL == "gpt-5.6-sol"
-    assert mc.GUARDRAIL_MODEL == "gpt-4o-mini"  # others untouched
+    assert mc.GUARDRAIL_MODEL == "gpt-5.6-luna"  # others untouched
 
 
 def test_surrounding_whitespace_is_stripped(clean_model_env, monkeypatch):
@@ -71,6 +71,29 @@ def test_blank_env_var_raises(clean_model_env, monkeypatch, blank):
 
     with pytest.raises(RuntimeError, match="GUARDRAIL_MODEL is set but empty"):
         _reload_model_config()
+
+
+@pytest.mark.parametrize(
+    "model,expected",
+    [
+        ("gpt-5.6-luna", True),
+        ("gpt-5.6-terra", True),
+        ("gpt-6-astra", True),
+        ("  GPT-5.6-LUNA  ", True),  # normalised before the check
+        ("o3-mini", True),
+        ("gpt-4o-mini", False),
+        ("gpt-4o", False),
+        ("gpt-4.1", False),
+    ],
+)
+def test_supports_reasoning(clean_model_env, model, expected):
+    """Only models with a reasoning phase may be sent a Reasoning object.
+
+    guardrail.py fails CLOSED on an unexpected error, so a 400 from sending
+    gpt-4o-mini a reasoning parameter would refuse every visitor — and
+    GUARDRAIL_MODEL is the knob used to roll back to exactly that model.
+    """
+    assert _reload_model_config().supports_reasoning(model) is expected
 
 
 def test_dotenv_reaches_constants_whoever_imports_first(clean_model_env):

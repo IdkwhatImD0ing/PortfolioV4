@@ -23,16 +23,19 @@ from openai import (
 )
 from pydantic import BaseModel
 
+from openai.types.shared import Reasoning
+
 from agents import (
     Agent,
     GuardrailFunctionOutput,
+    ModelSettings,
     RunContextWrapper,
     Runner,
     TResponseInputItem,
     input_guardrail,
 )
 
-from model_config import GUARDRAIL_MODEL
+from model_config import GUARDRAIL_MODEL, REASONING_EFFORT, supports_reasoning
 from prompts import reminder_prompt
 
 __all__ = [
@@ -266,14 +269,17 @@ guardrail_agent = Agent(
     instructions=GUARDRAIL_INSTRUCTIONS,
     output_type=JailbreakCheckOutput,
     model=GUARDRAIL_MODEL,
-    # No explicit reasoning setting. The default GUARDRAIL_MODEL is gpt-4o-mini,
-    # which has no reasoning phase to configure, and sending it a Reasoning
-    # object risks a 400 — which fails CLOSED here, refusing every visitor.
-    # Overriding GUARDRAIL_MODEL to a GPT-5.x model therefore gets that model's
-    # own default effort rather than "none", which the eval says is what this
-    # gate needs; the measurements are in model_config.py. Latency still matters
-    # either way: a timeout fails OPEN (asyncio.TimeoutError is in
+    # Send a reasoning setting only to models that have a reasoning phase. A
+    # Reasoning object on gpt-4o-mini risks a 400, and a 400 fails CLOSED here —
+    # so an operator rolling GUARDRAIL_MODEL back to gpt-4o-mini would take the
+    # whole gate down with it, refusing every visitor. Latency matters in the
+    # other direction: a timeout fails OPEN (asyncio.TimeoutError is in
     # _FAIL_OPEN_ERRORS), so a slow judge waves the turn through unjudged.
+    model_settings=(
+        ModelSettings(reasoning=Reasoning(effort=REASONING_EFFORT))
+        if supports_reasoning(GUARDRAIL_MODEL)
+        else ModelSettings()
+    ),
 )
 
 

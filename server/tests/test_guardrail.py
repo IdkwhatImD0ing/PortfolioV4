@@ -463,3 +463,24 @@ class TestLlmClientGuardrailIntegration:
         """
         assert "music" in guardrail_refusal_message
         assert "only share information about my background" not in guardrail_refusal_message
+
+
+class TestGuardrailReasoningWiring:
+    """The reasoning parameter must follow the configured model's capabilities."""
+
+    def test_reasoning_sent_only_to_models_that_support_it(self):
+        """A Reasoning object on a non-reasoning model risks a 400.
+
+        guardrail.py fails CLOSED on unexpected errors, so that 400 would refuse
+        every visitor. GUARDRAIL_MODEL is the rollback knob, and rolling back to
+        gpt-4o-mini must not take the gate down with it.
+        """
+        import guardrail
+        from model_config import supports_reasoning
+
+        settings = guardrail.guardrail_agent.model_settings
+        if supports_reasoning(guardrail.GUARDRAIL_MODEL):
+            assert settings.reasoning is not None
+            assert settings.reasoning.effort == "none"
+        else:
+            assert settings.reasoning is None

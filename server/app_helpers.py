@@ -40,9 +40,20 @@ def validate_environment_variables():
     # Print what model_config actually resolved, not the raw env vars. Reading
     # the env here would report an override that the constants may not have
     # picked up, which is precisely the failure this is meant to make visible.
-    from model_config import AGENT_MODEL, GUARDRAIL_MODEL, REASONING_EFFORT, SUMMARY_MODEL
+    from model_config import (
+        AGENT_MODEL,
+        GUARDRAIL_MODEL,
+        REASONING_EFFORT,
+        SUMMARY_MODEL,
+        supports_reasoning,
+    )
+
+    def _effort(model: str) -> str:
+        # A model without a reasoning phase is never sent the parameter, so
+        # reporting REASONING_EFFORT for it would misdescribe the request.
+        return REASONING_EFFORT if supports_reasoning(model) else "n/a for this model"
 
     print("Models in use:")
-    print(f"  · agent:     {AGENT_MODEL} (reasoning: {REASONING_EFFORT})")
-    print(f"  · guardrail: {GUARDRAIL_MODEL} (reasoning: model default)")
-    print(f"  · summary:   {SUMMARY_MODEL} (reasoning: {REASONING_EFFORT})")
+    print(f"  · agent:     {AGENT_MODEL} (reasoning: {_effort(AGENT_MODEL)})")
+    print(f"  · guardrail: {GUARDRAIL_MODEL} (reasoning: {_effort(GUARDRAIL_MODEL)})")
+    print(f"  · summary:   {SUMMARY_MODEL} (reasoning: {_effort(SUMMARY_MODEL)})")

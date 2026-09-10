@@ -110,10 +110,13 @@ Split deliberately, because the judge is now the only gate:
   refusal is not schema-valid, raises `ModelBehaviorError`, and failing open there would allow
   exactly the worst content.
 
-`GUARDRAIL_MODEL` (default `gpt-4o-mini`, declared in `model_config.py`) is
+`GUARDRAIL_MODEL` (default `gpt-5.6-luna`, declared in `model_config.py`) is
 validated non-empty at import, so a misconfiguration is loud rather than a
-silently disabled gate. The judge is sent no explicit reasoning setting, so a
-GPT-5.x override runs at that model's own default effort. Latency still matters:
+silently disabled gate. The judge runs at `REASONING_EFFORT` ("none"), but only
+when `supports_reasoning()` says the configured model takes the parameter — a
+`Reasoning` object on `gpt-4o-mini` risks a 400, and a 400 fails **closed** here,
+so rolling `GUARDRAIL_MODEL` back to that model would otherwise refuse every
+visitor. Latency still matters:
 the visitor waits on this call, and a timeout fails **open**
 (`asyncio.TimeoutError` is in `_FAIL_OPEN_ERRORS`), so a slow judge waves the
 turn through unjudged rather than refusing it. That makes latency here a
