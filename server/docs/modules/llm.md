@@ -22,15 +22,15 @@ class LlmClient:
         self.call_id = call_id
         self.mode = mode
 
-        # Voice mode: no reasoning ("none") for minimum TTFT.
-        # Text mode: "low" reasoning for better answer quality.
+        # The prompt varies by mode; reasoning is "none" in both, for minimum
+        # TTFT on voice and to keep the two modes from drifting apart.
         system_prompt = voice_system_prompt if mode == "voice" else text_system_prompt
-        reasoning_effort = "none" if mode == "voice" else "low"
+        reasoning_effort = "none"
 
         self.agent = Agent(
             name="portfolio_agent",
             instructions=system_prompt,
-            model="gpt-5.4-mini",
+            model=AGENT_MODEL,  # "gpt-5.6-terra"
             tools=self.prepare_functions(),
             input_guardrails=[security_guardrail],
             model_settings=ModelSettings(
@@ -43,6 +43,13 @@ class LlmClient:
         )
         self.debug = debug or os.getenv("LLM_DEBUG", "0") == "1"
 ```
+
+> **Model name:** every model this server calls is declared in
+> `model_config.py`, not at the call site. `llm.py` imports `AGENT_MODEL` and
+> `REASONING_EFFORT` from there; the stream log and `debug_agent.py` import the
+> same constant rather than repeating the literal. Each name is overridable by
+> an env var of the same name, so a model can be swapped or rolled back per
+> deploy without a code change.
 
 > **SDK requirement:** `effort="none"` requires `openai>=2.25` (added alongside
 > `gpt-5.4`). The pinned versions in `requirements.txt` are
@@ -236,25 +243,32 @@ def _log(self, *args, **kwargs):
 model_settings=ModelSettings(
     verbosity="low",
     reasoning=Reasoning(
-        effort=reasoning_effort,  # "none" for voice, "low" for text
+        effort=reasoning_effort,  # "none" in both voice and text
         summary="auto",
     ),
 )
 ```
 
-Valid `effort` values on `gpt-5.4-mini` (per `openai>=2.25`):
-`none | minimal | low | medium | high | xhigh`. `"none"` skips the reasoning
-phase entirely, which is what voice mode uses to minimize time-to-first-token.
+Valid `effort` values on `gpt-5.6-terra`:
+`none | low | medium | high | xhigh | max` (`medium` is the model default).
+`"none"` skips the reasoning phase entirely, which is what both modes use to
+minimize time-to-first-token.
 
 ## Modifications
 
 ### Change Model
 
+Set the env var — no code change, and it rolls back the same way:
+
+```bash
+AGENT_MODEL=gpt-5.6-sol
+```
+
+To change the default, edit `model_config.py` (not the call site — the log line
+and `debug_agent.py` both read the same constant):
+
 ```python
-self.agent = Agent(
-    model="gpt-4o",  # Different model
-    # ...
-)
+AGENT_MODEL = _model_from_env("AGENT_MODEL", "gpt-5.6-sol")
 ```
 
 ### Add Custom Tool

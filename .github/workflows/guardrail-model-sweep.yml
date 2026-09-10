@@ -1,0 +1,98 @@
+name: Guardrail Model Sweep
+
+# Runs the guardrail eval against several classifier models on the SAME rubric,
+# so the numbers differ only by model. Manual only: it costs three live API runs
+# and is a comparison tool, not a gate. The PR-blocking eval lives in
+# backend-integration.yml and runs one model, the configured default.
+#
+# Read the results from each leg's log — the eval prints false-allow and
+# false-refusal rates, the misclassified cases, and the judge's own rationale
+# under every miss. Legs are expected to fail while the eval is over threshold;
+# fail-fast is off so every model reports rather than the first one stopping the
+# rest.
+
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: "Comma-separated GUARDRAIL_MODEL values to compare"
+        required: false
+        default: "gpt-4o-mini,gpt-5.6-luna,gpt-5.6-terra"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # Turn the comma-separated input into a matrix, so the model list is editable
+  # from the Actions UI without touching this file.
+  plan:
+    name: Plan sweep
+    runs-on: ubuntu-latest
+    outputs:
+      models: ${{ steps.split.outputs.models }}
+    steps:
+      - id: split
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os
+          raw = os.environ["MODELS_INPUT"]
+          models = [m.strip() for m in raw.split(",") if m.strip()]
+          if not models:
+              raise SystemExit("no models given")
+          print("models=" + json.dumps(models))
+          EOF
+        env:
+          MODELS_INPUT: ${{ inputs.models }}
+
+  sweep:
+    name: "Eval: ${{ matrix.model }}"
+    needs: plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    strategy:
+      fail-fast: false
+      matrix:
+        model: ${{ fromJSON(needs.plan.outputs.models) }}
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+      GUARDRAIL_MODEL: ${{ matrix.model }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "$OPENAI_API_KEY" ] || [ -z "$PINECONE_API_KEY" ]; then
+            echo "Missing OPENAI_API_KEY or PINECONE_API_KEY repository secrets."
+            exit 1
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Confirm the model under test
+        # The eval reads GUARDRAIL_MODEL through model_config, and a typo would
+        # otherwise silently sweep the default three times.
+        run: |
+          uv run python -c "
+          from model_config import GUARDRAIL_MODEL, REASONING_EFFORT, supports_reasoning
+          effort = REASONING_EFFORT if supports_reasoning(GUARDRAIL_MODEL) else 'n/a (no reasoning phase)'
+          print(f'classifier: {GUARDRAIL_MODEL}')
+          print(f'reasoning : {effort}')
+          assert GUARDRAIL_MODEL == '${{ matrix.model }}', 'env override did not reach model_config'
+          "
+
+      - name: Run guardrail eval
+        run: uv run pytest tests/test_guardrail_eval.py -m integration -v --tb=short

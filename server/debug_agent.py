@@ -158,10 +158,11 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
     """Send messages through the full agent pipeline and log everything."""
     from agents import RawResponsesStreamEvent, RunItemStreamEvent, Runner, trace
     from llm import LlmClient
+    from model_config import AGENT_MODEL
 
     header("Agent Debug Session")
     kv("Mode", mode)
-    kv("Model", "gpt-5.4-mini")
+    kv("Model", AGENT_MODEL)
     kv("Messages", len(user_messages))
     for i, msg in enumerate(user_messages):
         print(f"  {DIM}[{i+1}]{RESET} {msg}")

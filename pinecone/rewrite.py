@@ -9,8 +9,9 @@ dotenv.load_dotenv()
 # Initialize async client (make sure your OPENAI_API_KEY is set in env)
 client = AsyncOpenAI()
 
-REWRITE_MODEL = "gpt-4o"
-REWRITE_TEMPERATURE = 0.7
+REWRITE_MODEL = "gpt-5.6-terra"
+# GPT-5.x reasoning models reject `temperature`; effort is the knob instead.
+REWRITE_REASONING_EFFORT = "none"
 REWRITE_SYSTEM_PROMPT = "You are a helpful assistant for rewriting project summaries."
 
 
@@ -43,7 +44,7 @@ Keep it professional, concise, and engaging.
                 },
                 {"role": "user", "content": prompt},
             ],
-            temperature=REWRITE_TEMPERATURE,
+            reasoning_effort=REWRITE_REASONING_EFFORT,
         )
         new_summary = response.choices[0].message.content.strip()
         proj["summary"] = new_summary
