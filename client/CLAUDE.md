@@ -90,6 +90,7 @@ Changing a navigable destination means editing all three: the tool/page mapping 
 RETELLAI_API_KEY=...              # server-only, used by the create-web-call proxy
 NEXT_PUBLIC_RETELL_AGENT_ID=...   # the Retell agent the browser dials
 NEXT_PUBLIC_APP_URL=...           # locks the proxy's CORS origin in prod
+NEXT_PUBLIC_API_URL=...           # optional; backend pinged on page load to wake Cloud Run
 ```
 
 The backend (`server/.env`) needs `RETELL_API_KEY`, `OPENAI_API_KEY`, `PINECONE_API_KEY` (validated at startup in `main.py`), plus optional `OBFUSCATED_WS_PATH` and `LLM_DEBUG`.

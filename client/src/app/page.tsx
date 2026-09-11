@@ -1,3 +1,4 @@
+import { BackendWarmup } from "@/components/backend-warmup";
 import { BgStage } from "@/components/bg-stage";
 import { CustomCursor } from "@/components/custom-cursor";
 import { HashLanding } from "@/components/hash-landing";
@@ -18,6 +19,7 @@ import { PersonalSection, FooterSection } from "@/components/sections/personal";
 export default function Home() {
   return (
     <>
+      <BackendWarmup />
       <BgStage />
       <ScrollProgressBar />
       <CustomCursor />
