@@ -19,7 +19,8 @@ import {
   type VoiceCommand,
 } from "@/lib/voice-bus";
 import { mergeTranscript, type TranscriptEntry } from "@/lib/transcript";
-import { resolveAgentId } from "@/lib/retell-agent";
+import { PROD_AGENT_ID, resolveAgentId } from "@/lib/retell-agent";
+import { waitForBackend, warmBackend } from "@/lib/backend-warmup";
 import { createSseParser, parseChatMarkdown, toChatMessages } from "@/lib/text-chat";
 import { cn } from "@/lib/utils";
 import type { RetellAIResponse } from "@/types/api";
@@ -246,6 +247,11 @@ export function VoiceOrb() {
         throw new Error("No Retell agent id configured (NEXT_PUBLIC_RETELL_AGENT_ID).");
       }
 
+      // The prod agent's LLM runs on Cloud Run, which may still be booting.
+      // Hold the call under "Connecting…" until it answers, so a cold start
+      // costs a longer spinner instead of a silent call. Capped; never throws.
+      if (agentId === PROD_AGENT_ID) await waitForBackend();
+
       if (!retellRef.current) {
         const { RetellWebClient } = await import("retell-client-js-sdk");
         retellRef.current = new RetellWebClient();
@@ -416,6 +422,11 @@ export function VoiceOrb() {
   /** The orb tap: open the panel and dial in one go. */
   const openAndStart = useCallback(() => {
     if (open) return;
+    // Opening the panel is the strongest "about to talk" signal we get. The
+    // prod call path waits on the backend anyway; this nudge also covers a
+    // visitor who switches straight to text chat, and it is deduplicated
+    // inside, so it's free when the page-load ping was recent.
+    warmBackend();
     openRef.current = true;
     modeRef.current = "voice";
     setMode("voice");

@@ -11,8 +11,9 @@
 import { DEV_API_URL, isDevBackendUp } from "./backend";
 
 /** Production Retell agent (public id, safe to ship). Env wins; the literal is
- *  a fallback so prod works even if the env var is missing. */
-const PROD_AGENT_ID =
+ *  a fallback so prod works even if the env var is missing. Its LLM websocket
+ *  points at the Cloud Run backend. */
+export const PROD_AGENT_ID =
   process.env.NEXT_PUBLIC_RETELL_AGENT_ID ?? "agent_c5ae64152c9091e17243c9bdfc";
 
 /** Dev Retell agent wired to the local backend. Unset → no dev agent, always
@@ -36,13 +37,22 @@ export function chooseAgentId(opts: {
 }
 
 /**
+ * Whether this build dials a local dev backend when one answers: a dev build
+ * with a dev agent configured. Production builds never do. `warmBackend` reads
+ * this so a dev session doesn't wake production for calls bound for the tunnel.
+ */
+export function prefersDevBackend(): boolean {
+  return process.env.NODE_ENV !== "production" && Boolean(DEV_AGENT_ID);
+}
+
+/**
  * Resolve the Retell agent id to dial. Only probes the dev backend when we're
  * in dev and a dev agent is configured — production builds skip the network
  * round-trip entirely and go straight to the prod agent.
  */
 export async function resolveAgentId(): Promise<string | undefined> {
   const isDev = process.env.NODE_ENV !== "production";
-  const devReachable = isDev && DEV_AGENT_ID ? await isDevBackendUp() : false;
+  const devReachable = prefersDevBackend() ? await isDevBackendUp() : false;
   if (devReachable) {
     console.info(
       `[retell] dev backend reachable at ${DEV_API_URL} — using dev agent.`,
