@@ -1,24 +1,14 @@
 /**
  * Resolves which Retell agent the browser should dial.
  *
- * In local dev you may run the FastAPI backend locally, exposed through the
- * Makefile's ngrok tunnel (https://conversational.ngrok.app). A *dev* Retell
- * agent points its LLM websocket at that tunnel; the *prod* agent points at
- * Cloud Run. So during dev we probe the dev backend's `/ping`: if it's
- * reachable, use the dev agent so calls hit your local server; otherwise fall
- * back to the production agent.
- *
- * The backend allows `http://localhost:3000` via CORS, so a normal GET to
- * `/ping` returns 200 with the CORS header when the tunnel is live. When the
- * tunnel has no running agent, ngrok answers with its own error page (no
- * matching CORS header), the browser blocks it, and `fetch` rejects — which we
- * treat as "dev backend down". That lets us tell a live backend apart from a
- * dormant tunnel without a false positive.
+ * A *dev* Retell agent points its LLM websocket at the local backend's ngrok
+ * tunnel; the *prod* agent points at Cloud Run. So during dev we probe the
+ * dev backend (see `backend.ts` for how the probe tells a live tunnel from a
+ * dormant one): if it's reachable, use the dev agent so calls hit your local
+ * server; otherwise fall back to the production agent.
  */
 
-/** Dev backend base URL, probed at `/ping`. Defaults to the Makefile tunnel. */
-const DEV_API_URL =
-  process.env.NEXT_PUBLIC_DEV_API_URL ?? "https://conversational.ngrok.app";
+import { DEV_API_URL, isDevBackendUp } from "./backend";
 
 /** Production Retell agent (public id, safe to ship). Env wins; the literal is
  *  a fallback so prod works even if the env var is missing. */
@@ -43,28 +33,6 @@ export function chooseAgentId(opts: {
   const { isDev, devReachable, devAgentId, prodAgentId } = opts;
   if (isDev && devAgentId && devReachable) return devAgentId;
   return prodAgentId;
-}
-
-/**
- * Probe the dev backend's `/ping`. Resolves true only when the backend itself
- * answers ok (see module note on why a dormant ngrok tunnel reads as false).
- * Never throws — times out to false after `timeoutMs`.
- */
-async function isDevBackendUp(timeoutMs = 1200): Promise<boolean> {
-  if (typeof fetch === "undefined") return false;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${DEV_API_URL}/ping`, {
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    return res.ok;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 /**

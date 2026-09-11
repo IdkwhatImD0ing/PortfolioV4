@@ -17,6 +17,7 @@
   --magenta: #e879f9;
   --cyan: #5eead4;
   --violet: #7f5af0;
+  --danger: #f87171;
 
   --grad: linear-gradient(135deg, #a259ff 0%, #e879f9 50%, #7f5af0 100%);
 }
@@ -37,6 +38,7 @@
   --color-magenta: var(--magenta);
   --color-cyan: var(--cyan);
   --color-violet: var(--violet);
+  --color-danger: var(--danger);
 
   --font-sans: var(--font-geist-sans), 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
@@ -56,6 +58,9 @@
   --animate-scrim-in: scrim-in 0.25s ease-out;
   --animate-panel-in: panel-in 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
   --animate-detail-in: detail-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-orb-morph-in: orb-morph-in 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
+  --animate-orb-morph-out: orb-morph-out 0.28s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  --animate-orb-morph-fade: orb-morph-fade 0.5s ease-out forwards;
 }
 
 @keyframes pulse-dot {
@@ -94,6 +99,41 @@
   }
   100% {
     transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* The voice panel grows out of the orb: a circular reveal centered where the
+   64px button sits (32px in from the panel's bottom-right corner) while a
+   wash in the orb's gradient fades away. Closing runs the reveal in reverse
+   and the orb reappears underneath. 900px covers the panel's diagonal. */
+@keyframes orb-morph-in {
+  from {
+    clip-path: circle(32px at calc(100% - 32px) calc(100% - 32px));
+    transform: translateY(6px);
+  }
+  to {
+    clip-path: circle(900px at calc(100% - 32px) calc(100% - 32px));
+    transform: none;
+  }
+}
+
+@keyframes orb-morph-out {
+  from {
+    clip-path: circle(900px at calc(100% - 32px) calc(100% - 32px));
+    opacity: 1;
+  }
+  to {
+    clip-path: circle(32px at calc(100% - 32px) calc(100% - 32px));
+    opacity: 0;
+  }
+}
+
+@keyframes orb-morph-fade {
+  from {
+    opacity: 1;
+  }
+  to {
     opacity: 0;
   }
 }
