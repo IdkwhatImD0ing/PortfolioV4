@@ -124,9 +124,9 @@ export function HeroSection() {
         </h1>
 
         <p className="mt-7 max-w-[640px] text-[19px] leading-[1.5] text-ink-soft max-[700px]:mt-5 max-[700px]:text-[16.5px]">
-          I&apos;m <b className="text-ink font-semibold">Bill Zhang</b>. I build LLM agent
-          systems at Pinterest. On my own time I build voice-first projects, and I&apos;ve won 36
-          hackathons. This page is one of the voice projects, so ask it something.
+          I&apos;m <b className="text-ink font-semibold">Bill Zhang</b>. By day I build LLM agents
+          at Pinterest. By night I build software you can talk to, which is how I ended up with
+          36 hackathon wins. This page is one of those builds. Go on, ask it something.
         </p>
 
         {/* Resume shortcut, using the same href + preventDefault pattern as

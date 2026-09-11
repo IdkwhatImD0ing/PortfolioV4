@@ -7,12 +7,12 @@ const FLOW = [
   {
     k: "01",
     title: "Mic input",
-    body: "Browser mic stream → Retell client SDK. Low-latency WebRTC pipe to a hosted agent.",
+    body: "Browser mic → Retell client SDK over WebRTC. Deepgram transcribes the stream as you speak.",
   },
   {
     k: "02",
     title: "LLM agent",
-    body: "Retell bridges the audio to a FastAPI backend, where an OpenAI Agents SDK agent runs with this site's content in context and nine registered tools.",
+    body: "Retell hands the transcript to a FastAPI backend, where a GPT-5.6 Terra agent (OpenAI Agents SDK) runs with this site's content in context, nine registered tools, and a jailbreak guardrail in front.",
   },
   {
     k: "03",
@@ -32,18 +32,22 @@ const FLOW = [
   {
     k: "06",
     title: "Voice reply",
-    body: "The agent says what it did while the scroll is still finishing, so the answer and the page land together.",
+    body: "The reply streams back through Retell into an ElevenLabs voice while the scroll is still finishing, so the answer and the page land together.",
   },
 ];
 
 const STACK = [
-  { group: "Voice", items: ["Retell AI (agent runtime)", "WebRTC (stream)", "Custom tool registry"] },
+  {
+    group: "Voice",
+    items: ["Retell AI (call runtime, WebRTC)", "Deepgram speech-to-text", "ElevenLabs text-to-speech"],
+  },
   {
     group: "Brain",
     items: [
-      "GPT-4 / Claude (selectable)",
+      "GPT-5.6 Terra (the agent)",
+      "GPT-5.6 Luna (guardrail + call summary)",
+      "OpenAI Agents SDK, nine tools",
       "Site-grounded system prompt",
-      "Function-calling JSON schema",
     ],
   },
   { group: "Frame", items: ["Next.js + React 19", "Three.js + GLSL bg", "Framer Motion + GSAP"] },
@@ -96,9 +100,9 @@ export function ArchitectureSection() {
             </em>
           </h2>
           <p className="text-[19px] leading-[1.55] text-ink-soft mt-6 text-pretty">
-            Ask about a project and the agent can look it up, describe it, and open it on the
-            page. Retell handles the audio; a Python backend runs the agent and sends
-            navigation events to the browser.
+            Ask about a project and the agent looks it up, describes it, and opens it on the
+            page. Retell carries the audio, Deepgram hears you, GPT-5.6 Terra thinks, ElevenLabs
+            talks back. A Python backend runs the agent and tells the browser where to scroll.
           </p>
         </div>
 
