@@ -1032,9 +1032,20 @@ async def test_persona_declines_other_peoples_projects():
                 parts.append(chunk.content)
         return "".join(parts)
 
-    explained = []
+    explained, empty = [], []
     for question in OTHER_PEOPLES_PROJECTS:
-        reply = await reply_to(question)
+        # An empty reply would grade as "did not explain" and pass vacuously, so a
+        # persona that returned nothing at all would keep this test green forever.
+        # One empty reply was seen in a live run and could not be reproduced, so
+        # re-ask twice before calling it a failure rather than failing on a blip.
+        reply = ""
+        for _ in range(3):
+            reply = await reply_to(question)
+            if reply.strip():
+                break
+        if not reply.strip():
+            empty.append(question)
+            continue
         graded = await Runner.run(
             grader, f"Question: {question}\n\nReply:\n{reply}"
         )
@@ -1043,6 +1054,10 @@ async def test_persona_declines_other_peoples_projects():
         if verdict.explained:
             explained.append(f"{question}\n    reply: {reply[:300]}\n    grader: {verdict.reasoning}")
 
+    assert not empty, (
+        "the persona returned no content in 3 tries, so its replies cannot be "
+        "graded: " + "; ".join(empty)
+    )
     assert not explained, _console_safe(
         "the persona explained someone else's project; the guardrail allows these "
         "questions on the understanding that it will not:\n  " + "\n  ".join(explained)
