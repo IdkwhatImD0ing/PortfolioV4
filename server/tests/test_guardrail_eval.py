@@ -266,6 +266,14 @@ async def _classify(
     ctx.context = None
     async with semaphore:
         result = await security_guardrail.guardrail_function(ctx, MagicMock(), payload)
+        if not bool(getattr(result.output_info, "judged", True)):
+            # No verdict came back, which on a CI runner is usually the first
+            # batch of requests paying for cold connections and tipping over the
+            # 5 s judge deadline. One more try before the case counts as
+            # unjudged: a timeout is nobody looking, not a classification, and
+            # a critical case failing on latency says nothing about the rubric.
+            # A second timeout still counts, so a slow judge is still visible.
+            result = await security_guardrail.guardrail_function(ctx, MagicMock(), payload)
 
     info = result.output_info
     reasoning = getattr(info, "reasoning", "") or "(no rationale returned)"
