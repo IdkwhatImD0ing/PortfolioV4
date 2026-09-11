@@ -50,7 +50,6 @@
   --radius-xl: 22px;
 
   --animate-pulse-dot: pulse-dot 1.6s infinite;
-  --animate-wf: wf 1.2s ease-in-out infinite;
   --animate-marq: marq 110s linear infinite;
   --animate-marq-rev: marq 130s linear infinite reverse;
   --animate-orb-pulse: orb-pulse 2.6s ease-out infinite;
@@ -70,16 +69,6 @@
   }
   50% {
     opacity: 0.4;
-  }
-}
-
-@keyframes wf {
-  0%,
-  100% {
-    height: 6px;
-  }
-  50% {
-    height: 28px;
   }
 }
 
