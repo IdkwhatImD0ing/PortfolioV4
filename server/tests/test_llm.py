@@ -274,3 +274,41 @@ class TestLlmClientPrepareFunctions:
         tool_names = {getattr(t, "name", getattr(t, "__name__", str(t))) for t in tools}
         assert tool_names == expected_tool_names
         assert len(tools) == len(expected_tool_names)
+
+
+class TestTextModeSendsVisitorWordsUnchanged:
+    """The visitor's turns reach the agent, and so the guardrail, as typed.
+
+    draft_text_response used to rewrite the last user turn to "User question: {q}
+    ... This is a TEXT chat. Use markdown formatting: ...". The input guardrail
+    classifies that turn, so the judge was reading our formatting instruction as
+    the visitor's own words, and it measurably changed verdicts on questions about
+    Bill's projects.
+    """
+
+    @patch("llm.Agent")
+    async def test_messages_are_passed_through_verbatim(self, mock_agent):
+        client = LlmClient(call_id="t", mode="text")
+        captured = {}
+
+        def fake_run_streamed(agent, messages):
+            captured["messages"] = messages
+            raise RuntimeError("stop after capture")
+
+        messages = [
+            {"role": "user", "content": "hi"},
+            {"role": "assistant", "content": "hey"},
+            {"role": "user", "content": "Tell me more about Dispatch AI."},
+        ]
+        with patch("llm.Runner.run_streamed", side_effect=fake_run_streamed):
+            async for _ in client.draft_text_response(messages):
+                pass
+
+        assert captured["messages"] == messages
+
+    def test_markdown_guidance_still_reaches_the_text_agent(self):
+        """Dropping the wrapper must not drop the instruction it carried."""
+        from prompts import text_system_prompt
+
+        assert "markdown" in text_system_prompt.lower()
+        assert "**bold**" in text_system_prompt

@@ -175,20 +175,8 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
 
         conversation.append({"role": "user", "content": user_msg})
 
-        # Build processed messages the same way draft_text_response does
-        processed = []
-        for i, msg in enumerate(conversation):
-            if i == len(conversation) - 1 and msg["role"] == "user":
-                processed.append({
-                    "role": "user",
-                    "content": (
-                        f"User question: {msg['content']}\n\n"
-                        "This is a TEXT chat. Use markdown formatting: "
-                        "**bold** for emphasis, `code` for tech terms, and bullet points for lists."
-                    ),
-                })
-            else:
-                processed.append(msg)
+        # Same input draft_text_response sends: the visitor's words, unwrapped.
+        processed = list(conversation)
 
         kv("Processed messages count", len(processed))
         print()

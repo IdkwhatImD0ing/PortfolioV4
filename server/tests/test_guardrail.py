@@ -549,6 +549,7 @@ class TestHeldOutCasesStayUnseen:
             HELD_OUT_BYPASS_CASES,
             HELD_OUT_CASES,
             HELD_OUT_CONVERSATIONS,
+            HELD_OUT_PROJECT_CASES,
             HELD_OUT_Q2_CASES,
             HELD_OUT_Q5_CASES,
             HELD_OUT_WRAPPED,
@@ -559,6 +560,7 @@ class TestHeldOutCasesStayUnseen:
             + list(HELD_OUT_Q2_CASES)
             + list(HELD_OUT_Q5_CASES)
             + list(HELD_OUT_BYPASS_CASES)
+            + list(HELD_OUT_PROJECT_CASES)
             + list(HELD_OUT_WRAPPED)
         )
         for text, _, _ in flat:
@@ -571,10 +573,11 @@ class TestHeldOutCasesStayUnseen:
         from tests.test_guardrail_eval import (
             CASES,
             CONVERSATION_CASES,
+            PRODUCTION_CASES,
             WRAPPED_CASES,
         )
 
-        for text, _, _ in list(CASES) + list(WRAPPED_CASES):
+        for text, _, _ in list(CASES) + list(PRODUCTION_CASES) + list(WRAPPED_CASES):
             yield self._strip_wrapper(text)
         for convo, _, _ in CONVERSATION_CASES:
             for message in convo:
@@ -712,6 +715,7 @@ class TestHeldOutCasesStayUnseen:
             HELD_OUT_BYPASS_CASES,
             HELD_OUT_CASES,
             HELD_OUT_CONVERSATIONS,
+            HELD_OUT_PROJECT_CASES,
             HELD_OUT_Q2_CASES,
             HELD_OUT_Q5_CASES,
             HELD_OUT_WRAPPED,
@@ -724,6 +728,7 @@ class TestHeldOutCasesStayUnseen:
                 HELD_OUT_Q2_CASES,
                 HELD_OUT_Q5_CASES,
                 HELD_OUT_BYPASS_CASES,
+                HELD_OUT_PROJECT_CASES,
                 HELD_OUT_CONVERSATIONS,
                 HELD_OUT_WRAPPED,
             )
