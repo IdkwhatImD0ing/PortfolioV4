@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 import sys
@@ -209,13 +210,27 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
                         flush=True,
                     )
 
-                    async for event in llm_client.draft_response(request):
-                        await websocket.send_json(event.__dict__)
-                        if request.response_id < response_id:
-                            print(
-                                "Detected newer response_id, abandoning current stream"
-                            )
-                            break  # new response needed, abandon this one
+                    stream = llm_client.draft_response(request)
+                    try:
+                        async for event in stream:
+                            await websocket.send_json(event.__dict__)
+                            if request.response_id < response_id:
+                                print(
+                                    "Detected newer response_id, abandoning current stream"
+                                )
+                                break  # new response needed, abandon this one
+                    except asyncio.CancelledError:
+                        # The call ended mid-turn (the finally below cancels
+                        # this task). Hand the cancellation to the stream, so
+                        # its trace reads "cancelled" rather than being closed
+                        # later by the garbage collector as "abandoned".
+                        with contextlib.suppress(BaseException):
+                            await stream.athrow(asyncio.CancelledError())
+                        raise
+                    finally:
+                        # Close now, not at garbage collection, so a barge-in's
+                        # trace is recorded promptly as "abandoned".
+                        await stream.aclose()
             except Exception as e:
                 print(
                     f"Exception in handle_message: {e}\n{traceback.format_exc()}\nPayload: {request_json}",

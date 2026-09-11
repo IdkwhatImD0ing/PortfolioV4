@@ -95,7 +95,10 @@ The key decides the environment. FireTrace stamps `production`, `preview` or
   carries over the line already in `.env`, so a re-pull cannot swap your
   development key for the production one.
 - **Cloud Run** uses the *production* key from the `FIRETRACE_API_KEY` secret
-  in Secret Manager. `deploy.sh` mounts it only when that secret exists.
+  in Secret Manager. `deploy.sh` mounts it when that secret exists, and stops
+  (rather than guessing) if the secret cannot be read for any other reason,
+  since redeploying without it would silently turn tracing off; pass
+  `FIRETRACE=off` to deploy without tracing on purpose.
 
 Never reuse one key across environments, and never commit one. When the
 variable is unset the server runs exactly as before and records nothing. See

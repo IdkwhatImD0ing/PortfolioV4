@@ -46,6 +46,8 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import copy
+import http.client
 import json
 import logging
 import math
@@ -59,7 +61,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -105,6 +107,10 @@ MAX_NAME_CHARS = 500
 MAX_ID_FIELD_CHARS = 200
 MAX_REQUEST_BYTES = 2 * 1024 * 1024
 _TARGET_REQUEST_BYTES = 1_800_000
+# FireTrace also caps each stored document (the trace without its spans, and
+# each span) at 768,000 bytes. Kept well under: FireTrace also measures by
+# Firestore's own accounting, which can exceed the JSON length.
+_MAX_DOCUMENT_BYTES = 700_000
 # Our own content caps, well under FireTrace's 750 KiB per stored document.
 MAX_STRING_CHARS = 10_000
 MAX_SPAN_FIELD_BYTES = 32_000
@@ -118,6 +124,9 @@ _MAX_COLLECTED_SPANS = 1000
 _SEND_TIMEOUT_SECONDS = 10.0
 _RETRY_DELAYS_SECONDS = (0.5, 1.0, 2.0, 4.0)  # attempts = len + 1
 _QUEUE_MAX = 256
+# Traces waiting to be sent before each send gets one quick attempt instead
+# of the full retry schedule (see FireTraceProcessor._hurry).
+_HURRY_BACKLOG = 8
 _SHUTDOWN_GRACE_SECONDS = 5.0
 _SHUTDOWN_SEND_TIMEOUT_SECONDS = 2.0
 # How long a run whose trace has ended may keep producing spans (a streamed
@@ -136,13 +145,24 @@ logger = logging.getLogger("firetrace")
 # Redaction
 # ---------------------------------------------------------------------------
 
-# Values under these keys are dropped wholesale, whatever they contain.
+# Values under these keys are dropped wholesale, whatever they contain. Keys
+# are matched on whole words at the END of the key (its head noun: `api_key`,
+# `clientSecret`, `X-Retell-Signature`), after splitting camelCase and
+# punctuation into `_`-separated words. A bare substring match also hit
+# `businessName` ("ssn"), `className`, `signature_url` and `cookieCount`.
 _SECRET_KEY_RE = re.compile(
-    r"(api[-_]?key|authorization|auth[-_]?token|access[-_]?token|refresh[-_]?token"
-    r"|id[-_]?token|secret|password|passwd|cookie|signature|bearer|credential"
-    r"|private[-_]?key|ssn|social[-_]?security|credit[-_]?card|card[-_]?number|cvv)",
-    re.IGNORECASE,
+    r"(?:^|_)(?:api_?key|secret_?key|authorization|auth_?token|access_?token"
+    r"|refresh_?token|id_?token|secrets?|password|passwd|cookies?|signature"
+    r"|bearer|credentials?|private_?key|ssn|social_?security(?:_?number)?"
+    r"|credit_?card(?:_?number)?|card_?number|cvv)$"
 )
+_CAMEL_RE = re.compile(r"([a-z0-9])([A-Z])")
+_NON_WORD_RE = re.compile(r"[^A-Za-z0-9]+")
+
+
+def _is_secret_key(key: str) -> bool:
+    words = _NON_WORD_RE.sub("_", _CAMEL_RE.sub(r"\1_\2", key)).lower().strip("_")
+    return bool(_SECRET_KEY_RE.search(words))
 
 # Patterns applied to every string. Order matters: known key shapes before the
 # generic long-token rule, and the generic rule before emails.
@@ -178,18 +198,22 @@ _STRING_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     # linear on long alphanumeric runs that contain no '@'.
     (re.compile(r"[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9.\-]{1,255}\.[A-Za-z]{2,}"), "[EMAIL]"),
     (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "[SSN]"),
-    # North-American shapes only (3-3-4 digits, optional +1). The trailing
-    # check refuses a digit continuation (versions, ticket numbers, IPs) but
-    # lets a sentence-final period through.
+    # North-American numbers only (3-3-4 digits, optional +1), with NANP's
+    # rule that area code and exchange start with 2-9: that spares unix-second
+    # timestamps (17xxxxxxxx) and other 10-digit ids that start with 0 or 1.
+    # The trailing check refuses a digit continuation (versions, ticket
+    # numbers, IPs) but lets a sentence-final period through.
     (
         re.compile(
-            r"(?<![\w/.\-])(?:\+?\d{1,2}[\s.\-]?)?(?:\(\d{3}\)|\d{3})[\s.\-]?\d{3}[\s.\-]?\d{4}(?!\w|[/.\-]\d)"
+            r"(?<![\w/.\-])(?:\+?\d{1,2}[\s.\-]?)?(?:\([2-9]\d{2}\)|[2-9]\d{2})[\s.\-]?[2-9]\d{2}[\s.\-]?\d{4}(?!\w|[/.\-]\d)"
         ),
         "[PHONE]",
     ),
     (re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"), "[IP]"),
 )
-_CARD_RE = re.compile(r"(?<!\d)(?:\d[ \-]?){13,19}(?!\d)")
+# 13-19 digits with optional single separators; the pattern ends on a digit so
+# the separator after the number is not swallowed ("[CARD] ok", not "[CARD]ok").
+_CARD_RE = re.compile(r"(?<!\d)(?:\d[ \-]?){12,18}\d(?!\d)")
 # A 40+ run of letters, digits and urlsafe punctuation is an opaque token
 # when it mixes cases and carries digits; that requirement keeps long slugs,
 # words and repeated characters. '/' is deliberately not part of a run, so
@@ -238,16 +262,32 @@ def _redact_long_runs(text: str) -> str:
     return _LONG_RUN_RE.sub(repl, text)
 
 
+# Per-payload memo for redact_text, set by build_payload on the thread that
+# builds. Every model call in a turn carries the whole conversation as its
+# input, and the SDK shares the same str objects between them, so without it
+# one turn redacts the same messages once per llm span.
+_redact_memo = threading.local()
+
+
 def redact_text(text: str) -> str:
     """Scrub secret- and PII-shaped substrings out of one string."""
     if not text:
         return text
+    memo: dict[str, str] | None = getattr(_redact_memo, "cache", None)
+    if memo is not None:
+        hit = memo.get(text)
+        if hit is not None:
+            return hit
+    original = text
     if len(text) > _MAX_SCAN_CHARS:
         text = text[:_MAX_SCAN_CHARS]
     text = _redact_cards(text)
     for pattern, replacement in _STRING_RULES:
         text = pattern.sub(replacement, text)
-    return _redact_long_runs(text)
+    text = _redact_long_runs(text)
+    if memo is not None:
+        memo[original] = text
+    return text
 
 
 _MAX_KEY_BYTES = 1000  # Firestore refuses field names over 1,500 bytes
@@ -342,7 +382,15 @@ def _redact_json(value: Any, flags: dict[str, bool]) -> Any:
     if isinstance(value, dict):
         out: dict[str, Any] = {}
         for k, v in value.items():
-            out[k] = "[REDACTED]" if _SECRET_KEY_RE.search(k) else _redact_json(v, flags)
+            # Keys can carry PII too ({"jane@x.com": ...}). Redact them, and
+            # keep keys that redact to the same text apart, not overwritten.
+            key = redact_text(k)
+            if key in out:
+                n = 2
+                while f"{key}#{n}" in out:
+                    n += 1
+                key = f"{key}#{n}"
+            out[key] = "[REDACTED]" if _is_secret_key(k) else _redact_json(v, flags)
         return out
     if isinstance(value, list):
         if len(value) > MAX_LIST_ITEMS:
@@ -411,21 +459,65 @@ def _shrink(value: Any, max_bytes: int) -> tuple[Any, bool]:
     """Bound a JSON value to ``max_bytes`` serialized, keeping it readable."""
     if _byte_len(value) <= max_bytes:
         return value, False
+    if isinstance(value, dict):
+        # Run inputs wrap their message list ({"messages": [...]},
+        # {"transcript": [...]}); trim the list inside and keep the wrapper.
+        lists = [k for k, v in value.items() if isinstance(v, list) and len(v) > 3]
+        if len(lists) == 1:
+            key = lists[0]
+            rest = {k: v for k, v in value.items() if k != key}
+            budget = max_bytes - _byte_len(rest) - _byte_len(key) - 2
+            inner, _ = _shrink(value[key], budget) if budget > 0 else (None, True)
+            if isinstance(inner, list):
+                shrunk = {**value, key: inner}
+                if _byte_len(shrunk) <= max_bytes:
+                    return shrunk, True
     if isinstance(value, list) and len(value) > 3:
-        # Message lists: keep the opening turns and the most recent ones.
-        head, tail = value[:2], value[-1:]
-        for extra in range(len(value) - 3, 0, -1):
-            candidate = head + value[-extra - 1 :]
-            if _byte_len(candidate) <= max_bytes:
-                tail = value[-extra - 1 :]
+        # Message lists: keep the opening turns and as many recent ones as
+        # fit. Each item is serialized once, so this is linear in the list.
+        sizes = [_byte_len(item) + 1 for item in value]  # +1: the comma
+        head = value[:2]
+        used = 2 + sum(sizes[:2]) + 48  # brackets, head, the elision marker
+        keep = 0
+        for size in reversed(sizes[2:]):
+            if used + size > max_bytes:
                 break
+            used += size
+            keep += 1
+        tail = value[len(value) - max(keep, 1) :]
         elided = len(value) - len(head) - len(tail)
-        shrunk = head + [f"…[{elided} items elided for size]"] + tail
+        shrunk = head + ([f"…[{elided} items elided for size]"] if elided else []) + tail
         if _byte_len(shrunk) <= max_bytes:
             return shrunk, True
-    text = _dumps(value)
-    head_text = text[: max(64, max_bytes // 2)]
-    return f"{head_text}…[truncated; {len(text)} chars total]", True
+    return _cut_text(_dumps(value), max_bytes), True
+
+
+def _cut_text(text: str, max_bytes: int) -> str:
+    """Cut ``text`` so its JSON encoding fits ``max_bytes`` of UTF-8.
+
+    Counts bytes, not characters (an emoji is 4 bytes), and includes the
+    escaping the text gets when it is serialized again as a string value.
+    """
+    suffix = f"…[truncated; {len(text)} chars total]"
+    raw = text.encode("utf-8")
+    room = max_bytes - len(suffix.encode("utf-8")) - 2
+    while True:
+        cut = raw[: max(0, room)].decode("utf-8", "ignore") + suffix
+        over = _byte_len(cut) - max_bytes
+        # Dropping `over` raw bytes drops at least `over` serialized bytes,
+        # so this settles on the second pass.
+        if over <= 0 or room <= 0:
+            return cut
+        room -= over
+
+
+def _clip(value: Any, limit: int) -> str:
+    """A bounded string field (name, id, tag): encodable, and at most ``limit``
+    UTF-16 units, the length FireTrace's validator counts."""
+    text = _clean_text(str(value))[:limit]
+    while len(text.encode("utf-16-le")) > 2 * limit:
+        text = text[:-1]
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -555,9 +647,16 @@ class FireTraceProcessor(TracingProcessor):
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._runs: dict[str, _RunRecord] = {}
+        # Two stages. The build thread turns each finished run into a bounded
+        # request body straight away, releasing the SDK objects and the
+        # conversation it holds; the send thread then holds only those bytes
+        # while it waits on the network.
         self._queue: queue.Queue[Any] = queue.Queue(maxsize=_QUEUE_MAX)
+        self._send_queue: queue.Queue[Any] = queue.Queue(maxsize=_QUEUE_MAX)
+        self._builder: threading.Thread | None = None
         self._worker: threading.Thread | None = None
         self._worker_lock = threading.Lock()
+        self._pending = 0  # traces queued or in flight; guarded by _worker_lock
         self._stopping = threading.Event()
 
     # -- registration from traced_run ------------------------------------
@@ -644,8 +743,11 @@ class FireTraceProcessor(TracingProcessor):
         Runs whose trace has ended but that were still waiting for background
         spans are exported as they stand; runs still in progress are dropped
         (they never completed). The worker gets one quick attempt per trace.
+        Runs once: our atexit hook and the SDK's both call it.
         """
         try:
+            if self._stopping.is_set():
+                return
             self._stopping.set()
             with self._lock:
                 pending = list(self._runs.values())
@@ -665,14 +767,16 @@ class FireTraceProcessor(TracingProcessor):
                     "[firetrace] %d run(s) were still in progress at exit and were not recorded",
                     in_progress,
                 )
-            self._stop_worker(timeout=_SHUTDOWN_GRACE_SECONDS)
+            self._stop_workers(timeout=_SHUTDOWN_GRACE_SECONDS)
         except Exception as e:  # pragma: no cover - defensive
             logger.warning("[firetrace] shutdown failed: %r", e)
 
     def force_flush(self) -> None:
         try:
             deadline = time.monotonic() + _SHUTDOWN_GRACE_SECONDS
-            while self._queue.unfinished_tasks and time.monotonic() < deadline:
+            while (
+                self._queue.unfinished_tasks or self._send_queue.unfinished_tasks
+            ) and time.monotonic() < deadline:
                 time.sleep(0.05)
         except Exception as e:  # pragma: no cover - defensive
             logger.warning("[firetrace] force_flush failed: %r", e)
@@ -733,7 +837,10 @@ class FireTraceProcessor(TracingProcessor):
         record.ended_at = record.ended_at or _now_iso()
         if record.started_at is None:
             record.started_at = record.ended_at
-        # Snapshot on the calling thread; the worker never touches SDK objects.
+        # Snapshot here: the workers never read a live SDK object. Each span's
+        # data is copied (its attributes, one level deep), because a run
+        # exported while spans are still open (the grace timer, shutdown) is
+        # otherwise read by the build thread while the run loop writes to it.
         snapshots: list[_SpanSnapshot] = []
         for seq, span in enumerate(record.spans):
             try:
@@ -744,9 +851,9 @@ class FireTraceProcessor(TracingProcessor):
                         started_at=span.started_at,
                         ended_at=span.ended_at,
                         type=getattr(span.span_data, "type", "custom"),
-                        data=span.span_data,
+                        data=_copy_span_data(span.span_data),
                         error=span.error,
-                        extra=record.span_attrs.get(span.span_id, {}),
+                        extra=dict(record.span_attrs.get(span.span_id, {})),
                         seq=seq,
                     )
                 )
@@ -754,59 +861,75 @@ class FireTraceProcessor(TracingProcessor):
                 logger.debug("[firetrace] skipping unreadable span: %r", e)
                 continue
         record.spans = []
+        with self._worker_lock:
+            self._pending += 1
         try:
             self._queue.put_nowait((record, snapshots))
         except queue.Full:
+            self._done_one()
             logger.warning(
                 "[firetrace] export queue full; dropping trace %s", record.trace_id
             )
             return
-        self._ensure_worker()
+        self._ensure_workers()
 
-    def _ensure_worker(self) -> None:
+    def _ensure_workers(self) -> None:
         with self._worker_lock:
-            if self._worker is not None and self._worker.is_alive():
-                return
-            self._worker = threading.Thread(
-                target=self._run_worker, name="firetrace-export", daemon=True
-            )
-            self._worker.start()
+            if self._builder is None or not self._builder.is_alive():
+                self._builder = threading.Thread(
+                    target=self._run_builder, name="firetrace-build", daemon=True
+                )
+                self._builder.start()
+            if self._worker is None or not self._worker.is_alive():
+                self._worker = threading.Thread(
+                    target=self._run_sender, name="firetrace-export", daemon=True
+                )
+                self._worker.start()
 
-    def _stop_worker(self, timeout: float) -> None:
+    def _stop_workers(self, timeout: float) -> None:
+        deadline = time.monotonic() + timeout
         with self._worker_lock:
-            worker = self._worker
-        if worker is None or not worker.is_alive():
-            return
-        try:
-            self._queue.put_nowait(None)
-        except queue.Full:
-            logger.debug("[firetrace] export queue full at shutdown; relying on the stop flag")
-        worker.join(timeout)
-        # The sentinel counts as an unfinished task until the worker takes it.
-        left = self._queue.unfinished_tasks - (1 if worker.is_alive() else 0)
+            threads = ((self._builder, self._queue), (self._worker, self._send_queue))
+        # Builder first, so what it still builds is queued ahead of the
+        # sender's stop signal.
+        for thread, q in threads:
+            if thread is None or not thread.is_alive():
+                continue
+            try:
+                q.put_nowait(None)
+            except queue.Full:
+                logger.debug("[firetrace] queue full at shutdown; not waiting for it")
+            thread.join(max(0.0, deadline - time.monotonic()))
+        with self._worker_lock:
+            left = self._pending
         if left > 0:
             logger.warning(
                 "[firetrace] %d trace(s) were still queued at exit and were not sent",
                 left,
             )
 
-    def _run_worker(self) -> None:
+    def _done_one(self) -> None:
+        with self._worker_lock:
+            self._pending -= 1
+
+    def _run_builder(self) -> None:
         while True:
             job = self._queue.get()
             try:
                 if job is None:
                     return
-                record, snapshots = job
-                self._export(record, snapshots)
+                if not self._hand_to_sender(*job):
+                    self._done_one()
             except Exception as e:
                 logger.warning("[firetrace] export failed: %r", e)
+                self._done_one()
             finally:
                 self._queue.task_done()
 
-    def _export(self, record: _RunRecord, snapshots: list[_SpanSnapshot]) -> None:
-        api_key = _api_key()
-        if not api_key:
-            return
+    def _hand_to_sender(self, record: _RunRecord, snapshots: list[_SpanSnapshot]) -> bool:
+        """Build one run's request body and queue it; False when dropped."""
+        if not _api_key():
+            return False
         try:
             payload = build_payload(record, snapshots)
             body = _dumps(payload).encode("utf-8")
@@ -818,9 +941,51 @@ class FireTraceProcessor(TracingProcessor):
                 type(e).__name__,
                 str(e)[:300],
             )
-            return
-        span_count = len(payload["trace"].get("spans", []))
-        send_with_retry(body, api_key, record.trace_id, span_count, stop_event=self._stopping)
+            return False
+        job = (body, record.trace_id, len(payload["trace"].get("spans", [])))
+        try:
+            self._send_queue.put_nowait(job)
+        except queue.Full:
+            logger.warning("[firetrace] send queue full; dropping trace %s", record.trace_id)
+            return False
+        return True
+
+    def _run_sender(self) -> None:
+        while True:
+            job = self._send_queue.get()
+            try:
+                if job is None:
+                    return
+                body, trace_id, span_count = job
+                api_key = _api_key()
+                if api_key:
+                    send_with_retry(body, api_key, trace_id, span_count, hurry=self._hurry)
+            except Exception as e:
+                logger.warning("[firetrace] export failed: %r", e)
+            finally:
+                if job is not None:
+                    self._done_one()
+                self._send_queue.task_done()
+
+    def _hurry(self) -> bool:
+        """One quick attempt per trace: the process is exiting, or a backlog
+        has built up behind a failing endpoint (a retried send can hold the
+        sender for a minute, and everything behind it waits)."""
+        return self._stopping.is_set() or self._send_queue.qsize() >= _HURRY_BACKLOG
+
+
+def _copy_span_data(data: Any) -> Any:
+    """A copy of an SDK span-data object, containers one level deep."""
+    try:
+        snap = copy.copy(data)
+        for name in getattr(type(data), "__slots__", ()):
+            value = getattr(snap, name, None)
+            if isinstance(value, (dict, list)):
+                setattr(snap, name, copy.copy(value))
+        return snap
+    except Exception as e:
+        logger.debug("[firetrace] could not copy span data: %r", e)
+        return data
 
 
 # ---------------------------------------------------------------------------
@@ -1045,7 +1210,7 @@ def _map_span(snap: _SpanSnapshot, run: _RunRecord) -> dict[str, Any]:
         status = "unset"
 
     span: dict[str, Any] = {
-        "name": str(name)[:MAX_NAME_CHARS] or "span",
+        "name": _clip(name, MAX_NAME_CHARS) or "span",
         "kind": kind,
         "status": status,
         "startedAt": snap.started_at or run.started_at or _now_iso(),
@@ -1054,9 +1219,9 @@ def _map_span(snap: _SpanSnapshot, run: _RunRecord) -> dict[str, Any]:
     if _ts_before(span["endedAt"], span["startedAt"]):
         span["endedAt"] = span["startedAt"]
     if provider:
-        span["provider"] = str(provider)[:MAX_ID_FIELD_CHARS]
+        span["provider"] = _clip(provider, MAX_ID_FIELD_CHARS)
     if model:
-        span["model"] = str(model)[:MAX_ID_FIELD_CHARS]
+        span["model"] = _clip(model, MAX_ID_FIELD_CHARS)
     truncated: list[str] = []
     if input_value is not None:
         span["input"], cut = _bounded(input_value, MAX_SPAN_FIELD_BYTES)
@@ -1118,14 +1283,20 @@ def _bounded_object(value: dict[str, Any], max_bytes: int) -> dict[str, Any]:
     clean = redact(value)
     if not isinstance(clean, dict):
         return {"firetrace.dropped": "not an object"}
-    if _byte_len(clean) <= max_bytes:
+    total = _byte_len(clean)
+    if total <= max_bytes:
         return clean
     sizes = sorted(((k, _byte_len(v)) for k, v in clean.items()), key=lambda kv: -kv[1])
     dropped: list[str] = []
+    # Track the size arithmetically rather than re-serializing the object
+    # after every drop, which was quadratic on large objects.
+    total += len(',"firetrace.dropped":[]')
     for key, size in sizes:
-        clean[key] = f"[dropped: {size} bytes]"
+        marker = f"[dropped: {size} bytes]"  # plain ASCII: serializes to len + 2
+        clean[key] = marker
         dropped.append(key)
-        if _byte_len(clean) <= max_bytes:
+        total += len(marker) + 2 - size + _byte_len(key) + 1
+        if total <= max_bytes:
             break
     clean["firetrace.dropped"] = dropped
     return clean
@@ -1143,6 +1314,16 @@ def build_payload(
     record: _RunRecord, snapshots: list[_SpanSnapshot]
 ) -> dict[str, Any]:
     """Build the ``IngestRequest`` body for one finished run."""
+    _redact_memo.cache = {}
+    try:
+        return _build_payload(record, snapshots)
+    finally:
+        _redact_memo.cache = None
+
+
+def _build_payload(
+    record: _RunRecord, snapshots: list[_SpanSnapshot]
+) -> dict[str, Any]:
     snapshots = _collapse_wrappers(snapshots)
     ordered = sorted(
         snapshots, key=lambda s: (_parse_ts(s.started_at) or _TS_MAX, s.seq, s.id)
@@ -1186,7 +1367,7 @@ def build_payload(
         tags.append("cancelled")
     clean_tags: list[str] = []
     for tag in tags:
-        t = str(tag).strip()[:MAX_TAG_CHARS]
+        t = _clip(str(tag).strip(), MAX_TAG_CHARS)
         if t and t not in clean_tags:
             clean_tags.append(t)
     clean_tags = clean_tags[:MAX_TAGS]
@@ -1208,7 +1389,7 @@ def build_payload(
 
     trace: dict[str, Any] = {
         "id": record.trace_id,
-        "name": (record.name or "run")[:MAX_NAME_CHARS],
+        "name": _clip(record.name or "run", MAX_NAME_CHARS),
         "status": status,
         "startedAt": record.started_at or _now_iso(),
         "endedAt": record.ended_at or _now_iso(),
@@ -1219,15 +1400,17 @@ def build_payload(
     if _ts_before(trace["endedAt"], trace["startedAt"]):
         trace["endedAt"] = trace["startedAt"]
     provider = record.provider or (PROVIDER if llm_models else None)
+    # Scalars go through _clip too: a lone surrogate from a client body (a
+    # browser-chosen user id, say) would otherwise fail the whole encode.
     if provider:
-        trace["provider"] = str(provider)[:MAX_ID_FIELD_CHARS]
+        trace["provider"] = _clip(provider, MAX_ID_FIELD_CHARS)
     model = record.model or (llm_models[0] if llm_models else None)
     if model:
-        trace["model"] = str(model)[:MAX_ID_FIELD_CHARS]
+        trace["model"] = _clip(model, MAX_ID_FIELD_CHARS)
     if record.session_id:
-        trace["sessionId"] = str(record.session_id)[:MAX_ID_FIELD_CHARS]
+        trace["sessionId"] = _clip(record.session_id, MAX_ID_FIELD_CHARS)
     if record.user_id:
-        trace["userId"] = str(record.user_id)[:MAX_ID_FIELD_CHARS]
+        trace["userId"] = _clip(record.user_id, MAX_ID_FIELD_CHARS)
     truncated: list[str] = []
     if record.input is not None:
         trace["input"], cut = _bounded(record.input, MAX_TRACE_FIELD_BYTES)
@@ -1248,9 +1431,26 @@ def build_payload(
 
 
 def _fit_request(payload: dict[str, Any], truncated: list[str]) -> None:
-    """Keep the serialized request under FireTrace's 2 MiB limit."""
+    """Keep the request under FireTrace's 2 MiB limit, and each stored
+    document (the trace without its spans, each span) under its 750 KiB one."""
     trace = payload["trace"]
-    if _byte_len(payload) <= _TARGET_REQUEST_BYTES:
+    total = _byte_len(payload)
+    if total > _MAX_DOCUMENT_BYTES:
+        # A single document can only be too big when the whole request is.
+        doc = {k: v for k, v in trace.items() if k != "spans"}
+        if _byte_len(doc) > _MAX_DOCUMENT_BYTES:
+            trace.pop("input", None)
+            trace.pop("output", None)
+            trace["metadata"] = _bounded_object(trace.get("metadata") or {}, 4096)
+            truncated.append("trace.document")
+        for span in trace["spans"]:
+            if _byte_len(span) > _MAX_DOCUMENT_BYTES:
+                for key in ("input", "output", "attributes"):
+                    span.pop(key, None)
+                if "span.document" not in truncated:
+                    truncated.append("span.document")
+        total = _byte_len(payload)
+    if total <= _TARGET_REQUEST_BYTES:
         return
     for span in trace["spans"]:
         span.pop("input", None)
@@ -1334,22 +1534,24 @@ def send_with_retry(
     api_key: str,
     trace_id: str,
     span_count: int,
-    stop_event: threading.Event | None = None,
+    hurry: Callable[[], bool] | None = None,
 ) -> bool:
     """POST one trace. Retries network errors, 429 and 5xx; never raises.
 
-    Once ``stop_event`` is set (the process is exiting) there is a single
-    attempt with a short timeout and no backoff, so the exit grace period
-    drains several queued traces instead of spending it all on one.
+    While ``hurry()`` is true (the process is exiting, or a backlog has built
+    up) there is a single attempt with a short timeout and no backoff, so the
+    queue drains instead of spending a minute on each trace.
     """
     attempts = len(_RETRY_DELAYS_SECONDS) + 1
     for attempt in range(1, attempts + 1):
-        stopping = stop_event is not None and stop_event.is_set()
+        stopping = hurry is not None and hurry()
         timeout = _SHUTDOWN_SEND_TIMEOUT_SECONDS if stopping else _SEND_TIMEOUT_SECONDS
         reason: str
         try:
             status, data = _deliver(body, api_key, timeout=timeout)
-        except (urllib.error.URLError, TimeoutError, OSError) as e:
+        # HTTPException covers a connection cut mid-response (IncompleteRead,
+        # BadStatusLine), which is not an OSError but is a network failure.
+        except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError) as e:
             reason = f"network error: {getattr(e, 'reason', None) or e!r}"
         except Exception as e:
             # Not a network problem, so a retry cannot help; say so and stop.
@@ -1515,11 +1717,19 @@ class traced_run:
                     started_at=_now_iso(),
                 )
                 _PROCESSOR.register(self._record)
+            # The SDK's own OpenAI exporter uploads this trace's metadata with
+            # none of FireTrace's redaction, so it gets short scalars only.
+            # Anything richer or client-supplied belongs in run.set_metadata().
+            sdk_metadata = {
+                k: str(v)
+                for k, v in self._metadata.items()
+                if isinstance(v, (str, int, float, bool)) and len(str(v)) <= 200
+            }
             self._sdk_trace = sdk_trace(
                 workflow_name=self._name,
                 trace_id=self._sdk_trace_id,
                 group_id=self._session_id,
-                metadata={k: str(v) for k, v in self._metadata.items()} or None,
+                metadata=sdk_metadata or None,
             )
             self._sdk_trace.__enter__()
         except Exception as e:
@@ -1541,12 +1751,17 @@ class traced_run:
                     record.error = (getattr(exc_type, "__name__", "Error"), str(exc_val))
             if self._sdk_trace is not None:
                 self._sdk_trace.__exit__(exc_type, exc_val, exc_tb)
-            if self._sdk_trace_id is not None:
-                # If the SDK never reported the end (tracing disabled globally),
-                # export what we have so the run is still recorded.
-                _PROCESSOR.finish_if_pending(self._sdk_trace_id)
         except Exception as e:
             logger.warning("[firetrace] could not close run %r: %r", self._name, e)
+        finally:
+            # Always, even if the SDK's exit raised: if the SDK never reported
+            # the end (tracing disabled, or its exit failed), export what we
+            # have so the run is recorded and its record does not leak.
+            if self._sdk_trace_id is not None:
+                try:
+                    _PROCESSOR.finish_if_pending(self._sdk_trace_id)
+                except Exception as e:
+                    logger.warning("[firetrace] could not finish run %r: %r", self._name, e)
         return False
 
 
@@ -1571,7 +1786,10 @@ def step(name: str, kind: str = "custom", **fields: Any) -> Iterator[dict[str, A
     try:
         yield data
     except BaseException as e:
-        if span is not None:
+        # Only failures mark the step as an error. Cancellation (a hang-up, a
+        # client disconnect) is not the step failing; traced_run tags the run
+        # "cancelled" instead, as the SDK's own spans leave it unmarked.
+        if span is not None and isinstance(e, Exception):
             try:
                 span.set_error(
                     SpanError(

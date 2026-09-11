@@ -207,6 +207,45 @@ class TestRedaction:
         # 16 digits that fail Luhn are not a card number.
         assert redact_text("order 1234 5678 9012 3456") == "order 1234 5678 9012 3456"
 
+    def test_card_marker_keeps_the_text_after_it(self):
+        assert redact_text("card 4111 1111 1111 1111 ok") == "card [CARD] ok"
+        assert redact_text("card 4111-1111-1111-1111, ok") == "card [CARD], ok"
+        assert redact_text("card 4111111111111111 ok") == "card [CARD] ok"
+
+    def test_ten_digit_ids_and_timestamps_are_not_phone_numbers(self):
+        # NANP numbers never start an area code or exchange with 0 or 1.
+        assert redact_text("unix 1757602496 secs") == "unix 1757602496 secs"
+        assert redact_text("order 1234567890 shipped") == "order 1234567890 shipped"
+        assert redact_text("call 4155550132 now") == "call [PHONE] now"
+        assert redact_text("call 415 555 0132 now") == "call [PHONE] now"
+
+    def test_secret_key_match_is_on_whole_words(self):
+        out = redact(
+            {
+                "businessName": "Acme",
+                "className": "x",
+                "signature_url": "https://a/b",
+                "cookieCount": 3,
+                "clientSecret": "s",
+                "Set-Cookie": "c",
+                "creditCardNumber": "4111",
+                "access_token": "t",
+            }
+        )
+        assert out["businessName"] == "Acme"
+        assert out["className"] == "x"
+        assert out["signature_url"] == "https://a/b"
+        assert out["cookieCount"] == 3
+        for key in ("clientSecret", "Set-Cookie", "creditCardNumber", "access_token"):
+            assert out[key] == "[REDACTED]", key
+
+    def test_dict_keys_are_redacted_too(self):
+        out = redact({"jane.doe@example.com": "vip", "415-555-0132": "callback", "ok": 1})
+        assert set(out) == {"[EMAIL]", "[PHONE]", "ok"}
+        # Two keys that redact to the same text stay two keys.
+        out = redact({"a@x.io": 1, "b@x.io": 2})
+        assert out == {"[EMAIL]": 1, "[EMAIL]#2": 2}
+
     def test_generic_token_rule_needs_mixed_case_and_digits(self):
         token = "Ab3" * 20
         assert redact_text(f"x {token} y") == "x [REDACTED_TOKEN] y"
@@ -251,6 +290,38 @@ class TestRedaction:
         (key,) = out.keys()
         assert len(key.encode("utf-8")) <= 1000
         json.dumps(out, ensure_ascii=False).encode("utf-8")
+
+    def test_shrink_counts_bytes_not_characters(self):
+        value, cut = firetrace._shrink({"x": "\U0001f600" * 20000}, 32_000)
+        assert cut and firetrace._byte_len(value) <= 32_000
+        value, cut = firetrace._bounded({"x": "\U0001f600" * 20000}, 32_000)
+        assert cut and firetrace._byte_len(value) <= 32_000
+
+    def test_shrink_trims_a_wrapped_message_list(self):
+        msgs = [{"role": "user", "content": f"turn {i} " + "x" * 5000} for i in range(60)]
+        value, cut = firetrace._bounded({"messages": msgs}, 128_000)
+        assert cut and isinstance(value, dict)
+        assert firetrace._byte_len(value) <= 128_000
+        kept = value["messages"]
+        assert kept[0] == msgs[0] and kept[1] == msgs[1] and kept[-1] == msgs[-1]
+        assert any(isinstance(m, str) and "elided" in m for m in kept)
+        assert len(kept) > 10
+
+    def test_scalars_with_lone_surrogates_do_not_break_the_build(self):
+        bad = json.loads('"u\\ud800"')
+        rec = make_record(user_id=bad, session_id=bad, name=bad, model=bad, tags=[bad])
+        payload = build_payload(rec, [snap("a", "agent", SimpleNamespace(name=bad))])
+        json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        assert payload["trace"]["userId"].startswith("u")
+
+    def test_trace_document_over_the_store_limit_is_cut(self):
+        payload = {
+            "schemaVersion": 1,
+            "trace": {"id": "a" * 32, "name": "n", "input": "y" * 750_000, "metadata": {}, "spans": []},
+        }
+        truncated: list[str] = []
+        firetrace._fit_request(payload, truncated)
+        assert "input" not in payload["trace"] and "trace.document" in truncated
 
     def test_redaction_is_linear_on_long_runs(self):
         import time
@@ -698,12 +769,20 @@ class TestSendWithRetry:
             raise urllib.error.URLError("down")
 
         monkeypatch.setattr(firetrace, "_deliver", fake_deliver)
-        stop = threading.Event()
-        stop.set()
         with caplog.at_level("WARNING", logger="firetrace"):
-            ok = send_with_retry(b"{}", FAKE_KEY, "t" * 32, 0, stop_event=stop)
+            ok = send_with_retry(b"{}", FAKE_KEY, "t" * 32, 0, hurry=lambda: True)
         assert not ok and seen == [firetrace._SHUTDOWN_SEND_TIMEOUT_SECONDS]
         assert "after 1 attempt(s)" in caplog.text
+
+    def test_truncated_or_garbled_responses_are_retried(self, monkeypatch, caplog):
+        import http.client
+
+        ok, n = self.run(
+            monkeypatch,
+            [http.client.IncompleteRead(b"x"), http.client.BadStatusLine("junk"), (201, {})],
+            caplog,
+        )
+        assert ok and n == 3
 
     def test_deliver_builds_the_request(self, monkeypatch):
         seen = {}
@@ -1012,9 +1091,81 @@ class TestProcessor:
             assert "1 run(s) were still in progress" in caplog.text
         finally:
             processor._stopping.clear()
+            with processor._worker_lock:
+                processor._pending = 0
             waiting.finish(reset_current=True)
             in_progress.__exit__(None, None, None)
             flush()
+
+    def test_cancelled_step_is_not_an_error(self, key, only_firetrace, sent):
+        import asyncio
+
+        with pytest.raises(asyncio.CancelledError):
+            with traced_run("voice"):
+                with step("pinecone.query", kind="retriever"):
+                    raise asyncio.CancelledError()
+        flush()
+        trace = sent.bodies[0]["trace"]
+        assert trace["status"] == "ok" and "cancelled" in trace["tags"]
+        assert trace["spans"][0]["status"] == "ok"
+        assert "error.type" not in (trace["spans"][0].get("attributes") or {})
+
+    def test_run_is_finished_even_when_the_sdk_exit_raises(self, key, only_firetrace, sent):
+        tr = traced_run("voice")
+        handle = tr.__enter__()
+        real = tr._sdk_trace
+
+        def boom(*a):
+            raise ValueError("created in a different Context")
+
+        tr._sdk_trace = SimpleNamespace(__exit__=boom)
+        try:
+            tr.__exit__(GeneratorExit, GeneratorExit(), None)
+        finally:
+            real.finish(reset_current=True)
+        flush()
+        assert only_firetrace.record_for("trace_" + handle.trace_id) is None
+        assert len(sent.bodies) == 1 and "abandoned" in sent.bodies[0]["trace"]["tags"]
+
+    def test_sdk_trace_gets_short_scalars_only(self, key, only_firetrace, sent):
+        tr = traced_run(
+            "voice",
+            metadata={"mode": "voice", "retell.metadata": {"email": "a@b.io"}, "long": "x" * 300},
+        )
+        tr.__enter__()
+        try:
+            assert tr._sdk_trace.metadata == {"mode": "voice"}
+        finally:
+            tr.__exit__(None, None, None)
+        flush()
+        assert sent.bodies[0]["trace"]["metadata"]["retell.metadata"] == {"email": "[EMAIL]"}
+
+    def test_shutdown_runs_once(self, key, only_firetrace, sent, caplog):
+        processor = only_firetrace
+        try:
+            with traced_run("a"):
+                pass
+            with caplog.at_level("WARNING", logger="firetrace"):
+                processor.shutdown()
+                processor.shutdown()
+            assert len(sent.bodies) == 1
+            assert "still queued" not in caplog.text
+        finally:
+            processor._stopping.clear()
+
+    def test_sender_hurries_when_a_backlog_builds(self, monkeypatch, only_firetrace):
+        assert only_firetrace._hurry() is False
+        monkeypatch.setattr(firetrace, "_HURRY_BACKLOG", 0)
+        assert only_firetrace._hurry() is True
+
+    def test_span_data_is_copied_when_snapshotted(self):
+        from agents.tracing.span_data import FunctionSpanData
+
+        data = FunctionSpanData(name="t", input="{}", output={"a": 1}, mcp_data=None)
+        snap_data = firetrace._copy_span_data(data)
+        data.output["a"] = 2
+        data.name = "changed"
+        assert snap_data.output == {"a": 1} and snap_data.name == "t"
 
     def test_two_runs_get_distinct_ids(self, key, only_firetrace, sent):
         with traced_run("a") as r1:

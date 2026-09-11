@@ -11,6 +11,7 @@ TIMEOUT="${TIMEOUT:-3600}"                    # seconds; Cloud Run supports up t
 KEEP_WARM="${KEEP_WARM:-0}"                   # 1 = keep 1 warm instance (no cold start), 0 = scale to zero
 ALLOW_UNAUTH="${ALLOW_UNAUTH:-1}"             # 1 = public URL
 KEY_FILE="${KEY_FILE:-./gcloud.json}"         # your SA key path (optional if using personal account)
+FIRETRACE="${FIRETRACE:-auto}"                # auto = mount FIRETRACE_API_KEY if the secret exists; off = never
 ### =================================
 
 # Check if service account key exists, otherwise use personal account
@@ -61,11 +62,25 @@ OBFUSCATED_WS_PATH=OBFUSCATED_WS_PATH:latest"
 # production one for this service: FireTrace stamps the environment from the
 # key, so production must never share a key with local dev. It is mounted only
 # when the secret exists, so a project that never created it still deploys.
-if gcloud secrets describe FIRETRACE_API_KEY --project "$PROJECT_ID" >/dev/null 2>&1; then
+#
+# The probe reads the secret (to /dev/null) because that needs only
+# secretAccessor, the role this repo's accounts are documented to hold;
+# `gcloud secrets describe` needs more and fails for them. Only NOT_FOUND means
+# "no secret". Any other failure stops the deploy: --set-secrets replaces the
+# whole set, so guessing would silently strip tracing from production.
+if [[ "$FIRETRACE" == "off" ]]; then
+  echo "▶ FIRETRACE=off; deploying without tracing."
+elif probe="$(gcloud secrets versions access latest --secret=FIRETRACE_API_KEY --project "$PROJECT_ID" 2>&1 >/dev/null)"; then
   SECRETS="${SECRETS},FIRETRACE_API_KEY=FIRETRACE_API_KEY:latest"
   echo "▶ FIRETRACE_API_KEY found in Secret Manager; runs will be traced."
-else
+elif [[ "$probe" == *NOT_FOUND* ]]; then
   echo "▶ No FIRETRACE_API_KEY secret in Secret Manager; deploying without tracing."
+else
+  echo "✗ Could not read FIRETRACE_API_KEY from Secret Manager:" >&2
+  echo "  $probe" >&2
+  echo "  Not deploying: that would silently remove tracing from production." >&2
+  echo "  Fix the account's access, or re-run with FIRETRACE=off to deploy without it." >&2
+  exit 1
 fi
 
 echo "▶ Deploying $SERVICE_NAME to Cloud Run (build from source)…"

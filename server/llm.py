@@ -237,6 +237,7 @@ class LlmClient:
         # One FireTrace trace per turn, grouped by call id so a whole
         # conversation can be pulled up by sessionId. The Agents SDK's own
         # trace (and the OpenAI dashboard export) rides inside it.
+        refused = failed = False
         with traced_run(
             "portfolio_voice_response",
             session_id=self.call_id,
@@ -253,10 +254,13 @@ class LlmClient:
                 "mode": self.mode,
                 "response_id": str(response_id),
                 "interaction_type": request.interaction_type,
-                **self._call_metadata(),
             },
             tags=("voice", request.interaction_type),
         ) as run:
+            # Retell's call details carry what the browser chose to attach, so
+            # they go to FireTrace only (redacted and bounded there), never to
+            # the SDK trace that the OpenAI exporter uploads as is.
+            run.set_metadata(**self._call_metadata())
             text_parts: List[str] = []
             tool_calls: List[dict] = []
             refusal_parts: List[str] = []
@@ -323,40 +327,40 @@ class LlmClient:
                 if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
                     self._log("Guardrail triggered: Request blocked due to security check")
                     run.mark_guardrail_blocked(output={"text": guardrail_refusal_message})
-                    yield ResponseResponse(
-                        response_id=response_id,
-                        content=guardrail_refusal_message,
-                        content_complete=True,
-                        end_call=False,
+                    refused = True
+                else:
+                    print(
+                        f"Error creating agent stream: {e}\n{traceback.format_exc()}",
+                        flush=True,
                     )
-                    return
+                    run.set_error(e)
+                    failed = True
+            else:
+                run.set_output(self._run_output(text_parts, tool_calls, refusal_parts))
 
-                print(
-                    f"Error creating agent stream: {e}\n{traceback.format_exc()}",
-                    flush=True,
-                )
-                run.set_error(e)
-                yield ResponseResponse(
-                    response_id=response_id,
-                    content="",
-                    content_complete=True,
-                    end_call=False,
-                )
-                return
+        # The closing chunk is sent after the trace has closed, so a consumer
+        # that stops reading here cannot make a finished turn look abandoned.
+        if refused:
+            yield ResponseResponse(
+                response_id=response_id,
+                content=guardrail_refusal_message,
+                content_complete=True,
+                end_call=False,
+            )
+            return
 
-            run.set_output(self._run_output(text_parts, tool_calls, refusal_parts))
-
-        # Send final response to signal completion
+        # Send final response to signal completion (also after an error)
         yield ResponseResponse(
             response_id=response_id,
             content="",
             content_complete=True,
             end_call=False,
         )
-        self._log(
-            f"finalizing response_id={response_id} content_complete=True end_call=False",
-            flush=True,
-        )
+        if not failed:
+            self._log(
+                f"finalizing response_id={response_id} content_complete=True end_call=False",
+                flush=True,
+            )
 
     async def draft_text_response(self, messages: List[dict]):
         """
@@ -389,6 +393,7 @@ class LlmClient:
             else:
                 processed_messages.append(msg)
 
+        refused = failed = False
         with traced_run(
             "portfolio_text_response",
             session_id=self.call_id,
@@ -448,25 +453,32 @@ class LlmClient:
                 if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
                     self._log("Guardrail triggered: Request blocked due to security check")
                     run.mark_guardrail_blocked(output={"text": guardrail_refusal_message})
-                    yield TextChatStreamChunk(
-                        type="content",
-                        content=guardrail_refusal_message,
+                    refused = True
+                else:
+                    print(
+                        f"Error in text chat stream: {e}\n{traceback.format_exc()}",
+                        flush=True,
                     )
-                    yield TextChatStreamChunk(type="done")
-                    return
+                    run.set_error(e)
+                    failed = True
+            else:
+                run.set_output(self._run_output(text_parts, tool_calls, refusal_parts))
 
-                print(
-                    f"Error in text chat stream: {e}\n{traceback.format_exc()}",
-                    flush=True,
-                )
-                run.set_error(e)
-                yield TextChatStreamChunk(
-                    type="error",
-                    content="An error occurred. Please try again.",
-                )
-                return
-
-            run.set_output(self._run_output(text_parts, tool_calls, refusal_parts))
+        # The closing chunks are sent after the trace has closed, so a client
+        # that stops reading here cannot make a finished turn look abandoned.
+        if refused:
+            yield TextChatStreamChunk(
+                type="content",
+                content=guardrail_refusal_message,
+            )
+            yield TextChatStreamChunk(type="done")
+            return
+        if failed:
+            yield TextChatStreamChunk(
+                type="error",
+                content="An error occurred. Please try again.",
+            )
+            return
 
         # Signal completion
         yield TextChatStreamChunk(type="done")

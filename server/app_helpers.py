@@ -31,15 +31,18 @@ def validate_environment_variables():
     for var in required_vars:
         print(f"  ✓ {var} is set")
 
+    # Only values known not to be secret are echoed. Everything else is
+    # reported as set or not: OBFUSCATED_WS_PATH hides the WebSocket route and
+    # FIRETRACE_API_KEY is a key, and neither belongs in startup logs.
+    printable = {"LLM_DEBUG"}
     for var, description in optional_vars.items():
         value = os.getenv(var)
         if not value:
             print(f"  ℹ {var} not set ({description})")
-        elif var.endswith("_KEY"):
-            # Never echo a secret, not even at startup.
-            print(f"  ✓ {var} is set")
-        else:
+        elif var in printable:
             print(f"  ✓ {var} is set to: {value}")
+        else:
+            print(f"  ✓ {var} is set")
 
     # Print what model_config actually resolved, not the raw env vars. Reading
     # the env here would report an override that the constants may not have
