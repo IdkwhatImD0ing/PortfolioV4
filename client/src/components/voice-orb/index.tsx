@@ -12,13 +12,13 @@ import {
 import type { RetellWebClient as RetellWebClientType } from "retell-client-js-sdk";
 import {
   VoiceBus,
+  applyNavigation,
   scrollToSection,
-  metaToNavigationAction,
   type NavigationMeta,
+  type VoiceCommand,
 } from "@/lib/voice-bus";
 import { mergeTranscript, type TranscriptEntry } from "@/lib/transcript";
 import { resolveAgentId } from "@/lib/retell-agent";
-import { resolveApiBase } from "@/lib/backend";
 import { createSseParser, parseChatMarkdown, toChatMessages } from "@/lib/text-chat";
 import { cn } from "@/lib/utils";
 import type { RetellAIResponse } from "@/types/api";
@@ -30,7 +30,21 @@ type Mode = "voice" | "text";
  *  panel sooner; this is the fallback if the event never fires. */
 const CLOSE_FALLBACK_MS = 400;
 
-const TEXT_HINT = "Type a question below. The page still rearranges as I answer.";
+/** Give up on a text reply after this long with no bytes from the backend.
+ *  Reset on every chunk, so a slow but steady reply is never cut off; it
+ *  mainly covers a cold start that never answers or a stalled connection. */
+const CHAT_IDLE_TIMEOUT_MS = 30_000;
+
+/** A failure whose message is fit to show the visitor as-is (the backend's
+ *  own error text, or a stream that ended without its `done` event). */
+class ChatReplyError extends Error {}
+
+/** Run a chip's page command locally. Scroll commands move the page here; the
+ *  rest are picked up by the section listening on the VoiceBus. */
+function runCommand(cmd: VoiceCommand) {
+  VoiceBus.emit(cmd);
+  if (cmd.type === "scroll") scrollToSection(cmd.id);
+}
 
 /** One agent turn. Renders the markdown subset the text prompt asks for;
  *  voice transcripts are plain text and pass through unchanged. */
@@ -83,12 +97,12 @@ export function VoiceOrb() {
   const openRef = useRef(false);
   const modeRef = useRef<Mode>("voice");
   const panelRef = useRef<HTMLDivElement>(null);
+  const orbRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const shortcutTimerRef = useRef(0);
   const closeTimerRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
-  const apiBaseRef = useRef<string | null>(null);
 
   // Auto-scroll transcript to bottom on new turn, status, or while pulsing.
   useEffect(() => {
@@ -107,8 +121,7 @@ export function VoiceOrb() {
     window.clearTimeout(shortcutTimerRef.current);
     shortcutTimerRef.current = window.setTimeout(() => {
       setFullTranscript((prev) => [...prev, { role: "agent", content: item.ai }]);
-      VoiceBus.emit(item.cmd);
-      if (item.cmd.type === "scroll") scrollToSection(item.cmd.id);
+      runCommand(item.cmd);
       setPulsing(false);
     }, 380);
   }, []);
@@ -141,10 +154,7 @@ export function VoiceOrb() {
     });
 
     client.on("metadata", (metadata: { metadata?: NavigationMeta }) => {
-      const action = metaToNavigationAction(metadata?.metadata);
-      if (!action) return;
-      VoiceBus.emit(action.command);
-      requestAnimationFrame(() => scrollToSection(action.scrollTo));
+      applyNavigation(metadata?.metadata);
     });
 
     client.on("error", (error) => {
@@ -158,10 +168,13 @@ export function VoiceOrb() {
     listenersBoundRef.current = true;
   }, []);
 
-  const startCall = useCallback(async () => {
+  /** Dial the voice agent. A fresh call clears the transcript; switching back
+   *  from text passes `keepTranscript` so the typed conversation stays on
+   *  screen above the new call. */
+  const startCall = useCallback(async (keepTranscript = false) => {
     if (isCalling || isStarting) return;
     setIsStarting(true);
-    setFullTranscript([]);
+    if (!keepTranscript) setFullTranscript([]);
     setHint("Connecting…");
     try {
       // In dev this prefers the dev agent when the local backend is reachable,
@@ -221,6 +234,13 @@ export function VoiceOrb() {
       const replyIndex = next.length;
       const commit = (content: string) =>
         setFullTranscript((prev) => [...prev.slice(0, replyIndex), { role: "agent", content }]);
+      // A UI-only line placed after whatever reply streamed (or in its slot if
+      // none did). Marked `notice` so it is never sent back as agent history.
+      const notify = (content: string, afterReply: boolean) =>
+        setFullTranscript((prev) => [
+          ...prev.slice(0, replyIndex + (afterReply ? 1 : 0)),
+          { role: "agent", content, notice: true },
+        ]);
 
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -230,10 +250,22 @@ export function VoiceOrb() {
       setIsSending(true);
       setStatus("Thinking…");
 
+      let timedOut = false;
+      let idleTimer = 0;
+      const armIdleTimer = () => {
+        window.clearTimeout(idleTimer);
+        idleTimer = window.setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, CHAT_IDLE_TIMEOUT_MS);
+      };
+
       let reply = "";
       try {
-        if (!apiBaseRef.current) apiBaseRef.current = await resolveApiBase();
-        const res = await fetch(`${apiBaseRef.current}/chat`, {
+        armIdleTimer();
+        // Same-origin proxy (app/api/chat): the backend's CORS would block a
+        // direct call from Vercel previews and other dev ports.
+        const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: toChatMessages(next) }),
@@ -244,9 +276,11 @@ export function VoiceOrb() {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         const parser = createSseParser();
+        let finished = false;
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
+          armIdleTimer();
           for (const chunk of parser.push(decoder.decode(value, { stream: true }))) {
             if (chunk.type === "content" && chunk.content) {
               reply += chunk.content;
@@ -255,22 +289,29 @@ export function VoiceOrb() {
             } else if (chunk.type === "status" && chunk.content) {
               setStatus(chunk.content);
             } else if (chunk.type === "metadata") {
-              const action = metaToNavigationAction(chunk.metadata);
-              if (action) {
-                VoiceBus.emit(action.command);
-                requestAnimationFrame(() => scrollToSection(action.scrollTo));
-              }
+              applyNavigation(chunk.metadata);
             } else if (chunk.type === "error") {
-              throw new Error(chunk.content || "Chat error");
+              throw new ChatReplyError(chunk.content || "Something went wrong. Please try again.");
+            } else if (chunk.type === "done") {
+              finished = true;
             }
           }
         }
-        if (!reply) commit("I didn't get a reply that time. Try asking again?");
+        // The backend always ends a reply with `done`. Without it the stream
+        // was cut, and a half answer shouldn't pass for a whole one.
+        if (!finished) throw new ChatReplyError("The reply was cut off. Please try again.");
+        if (!reply) notify("I didn't get a reply that time. Try asking again?", false);
       } catch (err) {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted && !timedOut) return;
         console.error("Text chat failed:", err);
-        if (!reply) commit("Couldn't reach the chat backend. Please try again in a moment.");
+        const message = timedOut
+          ? "The chat backend stopped responding. Please try again."
+          : err instanceof ChatReplyError
+            ? err.message
+            : "Couldn't reach the chat backend. Please try again in a moment.";
+        notify(message, reply.length > 0);
       } finally {
+        window.clearTimeout(idleTimer);
         // A newer send, a mode switch, or a close may own the state by now.
         if (abortRef.current === controller) {
           abortRef.current = null;
@@ -284,6 +325,11 @@ export function VoiceOrb() {
 
   const finishClose = useCallback(() => {
     window.clearTimeout(closeTimerRef.current);
+    // The orb is already back (it renders while closing). Hand focus to it,
+    // or focus drops to <body> when the panel that held it unmounts.
+    if (panelRef.current?.contains(document.activeElement)) {
+      orbRef.current?.focus({ preventScroll: true });
+    }
     setClosing(false);
     setOpen(false);
   }, []);
@@ -322,7 +368,7 @@ export function VoiceOrb() {
     setIsCalling(false);
     setIsAgentTalking(false);
     setMode("text");
-    setHint("Tap a suggestion above, or ask your own question.");
+    setHint("Ask your own question, or tap a suggestion below. The page rearranges as I answer.");
     requestAnimationFrame(() => inputRef.current?.focus());
   }, []);
 
@@ -333,15 +379,26 @@ export function VoiceOrb() {
     setStatus(null);
     modeRef.current = "voice";
     setMode("voice");
-    void startCall();
+    void startCall(true);
   }, [startCall]);
 
   const onSuggestion = useCallback(
     (s: Suggestion) => {
-      if (modeRef.current === "text") void sendText(s.you);
-      else fireShortcut(s);
+      if (modeRef.current === "text") {
+        // The text agent has no filter tool, so move the page here as well
+        // as asking the agent about it.
+        runCommand(s.cmd);
+        void sendText(s.you);
+      } else if (isCalling || isStarting) {
+        // The agent can't hear a tap, and turns written into the transcript
+        // here would break mergeTranscript's alignment with Retell's window.
+        // Just move the page.
+        runCommand(s.cmd);
+      } else {
+        fireShortcut(s);
+      }
     },
-    [fireShortcut, sendText],
+    [fireShortcut, sendText, isCalling, isStarting],
   );
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -350,7 +407,11 @@ export function VoiceOrb() {
   };
 
   const onPanelKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Escape") closePanel();
+    if (e.key !== "Escape") return;
+    // Close only this panel. Without this the key also reaches the project
+    // modal's window listener, and one press closes both.
+    e.stopPropagation();
+    closePanel();
   };
 
   const onPanelAnimationEnd = (e: AnimationEvent<HTMLDivElement>) => {
@@ -373,16 +434,14 @@ export function VoiceOrb() {
   const userHasSpoken = fullTranscript.some((e) => e.role === "user");
   const showSuggestions = !userHasSpoken && !isSending;
 
-  const subtitle =
-    mode === "text"
-      ? TEXT_HINT
-      : isStarting
-        ? "Connecting to the voice agent…"
-        : isCalling
-          ? isAgentTalking
-            ? "Speaking. The page moves as I answer."
-            : "Listening. Ask me anything about Bill's work."
-          : "Not connected. Start a call, or switch to text.";
+  // Voice-mode status line, shown above the call buttons.
+  const subtitle = isStarting
+    ? "Connecting to the voice agent…"
+    : isCalling
+      ? isAgentTalking
+        ? "Speaking. The page moves as I answer."
+        : "Listening. Ask me anything about Bill's work."
+      : "Not connected. Start a call, or switch to text.";
 
   return (
     <>
@@ -429,57 +488,45 @@ export function VoiceOrb() {
             </button>
           </header>
 
-          <div className="overflow-y-auto p-[18px]">
-            <h4 className="text-[18px] m-0 mb-1 -tracking-[0.01em] font-medium">Ask anything.</h4>
-            <p className="font-mono text-[11.5px] text-muted m-0 mb-3.5 tracking-[0.04em]">
-              {subtitle}
-            </p>
-
-            {mode === "voice" && (
-              <div className="flex gap-2 mb-3.5">
-                {isCalling ? (
-                  <button
-                    type="button"
-                    onClick={endCall}
-                    data-cursor-hover
-                    className={cn(
-                      cmdBtn,
-                      "flex-1 justify-center font-medium text-danger border-[rgba(248,113,113,0.45)] bg-[rgba(248,113,113,0.12)] hover:border-[rgba(248,113,113,0.7)] hover:bg-[rgba(248,113,113,0.18)]",
-                    )}
-                  >
-                    <span
-                      aria-hidden
-                      className="w-2 h-2 rounded-full bg-danger shadow-[0_0_10px_var(--danger)] animate-pulse-dot"
-                    />
-                    End call
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={startCall}
-                    disabled={isStarting}
-                    data-cursor-hover
-                    className={cn(
-                      cmdBtn,
-                      "flex-1 justify-center bg-[image:var(--grad)] text-white border-transparent font-medium hover:bg-[image:var(--grad)] hover:border-transparent disabled:opacity-70",
-                    )}
-                  >
-                    {isStarting ? "Connecting…" : "▶  Start voice call"}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={switchToText}
-                  data-cursor-hover
-                  className={cn(cmdBtn, "justify-center whitespace-nowrap text-ink-soft")}
-                >
-                  Prefer to chat?
-                </button>
-              </div>
-            )}
+          {/* Transcript on top, suggestion chips under it. The transcript is
+              the only part that can shrink, so it gives up height first and
+              the controls pinned below stay in view; on tiny screens this
+              area scrolls. */}
+          <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-[18px] pt-[18px] pb-3">
+            <div
+              ref={transcriptScrollRef}
+              className="p-3 rounded-[10px] bg-black/25 border border-line-soft font-mono text-[12px] text-ink-soft min-h-[70px] max-h-[320px] overflow-y-auto space-y-1.5"
+            >
+              {fullTranscript.length === 0 ? (
+                <>
+                  <h4 className="font-sans text-[18px] text-ink m-0 -tracking-[0.01em] font-medium">
+                    Ask anything.
+                  </h4>
+                  <div className="text-accent">↳ {hint}</div>
+                </>
+              ) : (
+                <>
+                  {fullTranscript.map((entry, i) =>
+                    entry.role === "user" ? (
+                      <div key={`user-${i}`} className="text-magenta">
+                        › {entry.content}
+                      </div>
+                    ) : entry.notice ? (
+                      <div key={`notice-${i}`} className="text-muted">
+                        ↳ {entry.content}
+                      </div>
+                    ) : (
+                      <AgentTurn key={`agent-${i}`} content={entry.content} />
+                    ),
+                  )}
+                  {pulsing && <div className="text-accent">↳ …</div>}
+                  {status && <div className="text-accent animate-pulse-dot">↳ {status}</div>}
+                </>
+              )}
+            </div>
 
             {showSuggestions && (
-              <div className="flex flex-wrap gap-2 mb-3.5" aria-label="Suggestions">
+              <div className="flex flex-wrap gap-2 mt-3" aria-label="Suggestions">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s.you}
@@ -494,33 +541,62 @@ export function VoiceOrb() {
                 ))}
               </div>
             )}
+          </div>
 
-            <div
-              ref={transcriptScrollRef}
-              className="p-3 rounded-[10px] bg-black/25 border border-line-soft font-mono text-[12px] text-ink-soft min-h-[70px] max-h-[320px] overflow-y-auto space-y-1.5"
-            >
-              {fullTranscript.length === 0 ? (
-                <div className="text-accent">↳ {hint}</div>
-              ) : (
-                <>
-                  {fullTranscript.map((entry, i) =>
-                    entry.role === "user" ? (
-                      <div key={`user-${i}`} className="text-magenta">
-                        › {entry.content}
-                      </div>
-                    ) : (
-                      <AgentTurn key={`agent-${i}`} content={entry.content} />
-                    ),
-                  )}
-                  {pulsing && <div className="text-accent">↳ …</div>}
-                  {status && <div className="text-accent animate-pulse-dot">↳ {status}</div>}
-                </>
-              )}
-            </div>
-
-            {mode === "text" && (
+          {/* Controls pinned to the bottom, where the orb sat. */}
+          <div className="shrink-0 px-[18px] pt-3 pb-[18px] border-t border-line-soft">
+            {mode === "voice" ? (
               <>
-                <form onSubmit={onSubmit} className="mt-3 flex gap-2">
+                <p className="font-mono text-[11.5px] text-muted m-0 mb-2.5 tracking-[0.04em]">
+                  {subtitle}
+                </p>
+                <div className="flex gap-2">
+                  {isCalling ? (
+                    <button
+                      type="button"
+                      onClick={endCall}
+                      data-cursor-hover
+                      className={cn(
+                        cmdBtn,
+                        "flex-1 justify-center font-medium text-danger border-danger/45 bg-danger/12 hover:border-danger/70 hover:bg-danger/18",
+                      )}
+                    >
+                      <span
+                        aria-hidden
+                        className="w-2 h-2 rounded-full bg-danger shadow-[0_0_10px_var(--danger)] animate-pulse-dot"
+                      />
+                      End call
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void startCall()}
+                      disabled={isStarting}
+                      data-cursor-hover
+                      className={cn(
+                        cmdBtn,
+                        "flex-1 justify-center bg-[image:var(--grad)] text-white border-transparent font-medium hover:bg-[image:var(--grad)] hover:border-transparent disabled:opacity-70",
+                      )}
+                    >
+                      {isStarting ? "Connecting…" : "▶  Start voice call"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={switchToText}
+                    data-cursor-hover
+                    className={cn(cmdBtn, "justify-center whitespace-nowrap text-ink-soft")}
+                  >
+                    Prefer to chat?
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <form onSubmit={onSubmit} className="flex gap-2">
+                  {/* 16px on touch screens: iOS Safari zooms the page into any
+                      input smaller than that on focus. `data-keeps-focus`
+                      tells the project modal not to steal the caret. */}
                   <input
                     ref={inputRef}
                     value={draft}
@@ -528,7 +604,9 @@ export function VoiceOrb() {
                     placeholder="Ask about Bill's work…"
                     aria-label="Your message"
                     autoComplete="off"
-                    className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-line-soft bg-black/25 text-[13.5px] text-ink placeholder:text-muted outline-none focus:border-[rgba(192,132,252,0.5)] transition-colors"
+                    maxLength={1000}
+                    data-keeps-focus
+                    className="flex-1 min-w-0 px-3 py-2.5 rounded-[10px] border border-line-soft bg-black/25 text-[13.5px] pointer-coarse:text-[16px] text-ink placeholder:text-muted outline-none focus:border-[rgba(192,132,252,0.5)] transition-colors"
                   />
                   <button
                     type="submit"
@@ -564,6 +642,7 @@ export function VoiceOrb() {
             <span>Tap to talk · or scroll</span>
           </div>
           <button
+            ref={orbRef}
             type="button"
             onClick={openAndStart}
             aria-label="Start a voice conversation"

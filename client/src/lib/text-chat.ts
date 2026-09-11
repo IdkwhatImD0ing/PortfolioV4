@@ -15,12 +15,21 @@ export interface ChatMessage {
   content: string;
 }
 
+/** How many recent turns each `/chat` request carries. Without a cap every
+ *  send re-posts the whole session, so cost and latency grow per turn and a
+ *  long voice call followed by text chat can overflow the model's context. */
+export const MAX_HISTORY_MESSAGES = 20;
+
 /** The transcript stores the speaker as "agent" (Retell's word); `/chat`
- *  wants "assistant". Empty turns are dropped — there is nothing in them for
- *  the model to read. */
-export function toChatMessages(transcript: TranscriptEntry[]): ChatMessage[] {
+ *  wants "assistant". Empty turns and UI-only notices are dropped — neither
+ *  is something the model said — and only the last `max` turns are kept. */
+export function toChatMessages(
+  transcript: TranscriptEntry[],
+  max = MAX_HISTORY_MESSAGES,
+): ChatMessage[] {
   return transcript
-    .filter((e) => e.content.trim().length > 0)
+    .filter((e) => !e.notice && e.content.trim().length > 0)
+    .slice(-max)
     .map((e) => ({
       role: e.role === "user" ? "user" : "assistant",
       content: e.content,

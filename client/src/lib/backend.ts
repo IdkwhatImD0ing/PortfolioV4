@@ -1,19 +1,23 @@
 /**
- * Where the FastAPI backend lives, from the browser's point of view.
+ * Where the FastAPI backend lives.
  *
  * Production talks to the Cloud Run service behind its custom domain. In
  * local dev you may run the backend locally, exposed through the Makefile's
  * ngrok tunnel (https://conversational.ngrok.app). When that tunnel answers
  * `/ping`, dev builds use it instead so requests hit your local server;
- * otherwise they fall back to production. `retell-agent.ts` runs the same
- * probe to decide which Retell agent to dial.
+ * otherwise they fall back to production.
  *
- * The backend allows `http://localhost:3000` via CORS, so a normal GET to
- * `/ping` returns 200 with the CORS header when the tunnel is live. When the
- * tunnel has no running agent, ngrok answers with its own error page (no
- * matching CORS header), the browser blocks it, and `fetch` rejects — which we
- * treat as "dev backend down". That lets us tell a live backend apart from a
- * dormant tunnel without a false positive.
+ * Two callers probe it. `retell-agent.ts` runs in the browser to pick which
+ * Retell agent to dial. The `/api/chat` route runs on the Next server and
+ * proxies text chat, so the browser never calls the backend cross-origin (its
+ * CORS only allows localhost:3000 and *.art3m1s.me, which would break Vercel
+ * previews and other dev ports).
+ *
+ * Either way a dormant tunnel reads as "down". From the browser, the backend
+ * allows `http://localhost:3000` via CORS, so a live tunnel's `/ping` returns
+ * 200, while ngrok's own error page carries no CORS header and `fetch`
+ * rejects. From the server there is no CORS, but that error page comes back
+ * non-2xx, so `res.ok` is false.
  */
 
 /** Dev backend base URL, probed at `/ping`. Defaults to the Makefile tunnel. */
@@ -63,8 +67,8 @@ export async function isDevBackendUp(timeoutMs = 1200): Promise<boolean> {
 }
 
 /**
- * Resolve the backend base URL for HTTP calls such as `/chat`. Production
- * builds skip the network round-trip entirely.
+ * Resolve the backend base URL for server-side calls such as the `/api/chat`
+ * proxy. Production builds skip the network round-trip entirely.
  */
 export async function resolveApiBase(): Promise<string> {
   const isDev = process.env.NODE_ENV !== "production";

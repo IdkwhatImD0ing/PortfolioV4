@@ -89,7 +89,7 @@ Changing a navigable destination means editing all three: the tool/page mapping 
 ```bash
 RETELLAI_API_KEY=...              # server-only, used by the create-web-call proxy
 NEXT_PUBLIC_RETELL_AGENT_ID=...   # the Retell agent the browser dials
-NEXT_PUBLIC_API_URL=...           # backend base URL for text chat (/chat); defaults to the Cloud Run domain
+NEXT_PUBLIC_API_URL=...           # backend the /api/chat proxy forwards text chat to; defaults to the Cloud Run domain
 NEXT_PUBLIC_APP_URL=...           # locks the proxy's CORS origin in prod
 ```
 

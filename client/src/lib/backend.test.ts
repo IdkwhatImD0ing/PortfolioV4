@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chooseApiBase } from "./backend";
+import { chooseApiBase, DEV_API_URL, PROD_API_URL } from "./backend";
 
 const DEV = "https://dev.example";
 const PROD = "https://prod.example";
@@ -17,7 +17,13 @@ describe("chooseApiBase", () => {
     expect(chooseApiBase({ isDev: false, devReachable: true, devUrl: DEV, prodUrl: PROD })).toBe(PROD);
   });
 
-  it("defaults to the shipped URLs when none are passed", () => {
-    expect(chooseApiBase({ isDev: false, devReachable: false })).toMatch(/^https:\/\//);
+  it("defaults production to the production backend, never the dev tunnel", () => {
+    expect(chooseApiBase({ isDev: false, devReachable: false })).toBe(PROD_API_URL);
+    expect(chooseApiBase({ isDev: false, devReachable: true })).toBe(PROD_API_URL);
+    expect(PROD_API_URL).not.toBe(DEV_API_URL);
+  });
+
+  it("defaults dev to the dev tunnel when it answered", () => {
+    expect(chooseApiBase({ isDev: true, devReachable: true })).toBe(DEV_API_URL);
   });
 });

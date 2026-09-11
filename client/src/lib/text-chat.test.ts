@@ -27,6 +27,41 @@ describe("toChatMessages", () => {
       ]),
     ).toEqual([{ role: "user", content: "x" }]);
   });
+
+  it("never sends UI-only notices back as assistant turns", () => {
+    expect(
+      toChatMessages([
+        { role: "user", content: "Hi" },
+        { role: "agent", content: "Couldn't reach the chat backend.", notice: true },
+        { role: "user", content: "Hi again" },
+      ]),
+    ).toEqual([
+      { role: "user", content: "Hi" },
+      { role: "user", content: "Hi again" },
+    ]);
+  });
+
+  it("keeps only the most recent turns, ending on the newest", () => {
+    const long = Array.from({ length: 30 }, (_, i) => ({
+      role: i % 2 ? ("agent" as const) : ("user" as const),
+      content: `turn ${i}`,
+    }));
+    const out = toChatMessages(long, 4);
+    expect(out.map((m) => m.content)).toEqual(["turn 26", "turn 27", "turn 28", "turn 29"]);
+  });
+
+  it("applies the cap after dropping notices, so notices don't eat the budget", () => {
+    const out = toChatMessages(
+      [
+        { role: "user", content: "a" },
+        { role: "agent", content: "b" },
+        { role: "agent", content: "oops", notice: true },
+        { role: "user", content: "c" },
+      ],
+      2,
+    );
+    expect(out.map((m) => m.content)).toEqual(["b", "c"]);
+  });
 });
 
 describe("createSseParser", () => {
