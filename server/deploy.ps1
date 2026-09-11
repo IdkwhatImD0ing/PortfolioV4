@@ -69,6 +69,7 @@ Invoke-Gcloud run deploy $SERVICE_NAME `
     --max-instances $MAX_INSTANCES `
     --timeout "${TIMEOUT}s" `
     --execution-environment gen2 `
+    --cpu-boost `
     $AUTH_FLAG
 
 Write-Host "`nDeployed. Default URL:"
