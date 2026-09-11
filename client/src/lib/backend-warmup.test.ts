@@ -1,29 +1,54 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  API_URL,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest";
+import { PROD_API_URL } from "./backend";
+import {
+  READY_TIMEOUT_MS,
   WARM_INTERVAL_MS,
   resetBackendWarmup,
+  waitForBackend,
   warmBackend,
 } from "./backend-warmup";
 
-type FetchMock = ReturnType<typeof vi.fn> & typeof fetch;
+const devBackend = vi.hoisted(() => ({ preferred: false }));
+vi.mock("./retell-agent", () => ({
+  prefersDevBackend: () => devBackend.preferred,
+}));
 
-const okFetch = () =>
-  vi.fn(() => Promise.resolve(new Response(null))) as unknown as FetchMock;
+const T0 = Date.UTC(2026, 8, 11);
+
+let fetchMock: Mock<typeof fetch>;
+
+beforeEach(() => {
+  resetBackendWarmup();
+  devBackend.preferred = false;
+  vi.useFakeTimers();
+  vi.setSystemTime(T0);
+  fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(new Response(null)));
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("warmBackend", () => {
-  beforeEach(() => resetBackendWarmup());
+  it("sends a fire-and-forget GET to the backend's /ping", () => {
+    warmBackend();
 
-  it("sends a fire-and-forget GET to /ping on the backend", () => {
-    const fetchImpl = okFetch();
-
-    expect(warmBackend({ fetchImpl, now: 1_000 })).toBe(true);
-
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${API_URL}/ping`);
-    // Opaque is fine — we only need the request to reach Cloud Run — and
-    // keepalive lets it finish if the visitor leaves before the boot completes.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${PROD_API_URL}/ping`);
+    // Opaque is fine (it only has to reach Cloud Run), and keepalive lets it
+    // finish if the visitor leaves before the boot completes.
     expect(init).toMatchObject({
       mode: "no-cors",
       cache: "no-store",
@@ -31,72 +56,77 @@ describe("warmBackend", () => {
     });
   });
 
-  it("targets a custom base URL when given one", () => {
-    const fetchImpl = okFetch();
-
-    warmBackend({ fetchImpl, now: 1_000, baseUrl: "https://example.test" });
-
-    expect(fetchImpl.mock.calls[0][0]).toBe("https://example.test/ping");
-  });
-
   it("does not re-ping inside the warm interval", () => {
-    const fetchImpl = okFetch();
+    warmBackend();
+    vi.setSystemTime(T0 + WARM_INTERVAL_MS - 1);
+    warmBackend();
 
-    warmBackend({ fetchImpl, now: 1_000 });
-    const again = warmBackend({
-      fetchImpl,
-      now: 1_000 + WARM_INTERVAL_MS - 1,
-    });
-
-    expect(again).toBe(false);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("pings again once the interval has passed", () => {
-    const fetchImpl = okFetch();
+    warmBackend();
+    vi.setSystemTime(T0 + WARM_INTERVAL_MS);
+    warmBackend();
 
-    warmBackend({ fetchImpl, now: 1_000 });
-    const again = warmBackend({ fetchImpl, now: 1_000 + WARM_INTERVAL_MS });
-
-    expect(again).toBe(true);
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("force bypasses the interval", () => {
-    const fetchImpl = okFetch();
+  it("lets the next trigger retry after a ping fails", async () => {
+    // Doubles as the no-leak check: vitest fails the run on an unhandled
+    // rejection.
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    warmBackend();
+    await vi.advanceTimersByTimeAsync(0);
 
-    warmBackend({ fetchImpl, now: 1_000 });
-    const again = warmBackend({ fetchImpl, now: 1_001, force: true });
+    vi.setSystemTime(T0 + 1_000);
+    warmBackend();
 
-    expect(again).toBe(true);
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("never throws or leaks a rejection when the request fails", async () => {
-    // Vitest fails the run on an unhandled rejection, so letting the rejected
-    // promise settle here is the assertion.
-    const rejecting = vi.fn(() =>
-      Promise.reject(new Error("offline")),
-    ) as unknown as FetchMock;
-    expect(() => warmBackend({ fetchImpl: rejecting, now: 1_000 })).not.toThrow();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+  it("treats a clock that stepped backwards as expired", () => {
+    warmBackend();
+    vi.setSystemTime(T0 - 60 * 60 * 1000);
+    warmBackend();
 
-    const throwing = vi.fn(() => {
-      throw new TypeError("bad url");
-    }) as unknown as FetchMock;
-    expect(warmBackend({ fetchImpl: throwing, now: 1_000, force: true })).toBe(
-      true,
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("stays quiet when the build dials a local dev backend", () => {
+    devBackend.preferred = true;
+    warmBackend();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("waitForBackend", () => {
+  it("resolves once the backend answers /ping", async () => {
+    await expect(waitForBackend()).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${PROD_API_URL}/ping`,
+      expect.objectContaining({ mode: "no-cors" }),
     );
   });
 
-  it("is a no-op where fetch does not exist (server render)", () => {
-    const saved = globalThis.fetch;
-    // @ts-expect-error -- simulate a runtime without fetch
-    globalThis.fetch = undefined;
-    try {
-      expect(warmBackend({ now: 1_000 })).toBe(false);
-    } finally {
-      globalThis.fetch = saved;
-    }
+  it("gives up after READY_TIMEOUT_MS and lets the call go ahead", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // A backend that never answers: the request settles only when aborted.
+    fetchMock.mockImplementationOnce(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          );
+        }),
+    );
+
+    const waiting = waitForBackend();
+    await vi.advanceTimersByTimeAsync(READY_TIMEOUT_MS);
+
+    await expect(waiting).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledOnce();
   });
 });
