@@ -84,7 +84,7 @@ export function PersonalSection() {
             className="relative aspect-[4/5] rounded-[22px] overflow-hidden border border-line bg-card"
           >
             <Image
-              src="/profile.webp"
+              src="/profile-joshua-tree.webp"
               alt="Bill Zhang"
               fill
               sizes="(max-width: 900px) 90vw, 480px"
