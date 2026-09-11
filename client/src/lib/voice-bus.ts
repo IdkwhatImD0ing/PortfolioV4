@@ -96,3 +96,14 @@ export function metaToNavigationAction(
     scrollTo: section,
   };
 }
+
+/** Apply a server navigation payload to the page: emit its VoiceBus command,
+ *  then scroll to its section on the next frame. No-op for anything that
+ *  isn't navigation metadata. The voice path (Retell `metadata` events) and
+ *  the text path (`/chat` SSE chunks) both go through here. */
+export function applyNavigation(meta: NavigationMeta | null | undefined): void {
+  const action = metaToNavigationAction(meta);
+  if (!action) return;
+  VoiceBus.emit(action.command);
+  requestAnimationFrame(() => scrollToSection(action.scrollTo));
+}

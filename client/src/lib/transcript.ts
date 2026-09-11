@@ -1,6 +1,9 @@
 export interface TranscriptEntry {
   role: "agent" | "user";
   content: string;
+  /** UI-only line (a failed request, a cut-off reply). Shown in the panel but
+   *  never sent back to the agent as something it said. */
+  notice?: boolean;
 }
 
 /** Merge a new rolling window of transcript entries into the running history.

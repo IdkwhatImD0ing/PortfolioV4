@@ -1,9 +1,12 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  applyNavigation,
   metaToNavigationAction,
   PAGE_TO_SECTION,
   prefersReducedMotion,
+  VoiceBus,
   type NavigationMeta,
+  type VoiceCommand,
 } from "./voice-bus";
 
 // The suite runs in vitest's `node` environment, so there is no `window` unless
@@ -106,6 +109,39 @@ describe("metaToNavigationAction", () => {
         page: "blog" as any,
       }),
     ).toBeNull();
+  });
+});
+
+describe("applyNavigation", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("emits the command and schedules the scroll for navigation metadata", () => {
+    const raf = vi.fn();
+    vi.stubGlobal("requestAnimationFrame", raf);
+    const seen: VoiceCommand[] = [];
+    const off = VoiceBus.on((cmd) => seen.push(cmd));
+
+    applyNavigation({ type: "navigation", page: "project", project_id: "dispatch-ai" });
+    off();
+
+    expect(seen).toEqual([{ type: "open", id: "dispatch-ai" }]);
+    expect(raf).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing for non-navigation or empty metadata", () => {
+    const raf = vi.fn();
+    vi.stubGlobal("requestAnimationFrame", raf);
+    const seen: VoiceCommand[] = [];
+    const off = VoiceBus.on((cmd) => seen.push(cmd));
+
+    applyNavigation(null);
+    applyNavigation({ type: "other", page: "education" } as NavigationMeta);
+    off();
+
+    expect(seen).toEqual([]);
+    expect(raf).not.toHaveBeenCalled();
   });
 });
 
