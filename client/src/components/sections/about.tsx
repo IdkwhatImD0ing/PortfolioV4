@@ -12,7 +12,7 @@ const ABOUT = [
   {
     num: "02 / WHAT",
     title: "Software you can talk to.",
-    body: "A 911 console that triages live calls, a bank you can reach from any phone, a food-rescue network that dispatches by voice, game tape you can question mid-replay. Several of them run on a plain phone call. No app, no download.",
+    body: "A 911 console that triages live calls, a whole bank that runs inside a phone call, a food-rescue network that dispatches by voice, game tape you can question mid-replay. Several of them need nothing but a phone. No app, no internet.",
   },
   {
     num: "03 / HOW",
@@ -22,7 +22,7 @@ const ABOUT = [
   {
     num: "04 / WHY",
     title: "Talking is the interface of the future.",
-    body: "Most people can speak several times faster than they type, with a fraction of the effort. And while you talk, your hands are free for whatever else you were doing. That is why this site listens instead of making you click, and why TalkTuahBank answers a plain phone call with no app and no data plan.",
+    body: "Most people can speak several times faster than they type, with a fraction of the effort. And while you talk, your hands are free for whatever else you were doing. That is why this site listens instead of making you click, and why TalkTuahBank handles balances, transfers, and bill pay by voice alone. No app, no data plan.",
   },
 ];
 
