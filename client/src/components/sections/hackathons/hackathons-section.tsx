@@ -32,15 +32,14 @@ export function HackathonsSection() {
             HACKATHONS · {HACKATHONS.length} WINS
           </span>
           <h2 className="font-sans text-[clamp(48px,7vw,96px)] -tracking-[0.02em] font-semibold leading-[0.95] mt-4 max-w-[1100px] text-balance">
-            Thirty-six wins from{" "}
+            Thirty-six{" "}
             <em className="font-serif italic font-normal bg-[image:var(--grad)] bg-clip-text text-transparent">
-              shipping.
+              wins.
             </em>
           </h2>
           <p className="mt-4 text-[18px] leading-[1.5] text-ink-soft max-w-[640px]">
-            Every one of these was built in a weekend and defended in front of judges.
-            $150k+ in prizes, most of them during college. Top row is the
-            flagship and grand-prize run, bottom row the earlier and smaller ones.
+            Every one of these was a weekend: build it, demo it, win over the judges. All
+            during college. $150k+ in prizes.
           </p>
         </div>
       </div>

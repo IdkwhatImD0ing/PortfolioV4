@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   title: "Bill Zhang | Voice-Driven Portfolio v2026",
   description:
-    "Bill Zhang builds LLM agent systems at Pinterest, and voice-first projects on his own time. Talk to this portfolio.",
+    "Bill Zhang builds LLM agents at Pinterest by day and software you can talk to by night. 36 hackathon wins. Talk to this portfolio.",
   keywords: [
     "AI Engineer",
     "Bill Zhang",
@@ -49,13 +49,13 @@ export const metadata: Metadata = {
     siteName: "Bill Zhang · art3m1s.me",
     title: "Bill Zhang | Voice-driven AI portfolio",
     description:
-      "LLM agent systems at Pinterest. Voice-first projects on the side. Talk to this portfolio.",
+      "LLM agents at Pinterest by day. Software you can talk to by night. Talk to this portfolio.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Bill Zhang | Voice-driven AI portfolio",
     description:
-      "LLM agent systems at Pinterest. Voice-first projects on the side. Talk to this portfolio.",
+      "LLM agents at Pinterest by day. Software you can talk to by night. Talk to this portfolio.",
   },
   icons: {
     icon: [

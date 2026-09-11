@@ -7,22 +7,22 @@ const ABOUT = [
   {
     num: "01 / WHO",
     title: "Most of my work is failure handling.",
-    body: "Latency, interrupted sentences, tool calls that half-fail, a model that answers the wrong question with total confidence. At RingCentral my eval pipeline moved retrieval accuracy from 90% to 95% and dropped human hand-offs from 40% to 13%. Almost all of that came out of the failure cases.",
+    body: "Latency, interrupted sentences, tool calls that half-fail, a model that answers the wrong question with total confidence. At Scale AI I shipped a multi-agent system that works through up to 20K denied claims a week, and owned the eval framework that moved audit accuracy from 64% to 88%. Almost all of that came out of the failure cases.",
   },
   {
     num: "02 / WHAT",
     title: "Software you can talk to.",
-    body: "A 911 console that triages live calls, a bank you can reach from any phone, a food-rescue network that dispatches by voice, game tape you can question mid-replay. Several of them work over an ordinary phone call.",
+    body: "A 911 console that triages live calls, a bank you can reach from any phone, a food-rescue network that dispatches by voice, game tape you can question mid-replay. Several of them run on a plain phone call. No app, no download.",
   },
   {
     num: "03 / HOW",
     title: "One idea, end to end, in 36 hours.",
-    body: "At a hackathon, I focus on getting one idea working. Dispatch AI was a phone line, a fine-tuned triage model, and a dispatcher screen, and it took the $50K grand prize at Berkeley against 900+ participants.",
+    body: "At a hackathon I pick one idea and make it actually work. Dispatch AI was a phone line, a fine-tuned triage model, and a dispatcher screen. It took the $50K grand prize at Berkeley against 900+ people.",
   },
   {
     num: "04 / WHY",
-    title: "Talking is the interface most people already have.",
-    body: "A phone call can be easier than navigating an app, and 1.7 billion adults have no bank account to log into in the first place. That is why TalkTuahBank answers an ordinary phone call with no app and no data plan.",
+    title: "Talking is the interface of the future.",
+    body: "Most people can speak several times faster than they type, with a fraction of the effort. And while you talk, your hands are free for whatever else you were doing. That is why this site listens instead of making you click, and why TalkTuahBank answers a plain phone call with no app and no data plan.",
   },
 ];
 
