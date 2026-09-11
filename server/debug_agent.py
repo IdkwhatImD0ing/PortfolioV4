@@ -156,7 +156,8 @@ async def list_all_vectors():
 # ── Agent conversation debug ─────────────────────────────────────────────────
 async def run_agent_debug(user_messages: List[str], mode: str = "text"):
     """Send messages through the full agent pipeline and log everything."""
-    from agents import RawResponsesStreamEvent, RunItemStreamEvent, Runner, trace
+    from agents import RawResponsesStreamEvent, RunItemStreamEvent, Runner
+    from firetrace import traced_run
     from llm import LlmClient
     from model_config import AGENT_MODEL
 
@@ -201,11 +202,16 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
         t0 = time.perf_counter()
 
         try:
-            with trace(
-                workflow_name="debug_session",
-                group_id="debug",
+            # Debug turns are traced to FireTrace too (tagged "debug") when
+            # FIRETRACE_API_KEY is set, so the span tree can be inspected there.
+            with traced_run(
+                "debug_session",
+                session_id="debug",
+                model=AGENT_MODEL,
+                input={"messages": list(conversation)},
                 metadata={"mode": mode, "turn": str(turn_num)},
-            ):
+                tags=("debug", mode),
+            ) as run:
                 result = Runner.run_streamed(llm_client.agent, processed)
 
                 async for event in result.stream_events():
@@ -320,6 +326,8 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
 
                     else:
                         print(f"\n  {DIM}[unknown event] {type(event).__name__}{RESET}")
+
+                run.set_output({"text": full_text, "tool_calls": tool_calls_log})
 
         except Exception as e:
             if "InputGuardrailTripwireTriggered" in type(e).__name__:

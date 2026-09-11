@@ -21,6 +21,7 @@ Runtime secrets live in **GCP Secret Manager** in project `spiritual-storm-46970
 | `RETELL_API_KEY` | Voice webhook + WebRTC |
 | `PINECONE_API_KEY` | Vector search |
 | `OBFUSCATED_WS_PATH` | Hardens the public WebSocket route |
+| `FIRETRACE_API_KEY` | Optional. [FireTrace](https://tracing.art3m1s.me) ingest key; one key per environment (see below) |
 
 ### How they get loaded
 
@@ -75,6 +76,30 @@ printf '%s' "$NEW_VALUE" | gcloud secrets versions add SECRET_NAME \
 make pull-secrets    # refresh local .env
 bash deploy.sh       # refresh Cloud Run (mount is :latest, resolved at deploy time)
 ```
+
+## Tracing (FireTrace)
+
+Every completed LLM or agent run is recorded as one trace at
+[tracing.art3m1s.me](https://tracing.art3m1s.me): each voice turn, each `/chat`
+turn, each `/summary`, and each `debug_agent.py` turn. `firetrace.py` builds the
+trace from the Agents SDK's own spans (agent, model calls with token usage,
+guardrail, tools, embedding, Pinecone query) and POSTs it once, after the run,
+from a background thread. Secrets and personal data are redacted before the
+send; a failed send is a log warning, never an error for the visitor.
+
+The key decides the environment. FireTrace stamps `production`, `preview` or
+`development` on each trace from the key that recorded it, so:
+
+- **Local dev** uses a *development* key you add to `server/.env` by hand.
+  `make pull-secrets` never pulls a FireTrace key from Secret Manager; it
+  carries over the line already in `.env`, so a re-pull cannot swap your
+  development key for the production one.
+- **Cloud Run** uses the *production* key from the `FIRETRACE_API_KEY` secret
+  in Secret Manager. `deploy.sh` mounts it only when that secret exists.
+
+Never reuse one key across environments, and never commit one. When the
+variable is unset the server runs exactly as before and records nothing. See
+[`docs/modules/firetrace.md`](docs/modules/firetrace.md).
 
 ## Run
 

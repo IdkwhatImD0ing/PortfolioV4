@@ -36,6 +36,7 @@ from agents import (
     input_guardrail,
 )
 
+import firetrace
 from model_config import GUARDRAIL_MODEL, REASONING_EFFORT, supports_reasoning
 from prompts import reminder_prompt
 
@@ -550,6 +551,11 @@ async def security_guardrail(
         # a site-wide refusal storm diagnosable only from this log line. A bad key
         # breaks the main agent too, so allowing here exposes nothing extra.
         print(f"[guardrail] classifier unavailable, allowing turn: {e!r}", flush=True)
+        firetrace.annotate(**{
+            "guardrail.judged": False,
+            "guardrail.allowed": True,
+            "guardrail.reasoning": f"Classifier unavailable ({type(e).__name__}); failed open",
+        })
         return _unjudged(
             f"Classifier unavailable ({type(e).__name__}); failed open", allowed=True
         )
@@ -559,6 +565,11 @@ async def security_guardrail(
         # abusive enough that the judge itself refuses — a refusal is not
         # schema-valid, and failing open there would allow exactly the worst input.
         print(f"[guardrail] classifier error, blocking turn: {e!r}", flush=True)
+        firetrace.annotate(**{
+            "guardrail.judged": False,
+            "guardrail.allowed": False,
+            "guardrail.reasoning": f"Classifier error ({type(e).__name__}); failed closed",
+        })
         return _unjudged(
             f"Classifier error ({type(e).__name__}); failed closed", allowed=False
         )
@@ -566,6 +577,14 @@ async def security_guardrail(
     # The mapping happens here, in code. The judge named a rule; it never got a
     # say in what that rule costs the visitor.
     blocked = rule_blocks(decision.rule)
+    # The verdict lands on this turn's guardrail span in FireTrace, so a refusal
+    # can be reviewed without opening the judge's raw output.
+    firetrace.annotate(**{
+        "guardrail.judged": True,
+        "guardrail.allowed": not blocked,
+        "guardrail.rule": decision.rule,
+        "guardrail.reasoning": decision.reasoning,
+    })
     return GuardrailFunctionOutput(
         output_info=GuardrailVerdict(
             reasoning=decision.reasoning,

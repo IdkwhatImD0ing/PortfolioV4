@@ -6,6 +6,11 @@ set -euo pipefail
 
 PROJECT="${GCP_PROJECT:-spiritual-storm-469704-n2}"
 SECRETS=(OPENAI_API_KEY RETELL_API_KEY PINECONE_API_KEY OBFUSCATED_WS_PATH)
+# Kept, never pulled. FireTrace keys are per environment: the production key
+# lives in Secret Manager for deploy.sh alone, and the development key is
+# typed into this file once. A re-pull carries it over instead of wiping it,
+# and never replaces it with the production one.
+KEEP_FROM_ENV=(FIRETRACE_API_KEY)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/../.env"
@@ -47,6 +52,15 @@ for name in "${SECRETS[@]}"; do
   escaped="${val//\'/\'\\\'\'}"
   printf "%s='%s'\n" "$name" "$escaped" >>"$TMP"
   echo "  ✓ $name"
+done
+
+for name in "${KEEP_FROM_ENV[@]}"; do
+  if [[ -f "$ENV_FILE" ]] && existing="$(grep -m1 "^${name}=" "$ENV_FILE")"; then
+    printf "%s\n" "$existing" >>"$TMP"
+    echo "  ↻ $name kept from existing .env"
+  else
+    echo "  – $name not set (optional; add it to $ENV_FILE by hand)"
+  fi
 done
 
 mv "$TMP" "$ENV_FILE"

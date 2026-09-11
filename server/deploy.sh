@@ -57,6 +57,17 @@ RETELL_API_KEY=RETELL_API_KEY:latest,\
 PINECONE_API_KEY=PINECONE_API_KEY:latest,\
 OBFUSCATED_WS_PATH=OBFUSCATED_WS_PATH:latest"
 
+# FireTrace (tracing.art3m1s.me) is optional. The key mounted here is the
+# production one for this service: FireTrace stamps the environment from the
+# key, so production must never share a key with local dev. It is mounted only
+# when the secret exists, so a project that never created it still deploys.
+if gcloud secrets describe FIRETRACE_API_KEY --project "$PROJECT_ID" >/dev/null 2>&1; then
+  SECRETS="${SECRETS},FIRETRACE_API_KEY=FIRETRACE_API_KEY:latest"
+  echo "▶ FIRETRACE_API_KEY found in Secret Manager; runs will be traced."
+else
+  echo "▶ No FIRETRACE_API_KEY secret in Secret Manager; deploying without tracing."
+fi
+
 echo "▶ Deploying $SERVICE_NAME to Cloud Run (build from source)…"
 gcloud run deploy "$SERVICE_NAME" \
   --source . \

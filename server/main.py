@@ -153,7 +153,6 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
         await websocket.accept()
         print("WebSocket accepted", call_id)
         llm_client = LlmClient(call_id, mode="voice")
-        call_metadata = None  # Will store metadata from call_details
 
         # Send optional config to Retell server
         config = ConfigResponse(
@@ -176,6 +175,10 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
                 # Not all of them need to be handled, only response_required and reminder_required.
                 print("handle_message received:", request_json.get("interaction_type"))
                 if request_json["interaction_type"] == "call_details":
+                    # Keep Retell's call details (agent id, call type, the
+                    # metadata the browser attached) for this call's traces.
+                    call = request_json.get("call")
+                    llm_client.call_details = call if isinstance(call, dict) else {}
                     # Send first message to signal ready of server
                     first_event = llm_client.draft_begin_message()
                     print("Sent first_event", flush=True)

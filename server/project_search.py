@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from pinecone import PineconeAsyncio
 
+from firetrace import step
+
 load_dotenv()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -43,10 +45,32 @@ def _attach_links(project: Dict, metadata) -> None:
         project["demo"] = metadata.get("demo")
 
 
+def _token_count(value) -> Optional[int]:
+    """An int token count, or None for anything else (mocks, missing usage)."""
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
 async def get_embedding(text: str) -> List[float]:
     """Generate embedding for text using OpenAI's text-embedding-3-large model."""
-    response = await openai_client.embeddings.create(model=EMBEDDING_MODEL, input=text)
-    return response.data[0].embedding
+    # Recorded as an `embedding` span under the calling tool's span when a
+    # traced run is in flight; a no-op otherwise (debug CLI, tests).
+    with step(
+        "embed-query",
+        kind="embedding",
+        provider="openai",
+        model=EMBEDDING_MODEL,
+        input=text,
+    ) as span:
+        response = await openai_client.embeddings.create(model=EMBEDDING_MODEL, input=text)
+        embedding = response.data[0].embedding
+        usage = getattr(response, "usage", None)
+        tokens = {
+            "inputTokens": _token_count(getattr(usage, "prompt_tokens", None)),
+            "totalTokens": _token_count(getattr(usage, "total_tokens", None)),
+        }
+        span["usage"] = {k: v for k, v in tokens.items() if v is not None}
+        span["output"] = {"dimensions": len(embedding)}
+        return embedding
 
 
 async def search_projects(query: str, top_k: int = 3) -> List[Dict]:
@@ -64,26 +88,38 @@ async def search_projects(query: str, top_k: int = 3) -> List[Dict]:
         query_embedding = await get_embedding(query)
 
         host = await _resolve_index_host()
-        async with pc.IndexAsyncio(host=host) as index:
-            results = await index.query(
-                vector=query_embedding,
-                top_k=top_k,
-                include_metadata=True,
-            )
+        with step(
+            "pinecone.query",
+            kind="retriever",
+            provider="pinecone",
+            index=INDEX_NAME,
+            top_k=top_k,
+            input=query,
+        ) as span:
+            async with pc.IndexAsyncio(host=host) as index:
+                results = await index.query(
+                    vector=query_embedding,
+                    top_k=top_k,
+                    include_metadata=True,
+                )
 
-        projects = []
-        for match in results.matches:
-            project = {
-                "id": match.id,
-                "name": match.metadata.get("name", DEFAULT_PROJECT_NAME),
-                "summary": match.metadata.get("summary", DEFAULT_PROJECT_SUMMARY),
-                "details": match.metadata.get("details", DEFAULT_PROJECT_DETAILS),
-                "score": round(match.score, 3),
-            }
+            projects = []
+            for match in results.matches:
+                project = {
+                    "id": match.id,
+                    "name": match.metadata.get("name", DEFAULT_PROJECT_NAME),
+                    "summary": match.metadata.get("summary", DEFAULT_PROJECT_SUMMARY),
+                    "details": match.metadata.get("details", DEFAULT_PROJECT_DETAILS),
+                    "score": round(match.score, 3),
+                }
 
-            _attach_links(project, match.metadata)
+                _attach_links(project, match.metadata)
 
-            projects.append(project)
+                projects.append(project)
+
+            span["output"] = [
+                {"id": p["id"], "name": p["name"], "score": p["score"]} for p in projects
+            ]
 
         return projects
 
@@ -104,25 +140,34 @@ async def get_project_by_id(project_id: str) -> Optional[Dict]:
     """
     try:
         host = await _resolve_index_host()
-        async with pc.IndexAsyncio(host=host) as index:
-            fetch_result = await index.fetch(ids=[project_id])
+        with step(
+            "pinecone.fetch",
+            kind="retriever",
+            provider="pinecone",
+            index=INDEX_NAME,
+            input={"id": project_id},
+        ) as span:
+            async with pc.IndexAsyncio(host=host) as index:
+                fetch_result = await index.fetch(ids=[project_id])
 
-        if project_id in fetch_result.vectors:
-            vector_data = fetch_result.vectors[project_id]
-            metadata = vector_data.metadata
+            if project_id in fetch_result.vectors:
+                vector_data = fetch_result.vectors[project_id]
+                metadata = vector_data.metadata
 
-            project = {
-                "id": project_id,
-                "name": metadata.get("name", DEFAULT_PROJECT_NAME),
-                "summary": metadata.get("summary", DEFAULT_PROJECT_SUMMARY),
-                "details": metadata.get("details", DEFAULT_PROJECT_DETAILS),
-            }
+                project = {
+                    "id": project_id,
+                    "name": metadata.get("name", DEFAULT_PROJECT_NAME),
+                    "summary": metadata.get("summary", DEFAULT_PROJECT_SUMMARY),
+                    "details": metadata.get("details", DEFAULT_PROJECT_DETAILS),
+                }
 
-            _attach_links(project, metadata)
+                _attach_links(project, metadata)
 
-            return project
+                span["output"] = {"found": True, "id": project_id, "name": project["name"]}
+                return project
 
-        return None
+            span["output"] = {"found": False, "id": project_id}
+            return None
 
     except Exception as e:
         print(f"Error fetching project {project_id}: {e}")

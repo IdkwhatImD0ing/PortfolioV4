@@ -13,6 +13,7 @@ def validate_environment_variables():
     optional_vars = {
         "OBFUSCATED_WS_PATH": "WebSocket path obfuscation (defaults to 'ws-default')",
         "LLM_DEBUG": "Enable debug logging for LLM (0 or 1, defaults to 0)",
+        "FIRETRACE_API_KEY": "FireTrace tracing key (runs are not recorded when unset)",
     }
 
     missing_required = []
@@ -32,10 +33,13 @@ def validate_environment_variables():
 
     for var, description in optional_vars.items():
         value = os.getenv(var)
-        if value:
-            print(f"  ✓ {var} is set to: {value}")
-        else:
+        if not value:
             print(f"  ℹ {var} not set ({description})")
+        elif var.endswith("_KEY"):
+            # Never echo a secret, not even at startup.
+            print(f"  ✓ {var} is set")
+        else:
+            print(f"  ✓ {var} is set to: {value}")
 
     # Print what model_config actually resolved, not the raw env vars. Reading
     # the env here would report an override that the constants may not have

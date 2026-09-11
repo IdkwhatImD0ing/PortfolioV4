@@ -23,6 +23,7 @@ This is a FastAPI WebSocket server that bridges Retell's voice platform with Ope
 server/
 ├── main.py              # FastAPI app, endpoints, WebSocket
 ├── llm.py               # LLM client, tools, guardrails
+├── firetrace.py         # FireTrace exporter: one trace per completed run
 ├── project_search.py    # Pinecone search functions
 ├── prompts.py           # System prompt and persona
 ├── custom_types.py      # Pydantic type definitions
@@ -49,6 +50,7 @@ User Speech → Retell Platform → WebSocket → main.py
 | `PINECONE_API_KEY` | Yes | - | Vector database |
 | `OBFUSCATED_WS_PATH` | No | `ws-default` | WebSocket path |
 | `LLM_DEBUG` | No | `0` | Debug logging |
+| `FIRETRACE_API_KEY` | No | - | Records every run at tracing.art3m1s.me; one key per environment |
 
 ## Development Commands
 
@@ -73,6 +75,7 @@ python run_integration_tests.py    # Run tests
 ### Modules
 - [modules/llm.md](modules/llm.md) - LLM client class
 - [modules/guardrail.md](modules/guardrail.md) - Security guardrail
+- [modules/firetrace.md](modules/firetrace.md) - FireTrace tracing exporter
 - [modules/prompts.md](modules/prompts.md) - System prompt
 
 ### Deployment
