@@ -8,6 +8,7 @@ import {
   type AnimationEvent,
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import type { RetellWebClient as RetellWebClientType } from "retell-client-js-sdk";
 import {
@@ -46,31 +47,92 @@ function runCommand(cmd: VoiceCommand) {
   if (cmd.type === "scroll") scrollToSection(cmd.id);
 }
 
-/** One agent turn. Renders the markdown subset the text prompt asks for;
- *  voice transcripts are plain text and pass through unchanged. */
+/** A chat bubble: the visitor's on the right, the agent's on the left. The
+ *  visitor's uses solid violet rather than the gradient, which fails contrast
+ *  for white text at its pink midpoint (see the hero's resume button). */
+function Bubble({ from, children }: { from: "user" | "agent"; children: ReactNode }) {
+  const mine = from === "user";
+  return (
+    <div className={cn("flex", mine ? "justify-end" : "justify-start")}>
+      <div
+        className={cn(
+          "max-w-[85%] px-3.5 py-2 rounded-2xl text-[13.5px] leading-[1.5] wrap-anywhere",
+          mine
+            ? "rounded-br-md bg-violet text-white"
+            : "rounded-bl-md bg-white/[0.05] border border-line-soft text-ink",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** An agent reply. Renders the markdown subset the text prompt asks for
+ *  (bold, inline code, bullets); voice transcripts are plain text and pass
+ *  through unchanged. */
 function AgentTurn({ content }: { content: string }) {
   const lines = parseChatMarkdown(content);
   return (
-    <div className="text-accent">
-      {lines.map((line, i) => (
-        <div key={i} className={line.bullet ? "pl-4" : undefined}>
-          {i === 0 ? "↳ " : ""}
-          {line.bullet ? "• " : ""}
-          {line.tokens.map((t, j) =>
-            t.kind === "bold" ? (
-              <strong key={j} className="text-ink font-semibold">
-                {t.text}
-              </strong>
-            ) : t.kind === "code" ? (
-              <code key={j} className="px-1 rounded bg-white/[0.06] text-magenta">
-                {t.text}
-              </code>
-            ) : (
-              <span key={j}>{t.text}</span>
-            ),
-          )}
-        </div>
-      ))}
+    <Bubble from="agent">
+      <div className="space-y-1">
+        {lines.map((line, i) => (
+          <div key={i} className={line.bullet ? "flex gap-1.5" : undefined}>
+            {line.bullet && (
+              <span aria-hidden className="text-accent">
+                •
+              </span>
+            )}
+            <span>
+              {line.tokens.map((t, j) =>
+                t.kind === "bold" ? (
+                  <strong key={j} className="font-semibold text-white">
+                    {t.text}
+                  </strong>
+                ) : t.kind === "italic" ? (
+                  <em key={j}>{t.text}</em>
+                ) : t.kind === "code" ? (
+                  <code
+                    key={j}
+                    className="px-1 rounded bg-white/[0.08] font-mono text-[12.5px] text-accent"
+                  >
+                    {t.text}
+                  </code>
+                ) : (
+                  <span key={j}>{t.text}</span>
+                ),
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Bubble>
+  );
+}
+
+const TYPING_DOT_DELAYS = ["0s", "0.2s", "0.4s"];
+
+/** The agent's "typing" bubble, with the backend's status (for example
+ *  "Searching projects...") beside the dots when there is one. */
+function TypingBubble({ label }: { label: string | null }) {
+  return (
+    <div className="flex justify-start">
+      <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl rounded-bl-md bg-white/[0.05] border border-line-soft">
+        <span aria-hidden className="flex gap-1">
+          {TYPING_DOT_DELAYS.map((delay) => (
+            <span
+              key={delay}
+              className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-dot"
+              style={{ animationDelay: delay }}
+            />
+          ))}
+        </span>
+        {label ? (
+          <span className="font-mono text-[11px] text-ink-soft">{label}</span>
+        ) : (
+          <span className="sr-only">Typing…</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -454,7 +516,10 @@ export function VoiceOrb() {
           onKeyDown={onPanelKeyDown}
           onAnimationEnd={onPanelAnimationEnd}
           className={cn(
-            "fixed right-7 bottom-7 z-[310] w-[360px] max-w-[calc(100vw-32px)] max-h-[min(72vh,640px)] flex flex-col bg-[rgba(12,10,23,0.92)] backdrop-blur-xl border border-line rounded-[22px] shadow-[0_30px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(192,132,252,0.1)_inset] overflow-hidden outline-none max-[700px]:right-4 max-[700px]:bottom-4",
+            // One fixed size, like any chat widget: the window doesn't grow or
+            // shrink with the conversation, the message list scrolls instead.
+            // `dvh` so mobile browser bars don't push the bottom offscreen.
+            "fixed right-7 bottom-7 z-[310] w-[380px] max-w-[calc(100vw-32px)] h-[min(600px,calc(100dvh-56px))] flex flex-col bg-[rgba(12,10,23,0.92)] backdrop-blur-xl border border-line rounded-[22px] shadow-[0_30px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(192,132,252,0.1)_inset] overflow-hidden outline-none max-[700px]:right-4 max-[700px]:bottom-4 max-[700px]:h-[min(600px,calc(100dvh-32px))]",
             closing ? "animate-orb-morph-out" : "animate-orb-morph-in",
           )}
         >
@@ -488,45 +553,50 @@ export function VoiceOrb() {
             </button>
           </header>
 
-          {/* Transcript on top, suggestion chips under it. The transcript is
-              the only part that can shrink, so it gives up height first and
-              the controls pinned below stay in view; on tiny screens this
-              area scrolls. */}
-          <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-[18px] pt-[18px] pb-3">
-            <div
-              ref={transcriptScrollRef}
-              className="p-3 rounded-[10px] bg-black/25 border border-line-soft font-mono text-[12px] text-ink-soft min-h-[70px] max-h-[320px] overflow-y-auto space-y-1.5"
-            >
-              {fullTranscript.length === 0 ? (
-                <>
-                  <h4 className="font-sans text-[18px] text-ink m-0 -tracking-[0.01em] font-medium">
-                    Ask anything.
-                  </h4>
-                  <div className="text-accent">↳ {hint}</div>
-                </>
-              ) : (
-                <>
-                  {fullTranscript.map((entry, i) =>
-                    entry.role === "user" ? (
-                      <div key={`user-${i}`} className="text-magenta">
-                        › {entry.content}
-                      </div>
-                    ) : entry.notice ? (
-                      <div key={`notice-${i}`} className="text-muted">
-                        ↳ {entry.content}
-                      </div>
-                    ) : (
-                      <AgentTurn key={`agent-${i}`} content={entry.content} />
-                    ),
-                  )}
-                  {pulsing && <div className="text-accent">↳ …</div>}
-                  {status && <div className="text-accent animate-pulse-dot">↳ {status}</div>}
-                </>
-              )}
-            </div>
+          {/* Messages: the visitor on the right, the agent on the left. A short
+              conversation sits on the controls like a messaging app; a long
+              one scrolls inside the fixed-size window. */}
+          <div
+            ref={transcriptScrollRef}
+            className="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-2 [scrollbar-width:thin] [scrollbar-color:var(--line)_transparent]"
+          >
+            {fullTranscript.length === 0 ? (
+              <div className="my-auto px-4 text-center">
+                <h4 className="m-0 text-[18px] -tracking-[0.01em] font-medium text-ink">
+                  Ask anything.
+                </h4>
+                <p className="m-0 mt-1.5 font-mono text-[11.5px] leading-[1.6] text-accent">
+                  {hint}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Pushes a short conversation down onto the controls. It
+                    collapses to nothing once the list overflows, so scrolling
+                    still reaches the first message. */}
+                <div aria-hidden className="mt-auto" />
+                {fullTranscript.map((entry, i) =>
+                  entry.notice ? (
+                    <p
+                      key={`notice-${i}`}
+                      className="m-0 self-center max-w-[90%] text-center font-mono text-[11px] leading-[1.5] text-ink-soft"
+                    >
+                      {entry.content}
+                    </p>
+                  ) : entry.role === "user" ? (
+                    <Bubble key={`user-${i}`} from="user">
+                      {entry.content}
+                    </Bubble>
+                  ) : (
+                    <AgentTurn key={`agent-${i}`} content={entry.content} />
+                  ),
+                )}
+              </>
+            )}
+            {(pulsing || status) && <TypingBubble label={status} />}
 
             {showSuggestions && (
-              <div className="flex flex-wrap gap-2 mt-3" aria-label="Suggestions">
+              <div className="flex flex-wrap justify-end gap-2 pt-1" aria-label="Suggestions">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s.you}

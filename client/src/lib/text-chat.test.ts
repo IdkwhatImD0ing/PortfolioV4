@@ -136,6 +136,26 @@ describe("tokenizeInline", () => {
     ]);
   });
 
+  it("renders single-asterisk italics", () => {
+    expect(tokenizeInline("My motto: *prepare for the worst, hope for the best.*")).toEqual([
+      { kind: "text", text: "My motto: " },
+      { kind: "italic", text: "prepare for the worst, hope for the best." },
+    ]);
+  });
+
+  it("keeps bold and italic apart on one line", () => {
+    expect(tokenizeInline("**Bold** and *soft*")).toEqual([
+      { kind: "bold", text: "Bold" },
+      { kind: "text", text: " and " },
+      { kind: "italic", text: "soft" },
+    ]);
+  });
+
+  it("leaves spaced-out asterisks literal", () => {
+    expect(tokenizeInline("5 * 3 * 2")).toEqual([{ kind: "text", text: "5 * 3 * 2" }]);
+    expect(tokenizeInline("*****")).toEqual([{ kind: "text", text: "*****" }]);
+  });
+
   it("leaves unbalanced markers alone", () => {
     expect(tokenizeInline("a ** b ` c")).toEqual([{ kind: "text", text: "a ** b ` c" }]);
   });

@@ -71,7 +71,7 @@ export function createSseParser(): { push(text: string): ChatChunk[] } {
 }
 
 export interface InlineToken {
-  kind: "text" | "bold" | "code";
+  kind: "text" | "bold" | "italic" | "code";
   text: string;
 }
 
@@ -80,21 +80,26 @@ export interface ChatLine {
   tokens: InlineToken[];
 }
 
-const INLINE = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+// Italic needs a non-space just inside each `*`, as in markdown, so a
+// spaced-out "5 * 3 * 2" stays literal.
+const INLINE = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s](?:[^*]*[^*\s])?\*)/g;
+const BOLD = /^\*\*([^*]+)\*\*$/;
+const CODE = /^`([^`]+)`$/;
+const ITALIC = /^\*([^*\s](?:[^*]*[^*\s])?)\*$/;
 
-/** Tokenize the inline markdown the text prompt asks the model for:
- *  `**bold**` and `` `code` ``. Everything else stays literal. */
+/** Tokenize the inline markdown the model writes in text chat: `**bold**`,
+ *  `*italic*` and `` `code` ``. Everything else stays literal. */
 export function tokenizeInline(text: string): InlineToken[] {
   return text
     .split(INLINE)
     .filter((part) => part.length > 0)
     .map((part) => {
-      if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
-        return { kind: "bold", text: part.slice(2, -2) };
-      }
-      if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
-        return { kind: "code", text: part.slice(1, -1) };
-      }
+      const bold = BOLD.exec(part);
+      if (bold) return { kind: "bold", text: bold[1] };
+      const code = CODE.exec(part);
+      if (code) return { kind: "code", text: code[1] };
+      const italic = ITALIC.exec(part);
+      if (italic) return { kind: "italic", text: italic[1] };
       return { kind: "text", text: part };
     });
 }
