@@ -10,6 +10,7 @@ import {
 } from "@/lib/voice-bus";
 import { mergeTranscript, type TranscriptEntry } from "@/lib/transcript";
 import { resolveAgentId } from "@/lib/retell-agent";
+import { warmBackend } from "@/lib/backend-warmup";
 import { cn } from "@/lib/utils";
 import type { RetellAIResponse } from "@/types/api";
 import { SHORTCUTS, cmdBtn } from "./shortcuts";
@@ -265,7 +266,13 @@ export function VoiceOrb() {
         )}
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => {
+            // Opening the panel is the strongest "about to call" signal we get.
+            // Deduplicated inside, so this is free when the load-time ping was
+            // recent, and a real nudge when the page has sat open a while.
+            if (!open) warmBackend();
+            setOpen((v) => !v);
+          }}
           aria-label="Open voice commands"
           data-cursor-hover
           className="relative w-16 h-16 rounded-full bg-[image:var(--grad)] shadow-[0_12px_40px_rgba(162,89,255,0.55),0_0_0_1px_rgba(255,255,255,0.06)_inset] grid place-items-center cursor-pointer transition-transform duration-200 hover:scale-105 before:content-[''] before:absolute before:-inset-2 before:rounded-full before:border before:border-[rgba(232,121,249,0.4)] before:animate-orb-pulse after:content-[''] after:absolute after:-inset-4 after:rounded-full after:border after:border-[rgba(232,121,249,0.2)] after:animate-orb-pulse-delayed"
