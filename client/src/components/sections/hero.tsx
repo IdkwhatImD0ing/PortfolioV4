@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useRafScroll, useRafWindowEvent } from "@/hooks/use-raf-listener";
 import { usePrefersReducedMotion } from "@/hooks/use-media-query";
 import { VoiceBus, scrollToSection } from "@/lib/voice-bus";
+import { SpeechWaveform } from "@/components/speech-waveform";
 
 const HERO_CHIPS = [
   "Who is Bill?",
@@ -15,8 +16,6 @@ const HERO_CHIPS = [
   "What does he do for fun?",
   "Take me to his projects.",
 ];
-
-const WAVEFORM_DELAYS = ["0s", "0.12s", "0.24s", "0.36s", "0.48s", "0.6s", "0.72s"];
 
 export function HeroSection() {
   const glowA = useRef<HTMLDivElement>(null);
@@ -101,15 +100,7 @@ export function HeroSection() {
         <div className="flex items-center gap-3 font-mono text-[13px] tracking-[0.1em] uppercase text-ink-soft max-[700px]:gap-2 max-[700px]:text-[10px] max-[700px]:tracking-[0.06em]">
           <span className="w-2 h-2 rounded-full bg-[#4ade80] shadow-[0_0_10px_#4ade80] animate-pulse-dot" />
           <span>VOICE-DRIVEN PORTFOLIO · 2026</span>
-          <span className="ml-auto flex items-center gap-1 h-7">
-            {WAVEFORM_DELAYS.map((d, i) => (
-              <span
-                key={i}
-                className="w-[3px] rounded-[2px] bg-gradient-to-b from-magenta to-primary animate-wf"
-                style={{ animationDelay: d }}
-              />
-            ))}
-          </span>
+          <SpeechWaveform className="ml-auto" />
         </div>
 
         <h1
