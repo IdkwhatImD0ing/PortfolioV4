@@ -43,7 +43,8 @@ export interface ExperienceEntry {
   when: string;
   role: string;
   where: string;
-  body: string;
+  /** One short line each, rendered as a bullet list. */
+  bullets: string[];
   badge?: string;
   /** Optional external link for the company / project. */
   link?: string;
