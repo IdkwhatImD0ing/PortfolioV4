@@ -103,9 +103,12 @@ async def draft_response(self, request: ResponseRequiredRequest):
     prompt = self.prepare_prompt(request)
     messages = [m for m in prompt if m.get("role") != "system"]
     
-    # The agent streams at once; the guardrail judges the turn beside it.
-    # (The real code enters this and the trace through one AsyncExitStack.)
-    async with screened_stream(self.agent, messages) as events:
+    # The agent streams at once; the guardrail judges the turn beside it
+    # (before it on an idle reminder). The real code enters this and the
+    # trace through one AsyncExitStack.
+    async with screened_stream(
+        self.agent, messages, screen_first=self._screens_first(request)
+    ) as events:
         async for event in events:
             if isinstance(event, GuardrailTripped):
                 # Close open tool calls, stop mid-answer and apologise
@@ -128,6 +131,12 @@ async def draft_response(self, request: ResponseRequiredRequest):
 
     yield ResponseResponse(content_complete=True)
 ```
+
+On an idle reminder (`reminder_required`), `_screens_first` is true, so `screened_stream`
+judges the turn before the model starts instead of beside it. If the guardrail trips and the
+agent already replied to the turn being re-judged, `_refusal_for` says
+`reminder_checkin_message` instead of repeating the refusal. See
+[guardrail.md](guardrail.md#what-the-classifier-receives).
 
 ### prepare_functions()
 
@@ -220,7 +229,7 @@ yield TextChatStreamChunk(type="replace", content=guardrail_refusal_message)
 
 # Voice: speech can't be withdrawn, so stop and apologise.
 yield ResponseResponse(
-    content=guardrail_interruption_message if spoke else guardrail_refusal_message,
+    content=guardrail_interruption_message if spoke else self._refusal_for(request),
     content_complete=True,
 )
 ```
@@ -230,9 +239,12 @@ the closing `content_complete=True` (voice) never go out while a turn is still
 being judged. See [guardrail.md](guardrail.md#how-a-trip-reaches-the-visitor)
 for why this replaced the SDK's `input_guardrails` hook.
 
-Both messages live in `prompts.py`. They deliberately name the hobbies — the old
-copy listed only "background, education, projects, and professional experience",
-which told visitors that music and cooking were off-limits (issue #10).
+`_refusal_for` gives `prompts.guardrail_refusal_message` in every case but one: a
+voice reminder that trips after the agent already replied says
+`prompts.reminder_checkin_message` instead. All three messages live in `prompts.py`
+and deliberately name the hobbies — the old copy listed only "background,
+education, projects, and professional experience", which told visitors that music
+and cooking were off-limits (issue #10).
 
 ### General Errors
 

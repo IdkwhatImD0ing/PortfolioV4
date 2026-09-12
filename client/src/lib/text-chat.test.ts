@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
+  MAX_MESSAGE_CHARS,
   applyReplyChunk,
   createSseParser,
   parseChatMarkdown,
@@ -109,6 +112,32 @@ describe("toChatMessages", () => {
       2,
     );
     expect(out.map((m) => m.content)).toEqual(["b", "c"]);
+  });
+
+  it("trims a long turn to the backend's cap, keeping both ends", () => {
+    const [ascii] = toChatMessages([
+      { role: "agent", content: "HEAD" + "x".repeat(MAX_MESSAGE_CHARS) + "TAIL" },
+    ]);
+    expect(ascii.content.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
+    expect(ascii.content.startsWith("HEAD")).toBe(true);
+    expect(ascii.content.endsWith("TAIL")).toBe(true);
+
+    // An emoji is one character to Python but two UTF-16 units to JS. Slicing
+    // by units would split one in half on either side of the cut.
+    const [emoji] = toChatMessages([
+      { role: "agent", content: "😀".repeat(MAX_MESSAGE_CHARS + 1) },
+    ]);
+    expect(Array.from(emoji.content).length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
+    expect(emoji.content).toContain("😀 […] 😀");
+  });
+
+  it("uses the same per-message cap as the server", () => {
+    // Drift either way breaks chat: a lower server cap 422s every send that
+    // carries a long turn, until it leaves the history window.
+    const source = readFileSync(join(__dirname, "../../../server/custom_types.py"), "utf8");
+    const match = /^MAX_CHAT_MESSAGE_CHARS = ([\d_]+)/m.exec(source);
+    expect(match).not.toBeNull();
+    expect(Number(match![1].replace(/_/g, ""))).toBe(MAX_MESSAGE_CHARS);
   });
 });
 

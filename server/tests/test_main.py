@@ -2,9 +2,9 @@
 Tests for main.py - FastAPI endpoints and handlers.
 """
 
-import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 
 class TestPingEndpoint:
@@ -157,6 +157,50 @@ class TestChatEndpoint:
         
         assert response.status_code == 422  # Validation error
 
+    def test_chat_rejects_oversized_requests_before_screening(self, app_client):
+        """/chat is unauthenticated; an oversized body must never reach the guardrail."""
+        from custom_types import MAX_CHAT_MESSAGE_CHARS, MAX_CHAT_MESSAGES
+
+        with patch("main.LlmClient") as mock_llm:
+            too_long = app_client.post(
+                "/chat",
+                json={
+                    "messages": [
+                        {"role": "user", "content": "x" * (MAX_CHAT_MESSAGE_CHARS + 1)}
+                    ]
+                },
+            )
+            too_many = app_client.post(
+                "/chat",
+                json={
+                    "messages": [{"role": "user", "content": "hi"}]
+                    * (MAX_CHAT_MESSAGES + 1)
+                },
+            )
+
+        assert too_long.status_code == 422
+        assert too_many.status_code == 422
+        mock_llm.assert_not_called()
+        # FastAPI's default 422 echoes the rejected input back; encoding a huge
+        # list for that took seconds on the event loop.
+        for response in (too_long, too_many):
+            assert all("input" not in err for err in response.json()["detail"])
+            assert len(response.content) < 1_000
+
+    def test_chat_refuses_an_oversized_body_before_parsing(self, app_client):
+        """The caps only apply after parsing; the body limit bounds the parse."""
+        from custom_types import MAX_CHAT_BODY_BYTES
+
+        with patch("main.LlmClient") as mock_llm:
+            response = app_client.post(
+                "/chat",
+                content=b" " * (MAX_CHAT_BODY_BYTES + 1),
+                headers={"content-type": "application/json"},
+            )
+
+        assert response.status_code == 413
+        mock_llm.assert_not_called()
+
     def test_chat_empty_messages(self, app_client):
         """Test /chat with empty messages array."""
         with patch("main.LlmClient") as mock_llm:
@@ -204,6 +248,47 @@ class TestValidateEnvironmentVariables:
         with patch.dict("os.environ", env_vars, clear=True):
             # Should not raise
             validate_environment_variables()
+
+    def test_ws_path_value_never_printed(self, capsys):
+        """The websocket path is a secret: startup logs say it's set, never what it is."""
+        from main import validate_environment_variables
+
+        secret_path = "s3cret-ws-path-7f3a9c"
+        env_vars = {
+            "RETELL_API_KEY": "test-key",
+            "OPENAI_API_KEY": "test-key",
+            "PINECONE_API_KEY": "test-key",
+            "OBFUSCATED_WS_PATH": secret_path,
+            "LLM_DEBUG": "1",
+        }
+
+        with patch.dict("os.environ", env_vars, clear=True):
+            validate_environment_variables()
+
+        captured = capsys.readouterr()
+        assert secret_path not in captured.out
+        assert secret_path not in captured.err
+        assert "OBFUSCATED_WS_PATH is set" in captured.out
+        assert "WARNING" not in captured.out
+        # LLM_DEBUG isn't secret, so its value is still shown.
+        assert "LLM_DEBUG is set to: 1" in captured.out
+
+    def test_unset_ws_path_warns(self, capsys):
+        """Without OBFUSCATED_WS_PATH the socket sits on the public default path, so say so."""
+        from main import validate_environment_variables
+
+        env_vars = {
+            "RETELL_API_KEY": "test-key",
+            "OPENAI_API_KEY": "test-key",
+            "PINECONE_API_KEY": "test-key",
+        }
+
+        with patch.dict("os.environ", env_vars, clear=True):
+            validate_environment_variables()
+
+        out = capsys.readouterr().out
+        assert "WARNING: OBFUSCATED_WS_PATH is not set" in out
+        assert "/ws-default/" in out
 
 
 class TestCORSConfiguration:

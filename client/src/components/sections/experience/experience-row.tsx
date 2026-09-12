@@ -34,7 +34,16 @@ export function ExperienceRow({ item }: { item: (typeof EXPERIENCE)[number] }) {
             item.where
           )}
         </div>
-        <p className="text-[17px] leading-[1.55] text-ink-soft mt-3.5 max-w-[680px]">{item.body}</p>
+        <ul className="list-none flex flex-col gap-2.5 mt-4 max-w-[680px]">
+          {item.bullets.map((line) => (
+            <li
+              key={line}
+              className="text-[17px] leading-[1.55] text-ink-soft pl-5 relative before:content-[''] before:absolute before:left-0 before:top-[11px] before:w-[6px] before:h-[6px] before:rounded-full before:bg-violet"
+            >
+              {line}
+            </li>
+          ))}
+        </ul>
         {item.badge && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10.5px] tracking-[0.1em] uppercase border border-[rgba(192,132,252,0.4)] text-accent bg-[rgba(192,132,252,0.06)] mt-3">
             <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80] shadow-[0_0_6px_#4ade80]" />

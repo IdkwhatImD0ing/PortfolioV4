@@ -23,6 +23,16 @@ guardrail_interruption_message = (
     "projects, hackathons, music, that kind of thing."
 )
 
+# What the visitor hears when an idle reminder trips the guardrail after the
+# agent already replied. A reminder adds no visitor input, so the trip is the
+# judge re-judging their previous turn, and repeating the refusal would answer
+# something they didn't just say. Fixed text: a turn that trips never reaches
+# the agent.
+reminder_checkin_message = (
+    "You still there? No rush. Whenever you're ready, ask me about my projects, "
+    "hackathons, music, whatever you're curious about."
+)
+
 # Base prompt shared between voice and text modes
 base_prompt = """
 ## **SYSTEM PROMPT: "Bill Zhang" AI Persona**

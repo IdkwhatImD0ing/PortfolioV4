@@ -85,7 +85,7 @@ after it in `<trailing_turns>`.
 | Last **non-empty** user turn is the target | `/chat` takes a client-supplied array, so a whitespace-only trailing turn would otherwise hide the payload behind it. |
 | Turns *after* the target are still rendered | Slicing them off is a hole: a caller can append their own `assistant` turns, which the model reads as a prefill to continue from. Dropped here means invisible to the judge but fully visible to the agent. |
 | An array with no user turn at all is still classified | A pure-assistant array is a prefill attempt, not an empty request. Waving it through unclassified is the bypass. |
-| Delimiter-shaped text stripped; per-call nonce on the tags, named in the payload | Stops a visitor closing `</turn_to_classify>` to forge an "already screened" note. The regex covers `< /tag>` as well as `</ tag>`. |
+| Delimiter names stripped from visitor text; per-call nonce on the tags, named in the payload | Stops a visitor closing `</turn_to_classify>` to forge an "already screened" note. The names are removed wherever they appear rather than matched as whole tags, so no spacing (`< /tag>`), nesting (`<<tag>/tag>`) or unclosed variant can leave a tag behind, and text inside a fake tag stays visible to the judge. |
 | Truncation keeps **both ends** of a turn and of the conversation | Head-only truncation makes length a bypass: the cap bounds what the *judge* sees, not what the *agent* sees, so `"A" * cap + payload` would show the judge pure filler. Likewise, evicting oldest-first would let cheap filler flush the setup out of view. |
 | Non-text content parts are marked, not dropped | Silently discarding an image or file part would let content the agent consumes go unclassified. |
 
@@ -93,9 +93,53 @@ The idle-timeout sentinel (`prompts.reminder_prompt`) is dropped — it is the h
 to the model, not visitor input. Only an exact full-string match drops the turn, so nothing
 can be smuggled through by padding it.
 
+Voice idle reminders are screened too. When Retell sends `reminder_required`, the only new
+user-role turn is that sentinel, so the judge re-classifies the visitor's previous turn. Two
+things keep that from misfiring:
+
+- **On a reminder the guardrail runs before the model**, not beside it. `llm.py`'s
+  `_screens_first` passes `screen_first=True` to `screened_stream`, which then starts the
+  model only once the verdict is in. Nobody is waiting on a reminder, so the wait costs
+  nothing, and a trip leaves no model output to leak.
+- **A trip after the agent already replied says `prompts.reminder_checkin_message`**, not the
+  refusal. The visitor has heard the answer to that turn, so repeating the refusal would
+  answer something they didn't just say. If the agent never replied (an agent error sends an
+  empty reply), the reminder is their first answer, and a trip is the refusal.
+
+Do not skip the judge on reminders to save the call. The agent still reads the whole
+transcript, so it would meet the refused turn with nothing to stop it: a payload planted for
+"when I go quiet", a turn the judge failed closed on, or refused text the model had already
+started speaking. The reminder keeps `prepare_prompt`'s `User question:` wrapper on that turn,
+so the judge sees the same text it judged the first time. Which line a trip gets is keyed on
+`interaction_type`, which `/chat` cannot set; the transcript only picks between two fixed
+strings. `tests/test_guardrail_reminder.py` pins all of this.
+
 Note that `llm.py` wraps the last user turn in `User question:…Always respond in plain
 conversational text…` before the guardrail sees it. That scaffolding is left in place and
 simply read as part of the message.
+
+### Size limits
+
+There are two layers of caps.
+
+| Where | Limit | Why |
+|---|---|---|
+| `custom_types.py`, the `/chat` request | 50 messages (`MAX_CHAT_MESSAGES`), 10,000 characters each (`MAX_CHAT_MESSAGE_CHARS`). Anything larger gets a 422 before the guardrail runs, and a body over 4 MiB (`MAX_CHAT_BODY_BYTES`) gets a 413 before it is even parsed. | `/chat` is unauthenticated and reachable directly at the Cloud Run URL, which accepts 32 MiB bodies. The client sends at most 20 messages and trims each to 10,000 characters, typed ones stop at 1,000, and replies are prompted to stay under 300 words, so real traffic sits far below every cap. |
+| `guardrail.py`, what the judge sees | 4,000 characters for the judged turn (`MAX_TURN_CHARS`), 1,000 for each other turn (`MAX_CONTEXT_CHARS_PER_TURN`), 12,000 for the earlier turns (`MAX_TOTAL_CONTEXT_CHARS`), plus up to 3,000 more for trailing turns (a quarter of that, counted separately). | Bounds the judge's context window and latency. A timeout fails open, so a slow judge is a bypass. |
+
+All of this runs synchronously on the event loop, so its cost must stay small however long
+a turn is. The old whole-tag regex ran on the **whole** turn before truncation and was
+quadratic: `"<turn_to_classify " * 20_000` (360 KB) took 2.8 s, and `"<" + " " * 20_000`
+(20 KB) took 4 s. For that long the server answered nothing else, voice calls included.
+
+Two changes fixed it. The pattern is now a plain alternation of the three names, which gets
+through a megabyte in about 10 ms. And `_sanitize` now truncates first and strips second, so
+the regex only sees the capped text. Because stripping runs last, nothing the slicing
+produces can survive as a name. The voice websocket has no request cap, so these two are its
+whole defence. `tests/test_guardrail.py::TestSanitize` times both on 1 MB adversarial inputs.
+
+A 422 from this server leaves out the `input` FastAPI normally echoes back for each error
+(`main.py`). Echoing an oversized list meant encoding all of it on the event loop.
 
 ## Failure behaviour
 
@@ -226,6 +270,10 @@ turn that then trips still gets the refusal rather than the half-answer plus an 
 - `tests/test_guardrail_streaming.py` — mocked judge racing the agent stream. Pins that a
   trip replaces the text reply, stops the voice answer, cancels the run, and never lets
   `done` go out before the verdict; and that allowed turns stream before the verdict.
+- `tests/test_guardrail_reminder.py` — the real SDK path with only the judge and the agent's
+  model faked. Pins that a reminder is judged before the model runs, that a trip after a
+  reply is the check-in rather than a second refusal, and that visitor turns, unanswered
+  turns and `/chat` still get the refusal.
 - `tests/test_guardrail_eval.py` — real judge over 133 labelled cases, marked `integration`.
   Reports **false-refusal rate separately**, since that is the metric issue #10 was about.
   Hard-asserts the critical cases; rate-bounds the rest because the judge is nondeterministic.

@@ -35,6 +35,7 @@ from prompts import (
     begin_sentence,
     guardrail_interruption_message,
     guardrail_refusal_message,
+    reminder_checkin_message,
     reminder_prompt,
     text_system_prompt,
     voice_system_prompt,
@@ -82,8 +83,9 @@ __all__ = [
 class GuardrailTripped:
     """The last item `screened_stream` yields when the guardrail blocks a turn.
 
-    By the time a caller sees it, the agent run has already been cancelled.
-    `verdict` is None when the screening itself crashed, which blocks.
+    By the time a caller sees it, the agent run has already been cancelled (or,
+    with `screen_first`, was never started). `verdict` is None when the
+    screening itself crashed, which blocks.
     """
 
     verdict: GuardrailVerdict | None = None
@@ -124,7 +126,7 @@ def _trip_from(screening: asyncio.Task) -> GuardrailTripped | None:
 
 
 @asynccontextmanager
-async def screened_stream(agent: Agent, messages: list):
+async def screened_stream(agent: Agent, messages: list, *, screen_first: bool = False):
     """Run the agent and the input guardrail side by side on the same turn.
 
     Use as `async with screened_stream(agent, messages) as events:`. Both start
@@ -138,36 +140,55 @@ async def screened_stream(agent: Agent, messages: list):
     `events` still waits for the verdict before ending, so a caller never
     closes out a turn that is still being judged.
 
+    With `screen_first`, the model starts only once the verdict is in, so a
+    trip leaves no model output at all and `events` is just the
+    `GuardrailTripped`. That puts the classifier's latency up front, so it is
+    only for turns nobody is waiting on (voice idle reminders).
+
     This replaces the Agent's `input_guardrails` hook. On the streamed path the
     SDK runs that hook as a detached task, notices a trip only between stream
     events, and never cancels the model, so a blocked answer kept streaming and
     the refusal arrived after it.
     """
-    result = Runner.run_streamed(agent, messages)
     screening = asyncio.create_task(_screen(agent, messages))
-
-    def stop_on_trip(task: asyncio.Task) -> None:
-        # Runs as soon as the verdict lands, even while the caller is busy
-        # sending. That keeps the model from generating, and tools from
-        # running, after a trip: the SDK hook's `before_side_effects` check did
-        # that job before.
-        if task.cancelled() or result.is_complete:
-            return
-        if task.exception() is not None or task.result().tripwire_triggered:
-            result.cancel()
-
-    screening.add_done_callback(stop_on_trip)
-    stream = result.stream_events()
-    events = _merge(stream, screening)
     try:
-        yield events
+        if screen_first:
+            await asyncio.wait({screening})
+            trip = _trip_from(screening)
+            if trip is not None:
+                yield _just(trip)
+                return
+
+        result = Runner.run_streamed(agent, messages)
+
+        def stop_on_trip(task: asyncio.Task) -> None:
+            # Runs as soon as the verdict lands, even while the caller is busy
+            # sending. That keeps the model from generating, and tools from
+            # running, after a trip: the SDK hook's `before_side_effects` check
+            # did that job before.
+            if task.cancelled() or result.is_complete:
+                return
+            if task.exception() is not None or task.result().tripwire_triggered:
+                result.cancel()
+
+        screening.add_done_callback(stop_on_trip)
+        stream = result.stream_events()
+        events = _merge(stream, screening)
+        try:
+            yield events
+        finally:
+            if not result.is_complete:
+                result.cancel()
+            await events.aclose()
+            await stream.aclose()
     finally:
-        if not result.is_complete:
-            result.cancel()
         screening.cancel()
         await asyncio.gather(screening, return_exceptions=True)
-        await events.aclose()
-        await stream.aclose()
+
+
+async def _just(item):
+    """`events` for a turn screened first and blocked: the trip, nothing else."""
+    yield item
 
 
 async def _merge(stream, screening: asyncio.Task):
@@ -295,6 +316,37 @@ class LlmClient:
             prompt.append({"role": "user", "content": reminder_prompt})
         return prompt
 
+    @staticmethod
+    def _screens_first(request: ResponseRequiredRequest) -> bool:
+        """Whether the guardrail must finish before the model starts. Every request is screened.
+
+        On a visitor turn the guardrail runs beside the model, so nobody waits on
+        the judge. A reminder has nobody waiting, so it is judged before the
+        model instead. A reminder re-judges the visitor's last turn, and if that
+        trips, nothing the model would have said streams out first. Keyed on
+        Retell's interaction_type, so /chat never takes this path.
+        """
+        return request.interaction_type == "reminder_required"
+
+    def _refusal_for(self, request: ResponseRequiredRequest) -> str:
+        """What the visitor hears when the guardrail trips on this request.
+
+        A reminder adds no visitor input, so a trip there is the judge re-judging
+        their previous turn. If the agent already replied to it, repeating the
+        refusal would answer something they didn't just say, so they get a
+        check-in. If it never replied (an agent error sends an empty reply), this
+        is their first answer, so it's the refusal. Keyed on Retell's
+        interaction_type, which /chat can't set; the transcript only picks
+        between two fixed lines.
+        """
+        if request.interaction_type == "reminder_required":
+            last = next(
+                (u for u in reversed(request.transcript) if u.content.strip()), None
+            )
+            if last is not None and last.role == "agent":
+                return reminder_checkin_message
+        return guardrail_refusal_message
+
     def prepare_functions(self) -> List[Any]:
         """Return tool functions available to the agent."""
         return [
@@ -354,8 +406,13 @@ class LlmClient:
                     group_id=self.call_id,
                     metadata={"mode": self.mode, "response_id": str(response_id)},
                 ))
-                # The guardrail runs beside the agent; see screened_stream.
-                events = await stack.enter_async_context(screened_stream(self.agent, messages))
+                # The guardrail runs beside the model on visitor turns and before
+                # it on reminders; see screened_stream and _screens_first.
+                events = await stack.enter_async_context(
+                    screened_stream(
+                        self.agent, messages, screen_first=self._screens_first(request)
+                    )
+                )
 
                 async for event in events:
                     if isinstance(event, GuardrailTripped):
@@ -373,7 +430,7 @@ class LlmClient:
                             content=(
                                 guardrail_interruption_message
                                 if spoke
-                                else guardrail_refusal_message
+                                else self._refusal_for(request)
                             ),
                             content_complete=True,
                             end_call=False,

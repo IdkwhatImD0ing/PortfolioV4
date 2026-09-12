@@ -6,6 +6,8 @@ import pytest
 from pydantic import ValidationError
 
 from custom_types import (
+    MAX_CHAT_MESSAGE_CHARS,
+    MAX_CHAT_MESSAGES,
     Utterance,
     ResponseRequiredRequest,
     ResponseResponse,
@@ -16,6 +18,8 @@ from custom_types import (
     TextChatRequest,
     TextChatStreamChunk,
     ConfigResponse,
+    MAX_SUMMARY_MESSAGES,
+    SummaryRequest,
 )
 
 
@@ -194,6 +198,31 @@ class TestTextChatTypes:
         )
         assert len(request.messages) == 2
 
+    def test_text_chat_request_accepts_what_the_client_sends(self):
+        """20 messages (MAX_HISTORY_MESSAGES in client/src/lib/text-chat.ts),
+        typed ones capped at 1,000 characters by the chat input."""
+        request = TextChatRequest(
+            messages=[TextChatMessage(role="user", content="x" * 1_000)] * 20
+        )
+        assert len(request.messages) == 20
+
+    def test_text_chat_caps_are_inclusive(self):
+        request = TextChatRequest(
+            messages=[{"role": "user", "content": "x" * MAX_CHAT_MESSAGE_CHARS}]
+            * MAX_CHAT_MESSAGES
+        )
+        assert len(request.messages) == MAX_CHAT_MESSAGES
+
+    def test_text_chat_message_rejects_oversized_content(self):
+        with pytest.raises(ValidationError):
+            TextChatMessage(role="user", content="x" * (MAX_CHAT_MESSAGE_CHARS + 1))
+
+    def test_text_chat_request_rejects_too_many_messages(self):
+        with pytest.raises(ValidationError):
+            TextChatRequest(
+                messages=[{"role": "user", "content": "hi"}] * (MAX_CHAT_MESSAGES + 1)
+            )
+
     def test_text_chat_stream_chunk_content(self):
         """Test text chat stream chunk with content."""
         chunk = TextChatStreamChunk(type="content", content="Hello")
@@ -220,6 +249,23 @@ class TestTextChatTypes:
         chunk = TextChatStreamChunk(type="error", content="Something went wrong")
         assert chunk.type == "error"
         assert chunk.content == "Something went wrong"
+
+
+class TestSummaryRequest:
+    """Tests for the /summary request body."""
+
+    def test_summary_cap_is_inclusive(self):
+        request = SummaryRequest(
+            transcript=[{"role": "user", "content": "hi"}] * MAX_SUMMARY_MESSAGES
+        )
+        assert len(request.transcript) == MAX_SUMMARY_MESSAGES
+
+    def test_summary_rejects_too_many_messages(self):
+        with pytest.raises(ValidationError):
+            SummaryRequest(
+                transcript=[{"role": "user", "content": "hi"}]
+                * (MAX_SUMMARY_MESSAGES + 1)
+            )
 
 
 class TestConfigResponse:

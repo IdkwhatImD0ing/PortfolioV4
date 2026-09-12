@@ -28,6 +28,22 @@ class TestSummaryEndpoint:
         response = app_client.post("/summary", json={})
         assert response.status_code == 422
 
+    def test_summary_rejects_oversized_transcript_before_the_model(self, app_client):
+        """/summary is unauthenticated; an oversized transcript must never reach the model."""
+        from custom_types import MAX_SUMMARY_MESSAGES
+
+        with patch("main.generate_summary", new_callable=AsyncMock) as mock_generate:
+            response = app_client.post(
+                "/summary",
+                json={
+                    "transcript": [{"role": "user", "content": "hi"}]
+                    * (MAX_SUMMARY_MESSAGES + 1)
+                },
+            )
+
+        assert response.status_code == 422
+        mock_generate.assert_not_called()
+
     def test_summary_error_handling(self, app_client):
         """Test error handling in /summary endpoint."""
         with patch("main.generate_summary", new_callable=AsyncMock) as mock_generate:

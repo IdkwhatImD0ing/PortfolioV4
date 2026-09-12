@@ -24,6 +24,20 @@ interface TextChatMessage {
 }
 ```
 
+### Limits
+
+At most 50 messages, each at most 10,000 characters (`MAX_CHAT_MESSAGES` and
+`MAX_CHAT_MESSAGE_CHARS` in `custom_types.py`). A larger request gets a 422 and never
+reaches the guardrail or the model. A body over 4 MiB (`MAX_CHAT_BODY_BYTES`) gets a 413
+before it is parsed.
+
+The client sends at most 20 messages and trims each to 10,000 characters, keeping both ends
+(`MAX_MESSAGE_CHARS` in `client/src/lib/text-chat.ts`). That constant must equal
+`MAX_CHAT_MESSAGE_CHARS`, and `text-chat.test.ts` checks that it does.
+
+`POST /summary` takes the same message type, so the 10,000-character cap applies to each of
+its transcript messages too.
+
 ### Example Request
 
 ```json
