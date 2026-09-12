@@ -11,6 +11,7 @@ SECRETS=(OPENAI_API_KEY RETELL_API_KEY PINECONE_API_KEY OBFUSCATED_WS_PATH)
 # typed into this file once. A re-pull carries it over instead of wiping it,
 # and never replaces it with the production one.
 KEEP_FROM_ENV=(FIRETRACE_API_KEY)
+BS='\'  # one backslash, kept in a variable so no ${var//…} replacement has to spell it
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/../.env"
@@ -48,9 +49,23 @@ for name in "${SECRETS[@]}"; do
     echo "✗ Failed to read secret '$name'. Does your account have secretmanager.secretAccessor on it?" >&2
     exit 1
   fi
-  # Single-quote the value; escape any embedded single quote as '\''
-  escaped="${val//\'/\'\\\'\'}"
-  printf "%s='%s'\n" "$name" "$escaped" >>"$TMP"
+  # Single-quote the value: bash and python-dotenv both read that literally.
+  # A value holding a single quote (or a doubled backslash, which python-dotenv
+  # would collapse) goes in double quotes instead. Both loaders agree on \\ and
+  # \" there, whereas python-dotenv does not understand the shell's 'a'\''b'
+  # trick and drops the key with a parse warning.
+  if [[ "$val" != *"'"* && "$val" != *'\\'* ]]; then
+    printf "%s='%s'\n" "$name" "$val" >>"$TMP"
+  else
+    escaped="$val"
+    for ch in "$BS" '"' '$' '`'; do  # backslash first so the others are not re-escaped
+      escaped="${escaped//"$ch"/"$BS$ch"}"
+    done
+    printf '%s="%s"\n' "$name" "$escaped" >>"$TMP"
+    if [[ "$val" == *'$'* || "$val" == *'`'* ]]; then
+      echo "  ⚠ $name: python-dotenv keeps the backslash before \$ and \` in a double-quoted value; check $ENV_FILE by hand" >&2
+    fi
+  fi
   echo "  ✓ $name"
 done
 

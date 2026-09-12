@@ -95,4 +95,6 @@ jobs:
           "
 
       - name: Run guardrail eval
-        run: uv run pytest tests/test_guardrail_eval.py -m integration -v --tb=short
+        # The persona test grades the agent, which the sweep does not vary, so it
+        # would only repeat full agent and Pinecone runs on every leg.
+        run: uv run pytest tests/test_guardrail_eval.py -m integration -k "not persona" -v --tb=short
