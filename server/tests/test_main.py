@@ -136,6 +136,50 @@ class TestChatEndpoint:
         
         assert response.status_code == 422  # Validation error
 
+    def test_chat_rejects_oversized_requests_before_screening(self, app_client):
+        """/chat is unauthenticated; an oversized body must never reach the guardrail."""
+        from custom_types import MAX_CHAT_MESSAGE_CHARS, MAX_CHAT_MESSAGES
+
+        with patch("main.LlmClient") as mock_llm:
+            too_long = app_client.post(
+                "/chat",
+                json={
+                    "messages": [
+                        {"role": "user", "content": "x" * (MAX_CHAT_MESSAGE_CHARS + 1)}
+                    ]
+                },
+            )
+            too_many = app_client.post(
+                "/chat",
+                json={
+                    "messages": [{"role": "user", "content": "hi"}]
+                    * (MAX_CHAT_MESSAGES + 1)
+                },
+            )
+
+        assert too_long.status_code == 422
+        assert too_many.status_code == 422
+        mock_llm.assert_not_called()
+        # FastAPI's default 422 echoes the rejected input back; encoding a huge
+        # list for that took seconds on the event loop.
+        for response in (too_long, too_many):
+            assert all("input" not in err for err in response.json()["detail"])
+            assert len(response.content) < 1_000
+
+    def test_chat_refuses_an_oversized_body_before_parsing(self, app_client):
+        """The caps only apply after parsing; the body limit bounds the parse."""
+        from custom_types import MAX_CHAT_BODY_BYTES
+
+        with patch("main.LlmClient") as mock_llm:
+            response = app_client.post(
+                "/chat",
+                content=b" " * (MAX_CHAT_BODY_BYTES + 1),
+                headers={"content-type": "application/json"},
+            )
+
+        assert response.status_code == 413
+        mock_llm.assert_not_called()
+
     def test_chat_empty_messages(self, app_client):
         """Test /chat with empty messages array."""
         with patch("main.LlmClient") as mock_llm:

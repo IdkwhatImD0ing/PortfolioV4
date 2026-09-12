@@ -1,5 +1,39 @@
 import os
 
+from fastapi import HTTPException
+
+
+class BodySizeLimit:
+    """Refuse a request body past `max_bytes` on the given paths with a 413.
+
+    Counts bytes as they arrive instead of trusting Content-Length, which a
+    chunked request doesn't send. FastAPI re-raises an HTTPException thrown
+    while it reads the body, so the caller gets a 413 before any parsing.
+    """
+
+    def __init__(self, app, max_bytes: int, paths: tuple[str, ...]):
+        self.app = app
+        self.max_bytes = max_bytes
+        self.paths = paths
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["path"] not in self.paths:
+            await self.app(scope, receive, send)
+            return
+
+        received = 0
+
+        async def limited_receive():
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_bytes:
+                    raise HTTPException(status_code=413, detail="Request body too large")
+            return message
+
+        await self.app(scope, limited_receive, send)
+
 
 # Validate required environment variables at startup
 def validate_environment_variables():
