@@ -92,6 +92,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances "$MAX_INSTANCES" \
   --timeout "${TIMEOUT}s" \
   --execution-environment gen2 \
+  --cpu-boost \
   --clear-env-vars \
   --set-secrets "$SECRETS" \
   $AUTH_FLAG
@@ -99,6 +100,10 @@ gcloud run deploy "$SERVICE_NAME" \
 echo "✅ Deployed. Default URL:"
 gcloud run services describe "$SERVICE_NAME" --region "$REGION" --format='value(status.url)'
 
+# Also hardcoded in the frontend (client/src/lib/backend.ts PROD_API_URL,
+# overridable with NEXT_PUBLIC_API_URL) and in the Retell agent's
+# llm_websocket_url. Change all three together: the frontend's warm-up ping
+# never reads its response, so a stale host there fails silently.
 CUSTOM_DOMAIN="portfolio-ws.art3m1s.me"
 
 # Check if mapping exists (domain-mappings requires `beta` in newer gcloud CLI versions)

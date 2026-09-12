@@ -1,3 +1,4 @@
+import dataclasses
 import os
 import json
 import traceback
@@ -28,6 +29,7 @@ from custom_types import (
 from prompts import (
     begin_sentence,
     guardrail_refusal_message,
+    reminder_checkin_message,
     reminder_prompt,
     text_system_prompt,
     voice_system_prompt,
@@ -154,6 +156,45 @@ class LlmClient:
             prompt.append({"role": "user", "content": reminder_prompt})
         return prompt
 
+    def _agent_for(self, request: ResponseRequiredRequest) -> Agent:
+        """The agent for this request. Every request is screened.
+
+        On a visitor turn the guardrail runs beside the model, so nobody waits on
+        the judge. A reminder has nobody waiting, so its guardrails run before
+        the model instead. A reminder re-judges the visitor's last turn, and if
+        that trips, nothing the model would have said streams out first.
+
+        Cloned per reminder rather than stored, so it can't drift from
+        self.agent, and /chat never builds one.
+        """
+        if request.interaction_type != "reminder_required":
+            return self.agent
+        return self.agent.clone(
+            input_guardrails=[
+                dataclasses.replace(g, run_in_parallel=False)
+                for g in self.agent.input_guardrails
+            ]
+        )
+
+    def _refusal_for(self, request: ResponseRequiredRequest) -> str:
+        """What the visitor hears when the guardrail trips on this request.
+
+        A reminder adds no visitor input, so a trip there is the judge re-judging
+        their previous turn. If the agent already replied to it, repeating the
+        refusal would answer something they didn't just say, so they get a
+        check-in. If it never replied (an agent error sends an empty reply), this
+        is their first answer, so it's the refusal. Keyed on Retell's
+        interaction_type, which /chat can't set; the transcript only picks
+        between two fixed lines.
+        """
+        if request.interaction_type == "reminder_required":
+            last = next(
+                (u for u in reversed(request.transcript) if u.content.strip()), None
+            )
+            if last is not None and last.role == "agent":
+                return reminder_checkin_message
+        return guardrail_refusal_message
+
     def prepare_functions(self) -> List[Any]:
         """Return tool functions available to the agent."""
         return [
@@ -238,6 +279,7 @@ class LlmClient:
         # conversation can be pulled up by sessionId. The Agents SDK's own
         # trace (and the OpenAI dashboard export) rides inside it.
         refused = failed = False
+        refusal_text = guardrail_refusal_message
         with traced_run(
             "portfolio_voice_response",
             session_id=self.call_id,
@@ -265,9 +307,10 @@ class LlmClient:
             tool_calls: List[dict] = []
             refusal_parts: List[str] = []
             try:
-                # Runner.run_streamed returns a RunResultStreaming object synchronously
-                # The guardrails will be checked automatically before the agent runs
-                result = Runner.run_streamed(self.agent, messages)
+                # Runner.run_streamed returns a RunResultStreaming object synchronously.
+                # The input guardrail runs beside the model on visitor turns and
+                # before it on reminders; see _agent_for.
+                result = Runner.run_streamed(self._agent_for(request), messages)
 
                 async for event in result.stream_events():
                     if isinstance(event, RawResponsesStreamEvent):
@@ -326,7 +369,8 @@ class LlmClient:
                 # Check if it's a guardrail tripwire trigger
                 if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
                     self._log("Guardrail triggered: Request blocked due to security check")
-                    run.mark_guardrail_blocked(output={"text": guardrail_refusal_message})
+                    refusal_text = self._refusal_for(request)
+                    run.mark_guardrail_blocked(output={"text": refusal_text})
                     refused = True
                 else:
                     print(
@@ -343,7 +387,7 @@ class LlmClient:
         if refused:
             yield ResponseResponse(
                 response_id=response_id,
-                content=guardrail_refusal_message,
+                content=refusal_text,
                 content_complete=True,
                 end_call=False,
             )

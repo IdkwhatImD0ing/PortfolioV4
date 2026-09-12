@@ -1,28 +1,19 @@
 /**
  * Resolves which Retell agent the browser should dial.
  *
- * In local dev you may run the FastAPI backend locally, exposed through the
- * Makefile's ngrok tunnel (https://conversational.ngrok.app). A *dev* Retell
- * agent points its LLM websocket at that tunnel; the *prod* agent points at
- * Cloud Run. So during dev we probe the dev backend's `/ping`: if it's
- * reachable, use the dev agent so calls hit your local server; otherwise fall
- * back to the production agent.
- *
- * The backend allows `http://localhost:3000` via CORS, so a normal GET to
- * `/ping` returns 200 with the CORS header when the tunnel is live. When the
- * tunnel has no running agent, ngrok answers with its own error page (no
- * matching CORS header), the browser blocks it, and `fetch` rejects — which we
- * treat as "dev backend down". That lets us tell a live backend apart from a
- * dormant tunnel without a false positive.
+ * A *dev* Retell agent points its LLM websocket at the local backend's ngrok
+ * tunnel; the *prod* agent points at Cloud Run. So during dev we probe the
+ * dev backend (see `backend.ts` for how the probe tells a live tunnel from a
+ * dormant one): if it's reachable, use the dev agent so calls hit your local
+ * server; otherwise fall back to the production agent.
  */
 
-/** Dev backend base URL, probed at `/ping`. Defaults to the Makefile tunnel. */
-const DEV_API_URL =
-  process.env.NEXT_PUBLIC_DEV_API_URL ?? "https://conversational.ngrok.app";
+import { DEV_API_URL, isDevBackendUp } from "./backend";
 
 /** Production Retell agent (public id, safe to ship). Env wins; the literal is
- *  a fallback so prod works even if the env var is missing. */
-const PROD_AGENT_ID =
+ *  a fallback so prod works even if the env var is missing. Its LLM websocket
+ *  points at the Cloud Run backend. */
+export const PROD_AGENT_ID =
   process.env.NEXT_PUBLIC_RETELL_AGENT_ID ?? "agent_c5ae64152c9091e17243c9bdfc";
 
 /** Dev Retell agent wired to the local backend. Unset → no dev agent, always
@@ -46,25 +37,12 @@ export function chooseAgentId(opts: {
 }
 
 /**
- * Probe the dev backend's `/ping`. Resolves true only when the backend itself
- * answers ok (see module note on why a dormant ngrok tunnel reads as false).
- * Never throws — times out to false after `timeoutMs`.
+ * Whether this build dials a local dev backend when one answers: a dev build
+ * with a dev agent configured. Production builds never do. `warmBackend` reads
+ * this so a dev session doesn't wake production for calls bound for the tunnel.
  */
-async function isDevBackendUp(timeoutMs = 1200): Promise<boolean> {
-  if (typeof fetch === "undefined") return false;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${DEV_API_URL}/ping`, {
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    return res.ok;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
+export function prefersDevBackend(): boolean {
+  return process.env.NODE_ENV !== "production" && Boolean(DEV_AGENT_ID);
 }
 
 /**
@@ -74,7 +52,7 @@ async function isDevBackendUp(timeoutMs = 1200): Promise<boolean> {
  */
 export async function resolveAgentId(): Promise<string | undefined> {
   const isDev = process.env.NODE_ENV !== "production";
-  const devReachable = isDev && DEV_AGENT_ID ? await isDevBackendUp() : false;
+  const devReachable = prefersDevBackend() ? await isDevBackendUp() : false;
   if (devReachable) {
     console.info(
       `[retell] dev backend reachable at ${DEV_API_URL} — using dev agent.`,

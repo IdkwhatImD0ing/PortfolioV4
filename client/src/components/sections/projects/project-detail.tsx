@@ -23,9 +23,13 @@ export function ProjectDetail({
   // Move focus into the dialog, and put it back where it came from on close.
   // Without this the cards stay focused behind the scrim: Tab walks them one by
   // one — invisible under an 18px backdrop blur — before ever reaching Close.
+  // The exception is a field marked `data-keeps-focus` (the voice panel's chat
+  // box, which floats above this scrim): the agent opening a project mid-reply
+  // must not swallow the visitor's next keystrokes.
   useEffect(() => {
     const opener = document.activeElement;
-    closeRef.current?.focus();
+    const keepFocus = opener instanceof HTMLElement && opener.hasAttribute("data-keeps-focus");
+    if (!keepFocus) closeRef.current?.focus();
     return () => {
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };

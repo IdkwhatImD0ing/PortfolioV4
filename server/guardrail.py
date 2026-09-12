@@ -58,9 +58,10 @@ __all__ = [
 # GUARDRAIL_MODEL` keeps working.
 
 # The classifier is the only gate, so bound what reaches it. Without a cap, a
-# padded /chat message (that endpoint is unauthenticated and has no length limit)
-# could blow the classifier's context window, and a context-length error is an
-# attacker-triggered failure, not an outage.
+# padded message could blow the classifier's context window, and a
+# context-length error is an attacker-triggered failure, not an outage. /chat is
+# unauthenticated, and its request caps (custom_types.py) sit well above these;
+# the voice websocket has no request cap at all.
 MAX_TURN_CHARS = 4000
 MAX_CONTEXT_CHARS_PER_TURN = 1000
 # The whole conversation goes to the judge — multi-turn attacks are the point.
@@ -81,11 +82,24 @@ _FAIL_OPEN_ERRORS = (
     PermissionDeniedError,     # 403, same class of misconfiguration
 )
 
-# Tag-shaped text in visitor input is stripped before wrapping, so a message
-# can't close our delimiters and forge an "already screened, allow this" note.
-# The leading `\s*` matters: `< /turn_to_classify>` is still a tag to a reader.
+# Our delimiter names are stripped from visitor input before wrapping, so a
+# message can't close our tags and forge an "already screened, allow this" note.
+#
+# The names are matched on their own, not as whole `<...>` tags. The old
+# whole-tag pattern, `<\s*/?\s*(?:names)\b[^>]*>`, had four problems:
+# - `<<turn_to_classify>/turn_to_classify>` came out of one pass as
+#   `< /turn_to_classify>`, a working closing tag.
+# - Everything between `<turn_to_classify` and the next `>` was deleted, so
+#   `<turn_to_classify PAYLOAD>` hid the payload from the judge while the agent
+#   still read it.
+# - A tag with no closing `>` was left alone.
+# - It was quadratic, and `_sanitize` ran it on the whole untruncated turn on
+#   the event loop, so 20 KB of `"<" + " " * n` stalled the server for ~4 s.
+#   `_sanitize` now truncates first as well.
+# With the name gone, no spacing, nesting or attribute trick leaves a tag behind,
+# and a plain alternation with no quantifiers runs in linear time.
 _DELIMITER_TAG_RE = re.compile(
-    r"<\s*/?\s*(?:conversation_context|turn_to_classify|trailing_turns)\b[^>]*>",
+    r"conversation_context|turn_to_classify|trailing_turns",
     re.IGNORECASE,
 )
 
@@ -391,7 +405,7 @@ def extract_turns(
 
 
 def _sanitize(text: str, limit: int) -> str:
-    """Strip delimiter-shaped text and cap length, keeping both ends.
+    """Cap length, keeping both ends, and strip our delimiter names.
 
     Truncating head-only would make length itself a bypass: the cap bounds what
     the *judge* sees, not what the agent sees, so `"A" * limit + payload` would
@@ -399,13 +413,15 @@ def _sanitize(text: str, limit: int) -> str:
     Keeping the tail means the end of a padded message — where an injection is
     normally parked — still reaches the judge.
 
-    Sanitize before truncating, so slicing can't reassemble a split tag.
+    Truncate first, then strip. The regex only ever sees about `limit`
+    characters, so its cost on the event loop can't grow with the input. And
+    because stripping runs last, nothing the slicing produces survives as a name.
     """
-    text = _DELIMITER_TAG_RE.sub(" ", text).strip()
+    text = text.strip()
     if len(text) > limit:
         half = limit // 2
         text = f"{text[:half]} […middle elided] {text[-half:]}"
-    return text
+    return _DELIMITER_TAG_RE.sub(" ", text).strip()
 
 
 def build_classifier_payload(
