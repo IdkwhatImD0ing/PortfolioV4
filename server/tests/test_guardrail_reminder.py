@@ -286,7 +286,13 @@ class TestVisitorTurnsStayScreened:
         ]
 
         chunks = [chunk async for chunk in client.draft_text_response(messages)]
-        text = "".join(c.content or "" for c in chunks if c.type == "content")
+        # What the chat panel ends up showing: `replace` swaps the whole reply.
+        text = ""
+        for c in chunks:
+            if c.type == "replace":
+                text = c.content or ""
+            elif c.type == "content":
+                text += c.content or ""
 
         assert BLOCKED_ASK in _judged_turn(blocking_judge)
         assert guardrail_refusal_message in text

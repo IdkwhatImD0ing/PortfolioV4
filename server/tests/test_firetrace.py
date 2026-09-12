@@ -1186,31 +1186,50 @@ class TestProcessor:
         assert sent.bodies == []
 
 
+class FakeRun:
+    """Stands in for the SDK's RunResultStreaming: plays `events` in order."""
+
+    def __init__(self, events):
+        self._events = events
+        self.is_complete = False
+
+    def cancel(self, mode="immediate"):
+        self.is_complete = True
+
+    async def stream_events(self):
+        for event in self._events:
+            yield event
+        self.is_complete = True
+
+
+def _judge(runner, block: bool):
+    """Patch the classifier the way main's guardrail tests do."""
+    from unittest.mock import AsyncMock
+
+    from tests.test_guardrail import _classifier_result
+
+    runner.run = AsyncMock(return_value=_classifier_result(block))
+
+
 class TestCallSites:
     """The wiring in llm.py, summary.py, guardrail.py and project_search.py."""
 
     @pytest.mark.asyncio
-    async def test_draft_response_records_request_and_result(self, key, only_firetrace, sent, mock_runner=None):
-        from unittest.mock import MagicMock
+    async def test_draft_response_records_request_and_result(self, key, only_firetrace, sent):
+        from agents import RawResponsesStreamEvent
 
         from custom_types import ResponseRequiredRequest, Utterance
         from llm import LlmClient
 
-        with patch("llm.Agent"), patch("llm.Runner") as runner:
+        with patch("llm.Agent"), patch("llm.Runner") as runner, patch("guardrail.Runner") as judge:
+            _judge(judge, block=False)
             client = LlmClient("call_xyz", mode="voice")
             client.call_details = {"agent_id": "agent_1", "call_type": "web_call", "metadata": {"platform": "web", "user_id": "u-7"}}
             delta = SimpleNamespace(type="response.output_text.delta", delta="Hi there")
             refusal = SimpleNamespace(type="response.refusal.delta", delta="nope")
-
-            async def events():
-                from agents import RawResponsesStreamEvent
-
-                yield RawResponsesStreamEvent(data=delta)
-                yield RawResponsesStreamEvent(data=refusal)
-
-            stream = MagicMock()
-            stream.stream_events = lambda: events()
-            runner.run_streamed.return_value = stream
+            runner.run_streamed.return_value = FakeRun(
+                [RawResponsesStreamEvent(data=delta), RawResponsesStreamEvent(data=refusal)]
+            )
             request = ResponseRequiredRequest(
                 interaction_type="response_required",
                 response_id=3,
@@ -1234,30 +1253,37 @@ class TestCallSites:
 
     @pytest.mark.asyncio
     async def test_draft_text_response_refusal(self, key, only_firetrace, sent):
+        from agents import RawResponsesStreamEvent
+
         from llm import LlmClient
         from prompts import guardrail_refusal_message
 
-        class InputGuardrailTripwireTriggered(Exception):
-            pass
-
-        with patch("llm.Agent"), patch("llm.Runner") as runner:
-            runner.run_streamed.side_effect = InputGuardrailTripwireTriggered("nope")
+        with patch("llm.Agent"), patch("llm.Runner") as runner, patch("guardrail.Runner") as judge:
+            _judge(judge, block=True)
+            delta = SimpleNamespace(type="response.output_text.delta", delta="Sure, here")
+            runner.run_streamed.return_value = FakeRun([RawResponsesStreamEvent(data=delta)])
             client = LlmClient("text-1", mode="text")
             out = [c async for c in client.draft_text_response([{"role": "user", "content": "do my homework"}])]
         flush()
         assert out[-1].type == "done"
+        assert out[-2].type == "replace" and out[-2].content == guardrail_refusal_message
         trace = sent.bodies[0]["trace"]
         assert trace["name"] == "portfolio_text_response"
         assert trace["status"] == "ok"
         assert "guardrail-blocked" in trace["tags"]
         assert trace["output"] == {"text": guardrail_refusal_message}
         assert trace["input"] == {"messages": [{"role": "user", "content": "do my homework"}]}
+        # The judge's own span is part of the trace, with its verdict.
+        guard = next(s for s in trace["spans"] if s["name"].startswith("guardrail:"))
+        assert guard["status"] == "ok" and guard["attributes"]["guardrail.triggered"] is True
+        assert guard["attributes"]["guardrail.rule"] == "Q4"
 
     @pytest.mark.asyncio
     async def test_draft_text_response_error(self, key, only_firetrace, sent):
         from llm import LlmClient
 
-        with patch("llm.Agent"), patch("llm.Runner") as runner:
+        with patch("llm.Agent"), patch("llm.Runner") as runner, patch("guardrail.Runner") as judge:
+            _judge(judge, block=False)
             runner.run_streamed.side_effect = RuntimeError("openai down")
             client = LlmClient("text-2", mode="text")
             out = [c async for c in client.draft_text_response([{"role": "user", "content": "hi"}])]

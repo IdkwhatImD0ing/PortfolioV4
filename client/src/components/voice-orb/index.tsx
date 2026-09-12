@@ -21,7 +21,12 @@ import {
 import { mergeTranscript, type TranscriptEntry } from "@/lib/transcript";
 import { PROD_AGENT_ID, resolveAgentId } from "@/lib/retell-agent";
 import { waitForBackend, warmBackend } from "@/lib/backend-warmup";
-import { createSseParser, parseChatMarkdown, toChatMessages } from "@/lib/text-chat";
+import {
+  applyReplyChunk,
+  createSseParser,
+  parseChatMarkdown,
+  toChatMessages,
+} from "@/lib/text-chat";
 import { cn } from "@/lib/utils";
 import type { RetellAIResponse } from "@/types/api";
 import { SUGGESTIONS, cmdBtn, type Suggestion } from "./suggestions";
@@ -336,7 +341,8 @@ export function VoiceOrb() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: toChatMessages(next) }),
+          // supports_replace: this page handles `replace` (see the loop below).
+          body: JSON.stringify({ messages: toChatMessages(next), supports_replace: true }),
           signal: controller.signal,
         });
         if (!res.ok || !res.body) throw new Error(`Server error (${res.status})`);
@@ -350,8 +356,9 @@ export function VoiceOrb() {
           if (done) break;
           armIdleTimer();
           for (const chunk of parser.push(decoder.decode(value, { stream: true }))) {
-            if (chunk.type === "content" && chunk.content) {
-              reply += chunk.content;
+            if ((chunk.type === "content" && chunk.content) || chunk.type === "replace") {
+              // `replace` swaps out the whole reply rather than adding to it.
+              reply = applyReplyChunk(reply, chunk);
               setStatus(null);
               commit(reply);
             } else if (chunk.type === "status" && chunk.content) {

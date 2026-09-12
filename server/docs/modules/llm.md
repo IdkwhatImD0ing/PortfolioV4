@@ -4,7 +4,7 @@ Documentation for the LLM client class that handles voice responses.
 
 ## File Location
 
-`llm.py` (lines 305-550)
+`llm.py` (`LlmClient`, plus the `screened_stream` helper that runs the guardrail)
 
 ## Purpose
 
@@ -27,12 +27,12 @@ class LlmClient:
         system_prompt = voice_system_prompt if mode == "voice" else text_system_prompt
         reasoning_effort = "none"
 
+        # No input_guardrails: screened_stream runs the guardrail beside the run.
         self.agent = Agent(
             name="portfolio_agent",
             instructions=system_prompt,
             model=AGENT_MODEL,  # "gpt-5.6-terra"
             tools=self.prepare_functions(),
-            input_guardrails=[security_guardrail],
             model_settings=ModelSettings(
                 verbosity="low",
                 reasoning=Reasoning(
@@ -103,27 +103,37 @@ async def draft_response(self, request: ResponseRequiredRequest):
     prompt = self.prepare_prompt(request)
     messages = [m for m in prompt if m.get("role") != "system"]
     
-    result = Runner.run_streamed(self._agent_for(request), messages)
-    
-    async for event in result.stream_events():
-        if isinstance(event, RawResponsesStreamEvent):
-            # Handle text deltas
-            yield ResponseResponse(content=delta, ...)
-            
-        elif isinstance(event, RunItemStreamEvent):
-            if event.name == "tool_called":
-                # Handle tool invocation
-                yield ToolCallInvocationResponse(...)
-                yield MetadataResponse(...)  # For navigation
-                
-            elif event.name == "tool_output":
-                yield ToolCallResultResponse(...)
-    
+    # The agent streams at once; the guardrail judges the turn beside it
+    # (before it on an idle reminder). The real code enters this and the
+    # trace through one AsyncExitStack.
+    async with screened_stream(
+        self.agent, messages, screen_first=self._screens_first(request)
+    ) as events:
+        async for event in events:
+            if isinstance(event, GuardrailTripped):
+                # Close open tool calls, stop mid-answer and apologise
+                # (see Error Handling below)
+                yield ResponseResponse(content=guardrail_interruption_message, content_complete=True)
+                return
+
+            if isinstance(event, RawResponsesStreamEvent):
+                # Handle text deltas
+                yield ResponseResponse(content=delta, ...)
+
+            elif isinstance(event, RunItemStreamEvent):
+                if event.name == "tool_called":
+                    # Handle tool invocation
+                    yield ToolCallInvocationResponse(...)
+                    yield MetadataResponse(...)  # For navigation
+
+                elif event.name == "tool_output":
+                    yield ToolCallResultResponse(...)
+
     yield ResponseResponse(content_complete=True)
 ```
 
-On an idle reminder (`reminder_required`), `_agent_for` returns a copy of the agent whose
-input guardrails run before the model instead of beside it. If the guardrail trips and the
+On an idle reminder (`reminder_required`), `_screens_first` is true, so `screened_stream`
+judges the turn before the model starts instead of beside it. If the guardrail trips and the
 agent already replied to the turn being re-judged, `_refusal_for` says
 `reminder_checkin_message` instead of repeating the refusal. See
 [guardrail.md](guardrail.md#what-the-classifier-receives).
@@ -209,20 +219,32 @@ if name == "display_education_page":
 
 ### Guardrail Trigger
 
+`screened_stream(agent, messages)` runs the agent's streamed run and the input
+guardrail side by side. When the guardrail trips it cancels the run and yields a
+`GuardrailTripped` marker as its last item. Each path handles that marker:
+
 ```python
-if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
-    yield ResponseResponse(
-        content=self._refusal_for(request),  # draft_text_response: guardrail_refusal_message
-        content_complete=True,
-    )
-    return
+# Text chat: withdraw whatever streamed, show the refusal instead.
+yield TextChatStreamChunk(type="replace", content=guardrail_refusal_message)
+
+# Voice: speech can't be withdrawn, so stop and apologise.
+yield ResponseResponse(
+    content=guardrail_interruption_message if spoke else self._refusal_for(request),
+    content_complete=True,
+)
 ```
 
-The text lives in `prompts.guardrail_refusal_message` so both the voice and text
-paths share one wording. The one exception is a voice reminder that trips after the
-agent already replied, which says `prompts.reminder_checkin_message` instead. It deliberately names the hobbies — the old copy listed
-only "background, education, projects, and professional experience", which told
-visitors that music and cooking were off-limits (issue #10).
+`screened_stream` also waits for the verdict before it ends, so `done` (text) and
+the closing `content_complete=True` (voice) never go out while a turn is still
+being judged. See [guardrail.md](guardrail.md#how-a-trip-reaches-the-visitor)
+for why this replaced the SDK's `input_guardrails` hook.
+
+`_refusal_for` gives `prompts.guardrail_refusal_message` in every case but one: a
+voice reminder that trips after the agent already replied says
+`prompts.reminder_checkin_message` instead. All three messages live in `prompts.py`
+and deliberately name the hobbies — the old copy listed only "background,
+education, projects, and professional experience", which told visitors that music
+and cooking were off-limits (issue #10).
 
 ### General Errors
 

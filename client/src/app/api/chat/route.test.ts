@@ -67,6 +67,18 @@ describe("POST /api/chat", () => {
     expect(JSON.parse(init.body as string)).toEqual({ messages: MESSAGES });
   });
 
+  it("forwards supports_replace only when the page sent it as true", async () => {
+    const fetchMock = mockUpstream(200, SSE);
+
+    await POST(postRequest({ messages: MESSAGES, supports_replace: true }));
+    await POST(postRequest({ messages: MESSAGES, supports_replace: "yes" }));
+
+    const sent = fetchMock.mock.calls.map(
+      (call) => JSON.parse((call as unknown as [string, RequestInit])[1].body as string),
+    );
+    expect(sent).toEqual([{ messages: MESSAGES, supports_replace: true }, { messages: MESSAGES }]);
+  });
+
   it("rejects malformed JSON without calling the backend", async () => {
     const fetchMock = mockUpstream(200, SSE);
 
