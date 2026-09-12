@@ -1,5 +1,5 @@
 from typing import Any, List, Optional, Literal, Union, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # Retell -> Your Server Events
@@ -113,5 +113,17 @@ class TextChatStreamChunk(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
+# /summary is unauthenticated and reachable straight at the Cloud Run URL, and
+# each request sends the whole transcript to the model in one call, so bound how
+# many messages it takes. It was built to summarise a voice call once the call
+# ends. Retell ends a call after an hour by default, and a voice reply is
+# prompted to stay under 200 words, so a question and its answer take about 30
+# seconds: roughly 240 messages in a full hour. 500 covers that twice over, or a
+# brisk hour at 15 seconds an exchange. No client calls /summary since the
+# legacy client was retired (client/docs/legacy-client-retirement.md), so there
+# is no client-side number to match. Oversized requests get a 422.
+MAX_SUMMARY_MESSAGES = 500
+
+
 class SummaryRequest(BaseModel):
-    transcript: List[TextChatMessage]
+    transcript: List[TextChatMessage] = Field(max_length=MAX_SUMMARY_MESSAGES)

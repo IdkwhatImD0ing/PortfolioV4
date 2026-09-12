@@ -16,6 +16,8 @@ from custom_types import (
     TextChatRequest,
     TextChatStreamChunk,
     ConfigResponse,
+    MAX_SUMMARY_MESSAGES,
+    SummaryRequest,
 )
 
 
@@ -220,6 +222,23 @@ class TestTextChatTypes:
         chunk = TextChatStreamChunk(type="error", content="Something went wrong")
         assert chunk.type == "error"
         assert chunk.content == "Something went wrong"
+
+
+class TestSummaryRequest:
+    """Tests for the /summary request body."""
+
+    def test_summary_cap_is_inclusive(self):
+        request = SummaryRequest(
+            transcript=[{"role": "user", "content": "hi"}] * MAX_SUMMARY_MESSAGES
+        )
+        assert len(request.transcript) == MAX_SUMMARY_MESSAGES
+
+    def test_summary_rejects_too_many_messages(self):
+        with pytest.raises(ValidationError):
+            SummaryRequest(
+                transcript=[{"role": "user", "content": "hi"}]
+                * (MAX_SUMMARY_MESSAGES + 1)
+            )
 
 
 class TestConfigResponse:
