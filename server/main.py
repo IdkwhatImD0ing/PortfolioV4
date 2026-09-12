@@ -10,11 +10,14 @@ from dotenv import load_dotenv
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from concurrent.futures import TimeoutError as ConnectionTimeoutError
 from retell import Retell
 from custom_types import (
+    MAX_CHAT_BODY_BYTES,
     ConfigResponse,
     ResponseRequiredRequest,
     TextChatRequest,
@@ -23,7 +26,7 @@ from custom_types import (
 from typing import Optional, List
 from socket_manager import manager
 from llm import LlmClient, generate_summary
-from app_helpers import validate_environment_variables
+from app_helpers import BodySizeLimit, validate_environment_variables
 
 # Re-export previously module-level public names so existing
 # `from main import validate_environment_variables` imports keep working.
@@ -47,6 +50,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(BodySizeLimit, max_bytes=MAX_CHAT_BODY_BYTES, paths=("/chat",))
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_without_input(request: Request, exc: RequestValidationError):
+    """FastAPI's default 422, minus the `input` it echoes back for each error.
+
+    For an oversized /chat body that input is the whole rejected list:
+    encoding a million tiny messages took ~2 s of event-loop time and came back
+    as a 29 MB response.
+    """
+    errors = [{k: v for k, v in err.items() if k != "input"} for err in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
+
 
 retell = Retell(api_key=os.getenv("RETELL_API_KEY"))
 
@@ -72,7 +89,9 @@ async def chat_endpoint(request: TextChatRequest):
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
         
         try:
-            async for chunk in llm_client.draft_text_response(messages):
+            async for chunk in llm_client.draft_text_response(
+                messages, supports_replace=request.supports_replace
+            ):
                 # Format as SSE
                 data = json.dumps(chunk.model_dump())
                 yield f"data: {data}\n\n"

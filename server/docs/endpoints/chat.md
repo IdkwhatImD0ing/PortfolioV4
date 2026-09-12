@@ -15,6 +15,7 @@ Provides a text-based alternative to voice chat, allowing users who cannot use v
 ```typescript
 interface TextChatRequest {
   messages: TextChatMessage[];
+  supports_replace?: boolean; // true if the client handles `replace` chunks (default false)
 }
 
 interface TextChatMessage {
@@ -22,6 +23,20 @@ interface TextChatMessage {
   content: string;
 }
 ```
+
+### Limits
+
+At most 50 messages, each at most 10,000 characters (`MAX_CHAT_MESSAGES` and
+`MAX_CHAT_MESSAGE_CHARS` in `custom_types.py`). A larger request gets a 422 and never
+reaches the guardrail or the model. A body over 4 MiB (`MAX_CHAT_BODY_BYTES`) gets a 413
+before it is parsed.
+
+The client sends at most 20 messages and trims each to 10,000 characters, keeping both ends
+(`MAX_MESSAGE_CHARS` in `client/src/lib/text-chat.ts`). That constant must equal
+`MAX_CHAT_MESSAGE_CHARS`, and `text-chat.test.ts` checks that it does.
+
+`POST /summary` takes the same message type, so the 10,000-character cap applies to each of
+its transcript messages too.
 
 ### Example Request
 
@@ -41,8 +56,8 @@ Returns a Server-Sent Events stream with JSON chunks:
 
 ```typescript
 interface TextChatStreamChunk {
-  type: "content" | "metadata" | "done" | "error";
-  content?: string;      // Text content (for type: "content" or "error")
+  type: "content" | "metadata" | "done" | "error" | "status" | "replace";
+  content?: string;      // Text (for "content", "replace", "status" or "error")
   metadata?: {           // Navigation metadata (for type: "metadata")
     type: "navigation";
     page: "landing" | "personal" | "education" | "project";
@@ -53,10 +68,17 @@ interface TextChatStreamChunk {
 
 ### Stream Events
 
-1. **content** - Text tokens streamed incrementally
-2. **metadata** - Navigation commands from tool calls
-3. **done** - Signals end of response
-4. **error** - Error message
+1. **content** - Text tokens streamed incrementally. Append each to the reply.
+2. **replace** - Throw away every `content` chunk so far and show this chunk's
+   `content` instead. Sent when the guardrail blocks the turn, and only to a
+   request that set `supports_replace: true`. `content` chunks may follow it and
+   append as usual (none do today).
+3. **status** - What the agent is doing ("Thinking...", "Searching projects...").
+4. **metadata** - Navigation commands from tool calls
+5. **done** - Signals end of response. Never sent before the guardrail's verdict
+   is in, so a reply marked done will not be replaced afterwards. When a short
+   answer finishes first, `done` waits for the verdict (1-3 s seen live, 5 s cap).
+6. **error** - Error message
 
 ### Example SSE Stream
 
@@ -71,6 +93,30 @@ data: {"type": "content", "content": "Let me show you one."}
 
 data: {"type": "done"}
 ```
+
+### When the guardrail blocks a turn
+
+The answer starts streaming before the guardrail has decided. If it then trips,
+the agent run is cancelled and a `replace` withdraws what already went out:
+
+```
+data: {"type": "status", "content": "Thinking..."}
+
+data: {"type": "content", "content": "Dear hiring"}
+
+data: {"type": "content", "content": " manager, I am"}
+
+data: {"type": "replace", "content": "Yeah, that one's outside what I do here. ..."}
+
+data: {"type": "done"}
+```
+
+The withdrawn chunks did reach the browser. A client that ignored `replace`
+would show the answer with no refusal at all, which is why it is opt-in: without
+`supports_replace: true` the refusal is appended as a `content` chunk instead,
+after a blank line. The Next.js proxy (`client/src/app/api/chat/route.ts`) passes
+the flag through only when the page sent it.
+See [../modules/guardrail.md](../modules/guardrail.md#how-a-trip-reaches-the-visitor).
 
 ## Frontend Integration
 
@@ -97,6 +143,8 @@ while (true) {
       
       if (data.type === "content") {
         // Append to response
+      } else if (data.type === "replace") {
+        // Swap the whole response for data.content
       } else if (data.type === "metadata") {
         // Handle navigation
       }

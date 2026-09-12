@@ -160,7 +160,7 @@ Deeper docs: [`client/docs`](./client/docs) · [`server/docs`](./server/docs) ·
 
 - **Voice as a first-class router.** The agent emits `navigate_to(page)` tool calls; the client subscribes to Retell metadata events and swaps pages — no buttons required.
 - **RAG over me.** Every project + experience is embedded into Pinecone. Ask *"what did you build for emergency dispatch?"* — it pulls **DispatchAI** by meaning, not keywords.
-- **Guardrails that actually run.** A small classifier agent checks each user turn for prompt-injection / off-topic before the main LLM sees it.
+- **Guardrails that actually run.** A small classifier agent checks each user turn for prompt-injection / off-topic while the main LLM starts answering. If it trips, the answer is cancelled and swapped for a refusal, so legit questions get their first word with no extra wait.
 - **Streaming end-to-end.** Tokens stream from OpenAI → FastAPI → Retell → audio in <600 ms.
 - **JSON-LD + `/llms.txt`** so search engines *and* LLMs both index the site cleanly.
 - **Edge-grade UX.** Speed Insights, Vercel Analytics, theme-color matched to the dark hero.

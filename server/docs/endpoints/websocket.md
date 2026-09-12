@@ -127,7 +127,12 @@ if request.response_id < response_id:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `OBFUSCATED_WS_PATH` | `ws-default` | Security through obscurity |
+| `OBFUSCATED_WS_PATH` | `ws-default` | Secret path segment; the only thing guarding this route |
+
+There is no signature or `call_id` check on this socket, so treat the path like a key.
+Startup logs say whether `OBFUSCATED_WS_PATH` is set but never print its value. If it is
+unset, startup prints a warning, because the route falls back to `/ws-default/{call_id}`,
+which anyone who reads this repo knows. Production sets it from Secret Manager in `deploy.sh`.
 
 ## Error Handling
 

@@ -26,7 +26,6 @@ import json
 import os
 import sys
 import time
-from typing import List
 
 from dotenv import load_dotenv
 
@@ -63,8 +62,9 @@ def kv(key: str, value, color=WHITE):
 # ── Direct Pinecone search ───────────────────────────────────────────────────
 async def direct_search(query: str, top_k: int):
     """Call Pinecone directly, bypassing the agent, to see raw results."""
-    from project_search import search_projects, get_embedding
     from pinecone import PineconeAsyncio
+
+    from project_search import get_embedding, search_projects
 
     header(f"Direct Pinecone Search: \"{query}\" (top_k={top_k})")
 
@@ -83,7 +83,7 @@ async def direct_search(query: str, top_k: int):
     t0 = time.perf_counter()
     embedding = await get_embedding(query)
     elapsed = time.perf_counter() - t0
-    print(f"  Model: text-embedding-3-large")
+    print("  Model: text-embedding-3-large")
     print(f"  Dimensions: {len(embedding)}")
     print(f"  Time: {elapsed:.3f}s")
 
@@ -154,12 +154,15 @@ async def list_all_vectors():
 
 
 # ── Agent conversation debug ─────────────────────────────────────────────────
-async def run_agent_debug(user_messages: List[str], mode: str = "text"):
+async def run_agent_debug(user_messages: list[str], mode: str = "text"):
     """Send messages through the full agent pipeline and log everything."""
-    from agents import RawResponsesStreamEvent, RunItemStreamEvent, Runner, trace
-    from llm import LlmClient
+    from contextlib import AsyncExitStack
+
+    from agents import RawResponsesStreamEvent, RunItemStreamEvent, trace
+
+    from llm import GuardrailTripped, LlmClient, screened_stream
     from model_config import AGENT_MODEL
-    from prompts import voice_turn
+    from prompts import guardrail_refusal_message, voice_turn
 
     header("Agent Debug Session")
     kv("Mode", mode)
@@ -168,7 +171,7 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
     for i, msg in enumerate(user_messages):
         print(f"  {DIM}[{i+1}]{RESET} {msg}")
 
-    conversation: List[dict] = []
+    conversation: list[dict] = []
     llm_client = LlmClient(call_id="debug-session", mode=mode, debug=True)
 
     for turn_num, user_msg in enumerate(user_messages, 1):
@@ -194,15 +197,28 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
         t0 = time.perf_counter()
 
         try:
-            with trace(
-                workflow_name="debug_session",
-                group_id="debug",
-                metadata={"mode": mode, "turn": str(turn_num)},
-            ):
-                result = Runner.run_streamed(llm_client.agent, processed)
-
-                async for event in result.stream_events():
+            async with AsyncExitStack() as stack:
+                stack.enter_context(trace(
+                    workflow_name="debug_session",
+                    group_id="debug",
+                    metadata={"mode": mode, "turn": str(turn_num)},
+                ))
+                # Same path as production: the guardrail runs beside the agent.
+                events = await stack.enter_async_context(
+                    screened_stream(llm_client.agent, processed)
+                )
+                async for event in events:
                     event_count += 1
+
+                    if isinstance(event, GuardrailTripped):
+                        # The run was cancelled; production swaps the reply for
+                        # the refusal at this point.
+                        print(f"\n  {BOLD}{RED}🚫 GUARDRAIL BLOCKED THIS MESSAGE{RESET}")
+                        print(f"     {RED}{event.verdict}{RESET}")
+                        print(f"     {DIM}(withdrawn after {len(full_text)} chars had streamed){RESET}")
+                        # What the chat panel is left showing and sends back as history.
+                        full_text = guardrail_refusal_message
+                        break
 
                     if isinstance(event, RawResponsesStreamEvent):
                         data = event.data
@@ -305,9 +321,6 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
                             print(f"     call_id: {DIM}{call_id}{RESET}")
                             print(f"     output:\n{BLUE}{display_output}{RESET}")
 
-                        elif event.name == "guardrail_tripped":
-                            print(f"\n  {BOLD}{RED}🚫 GUARDRAIL TRIPPED{RESET}")
-
                         else:
                             print(f"\n  {DIM}[item event] {event.name}{RESET}")
 
@@ -315,13 +328,9 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
                         print(f"\n  {DIM}[unknown event] {type(event).__name__}{RESET}")
 
         except Exception as e:
-            if "InputGuardrailTripwireTriggered" in type(e).__name__:
-                print(f"\n  {BOLD}{RED}🚫 GUARDRAIL BLOCKED THIS MESSAGE{RESET}")
-                print(f"     {RED}{e}{RESET}")
-            else:
-                print(f"\n  {BOLD}{RED}❌ ERROR: {e}{RESET}")
-                import traceback
-                traceback.print_exc()
+            print(f"\n  {BOLD}{RED}❌ ERROR: {e}{RESET}")
+            import traceback
+            traceback.print_exc()
             continue
 
         elapsed = time.perf_counter() - t0

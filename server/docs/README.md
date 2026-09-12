@@ -47,7 +47,7 @@ User Speech → Retell Platform → WebSocket → main.py
 | `RETELL_API_KEY` | Yes | - | Retell webhook verification |
 | `OPENAI_API_KEY` | Yes | - | LLM and embeddings |
 | `PINECONE_API_KEY` | Yes | - | Vector database |
-| `OBFUSCATED_WS_PATH` | No | `ws-default` | WebSocket path |
+| `OBFUSCATED_WS_PATH` | No | `ws-default` | Secret WebSocket path (value never logged; startup warns if unset) |
 | `LLM_DEBUG` | No | `0` | Debug logging |
 
 ## Development Commands

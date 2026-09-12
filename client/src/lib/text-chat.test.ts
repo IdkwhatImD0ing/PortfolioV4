@@ -1,10 +1,61 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
+  MAX_MESSAGE_CHARS,
+  applyReplyChunk,
   createSseParser,
   parseChatMarkdown,
   toChatMessages,
   tokenizeInline,
+  type ChatChunk,
 } from "./text-chat";
+
+describe("applyReplyChunk", () => {
+  const fold = (chunks: ChatChunk[]) => chunks.reduce(applyReplyChunk, "");
+
+  it("appends content chunks in order", () => {
+    expect(
+      fold([
+        { type: "content", content: "I built " },
+        { type: "content", content: "Dispatch AI." },
+      ]),
+    ).toBe("I built Dispatch AI.");
+  });
+
+  it("lets replace withdraw everything streamed so far", () => {
+    // The guardrail blocked the turn after the answer had started.
+    expect(
+      fold([
+        { type: "content", content: "Dear hiring manager," },
+        { type: "content", content: " I am thrilled" },
+        { type: "replace", content: "That one's outside what I do here." },
+      ]),
+    ).toBe("That one's outside what I do here.");
+  });
+
+  it("keeps appending after a replace", () => {
+    expect(
+      fold([
+        { type: "content", content: "old" },
+        { type: "replace", content: "new" },
+        { type: "content", content: "!" },
+      ]),
+    ).toBe("new!");
+  });
+
+  it("leaves the reply alone for status, metadata, done and error", () => {
+    const reply = "so far";
+    for (const chunk of [
+      { type: "status", content: "Searching projects..." },
+      { type: "metadata", metadata: { type: "navigation", page: "education" } },
+      { type: "done" },
+      { type: "error", content: "boom" },
+    ] as ChatChunk[]) {
+      expect(applyReplyChunk(reply, chunk)).toBe(reply);
+    }
+  });
+});
 
 describe("toChatMessages", () => {
   it("maps agent turns to assistant and keeps order", () => {
@@ -61,6 +112,32 @@ describe("toChatMessages", () => {
       2,
     );
     expect(out.map((m) => m.content)).toEqual(["b", "c"]);
+  });
+
+  it("trims a long turn to the backend's cap, keeping both ends", () => {
+    const [ascii] = toChatMessages([
+      { role: "agent", content: "HEAD" + "x".repeat(MAX_MESSAGE_CHARS) + "TAIL" },
+    ]);
+    expect(ascii.content.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
+    expect(ascii.content.startsWith("HEAD")).toBe(true);
+    expect(ascii.content.endsWith("TAIL")).toBe(true);
+
+    // An emoji is one character to Python but two UTF-16 units to JS. Slicing
+    // by units would split one in half on either side of the cut.
+    const [emoji] = toChatMessages([
+      { role: "agent", content: "😀".repeat(MAX_MESSAGE_CHARS + 1) },
+    ]);
+    expect(Array.from(emoji.content).length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
+    expect(emoji.content).toContain("😀 […] 😀");
+  });
+
+  it("uses the same per-message cap as the server", () => {
+    // Drift either way breaks chat: a lower server cap 422s every send that
+    // carries a long turn, until it leaves the history window.
+    const source = readFileSync(join(__dirname, "../../../server/custom_types.py"), "utf8");
+    const match = /^MAX_CHAT_MESSAGE_CHARS = ([\d_]+)/m.exec(source);
+    expect(match).not.toBeNull();
+    expect(Number(match![1].replace(/_/g, ""))).toBe(MAX_MESSAGE_CHARS);
   });
 });
 

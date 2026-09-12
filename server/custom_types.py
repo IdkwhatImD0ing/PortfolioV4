@@ -1,5 +1,5 @@
 from typing import Any, List, Optional, Literal, Union, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # Retell -> Your Server Events
@@ -98,20 +98,59 @@ CustomLlmResponse = Union[ConfigResponse, PingPongResponse, ResponseResponse, Me
 
 
 # Text Chat Types (for non-voice chat interface)
+
+# /chat is unauthenticated and reachable straight at the Cloud Run URL (CORS
+# stops browsers, not curl), and Cloud Run accepts bodies up to 32 MiB. Every
+# request is parsed and screened on the event loop and forwarded to the model,
+# so bound it here. The client sends at most 20 messages (MAX_HISTORY_MESSAGES
+# in client/src/lib/text-chat.ts), a typed message is at most 1,000 characters,
+# and a text reply is prompted to stay under 300 words, so these leave plenty of
+# headroom. Oversized requests get a 422.
+#
+# The client trims every message to MAX_MESSAGE_CHARS in text-chat.ts, which
+# must equal MAX_CHAT_MESSAGE_CHARS (text-chat.test.ts checks). /summary reuses
+# TextChatMessage, so the per-message cap applies there too.
+MAX_CHAT_MESSAGES = 50
+MAX_CHAT_MESSAGE_CHARS = 10_000
+# The caps above only apply once the body is read and parsed, so /chat also
+# refuses a body past this size with a 413 before parsing it. JSON.stringify
+# writes at most 6 bytes per character (`\u00XX`), so a request inside the caps
+# is about 3 MB at most and this never refuses one.
+MAX_CHAT_BODY_BYTES = 4 * 1024 * 1024
+
+
 class TextChatMessage(BaseModel):
     role: Literal["user", "assistant"]
-    content: str
+    content: str = Field(max_length=MAX_CHAT_MESSAGE_CHARS)
 
 
 class TextChatRequest(BaseModel):
-    messages: List[TextChatMessage]
+    messages: List[TextChatMessage] = Field(max_length=MAX_CHAT_MESSAGES)
+    # Set by clients that handle `replace` chunks. Defaults off, so a page
+    # loaded before `replace` existed still gets a refusal it can show.
+    supports_replace: bool = False
 
 
 class TextChatStreamChunk(BaseModel):
-    type: Literal["content", "metadata", "done", "error", "status"]
+    # "replace" withdraws every `content` chunk sent so far for this reply: the
+    # client shows this chunk's `content` in its place. Sent when the guardrail
+    # blocks a turn after the answer had already started streaming.
+    type: Literal["content", "metadata", "done", "error", "status", "replace"]
     content: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
 
+# /summary is unauthenticated and reachable straight at the Cloud Run URL, and
+# each request sends the whole transcript to the model in one call, so bound how
+# many messages it takes. It was built to summarise a voice call once the call
+# ends. Retell ends a call after an hour by default, and a voice reply is
+# prompted to stay under 200 words, so a question and its answer take about 30
+# seconds: roughly 240 messages in a full hour. 500 covers that twice over, or a
+# brisk hour at 15 seconds an exchange. No client calls /summary since the
+# legacy client was retired (client/docs/legacy-client-retirement.md), so there
+# is no client-side number to match. Oversized requests get a 422.
+MAX_SUMMARY_MESSAGES = 500
+
+
 class SummaryRequest(BaseModel):
-    transcript: List[TextChatMessage]
+    transcript: List[TextChatMessage] = Field(max_length=MAX_SUMMARY_MESSAGES)

@@ -43,6 +43,25 @@ guardrail_refusal_message = (
     "into. Ask me about any of that."
 )
 
+# What a voice caller hears when the guardrail trips after the answer already
+# started. Speech can't be taken back, so the agent stops mid-answer and says
+# this next, in the same breath. The leading space keeps it from fusing onto a
+# word that was cut off. Same rule as above: name the hobbies too.
+guardrail_interruption_message = (
+    " Actually, sorry, I'm not allowed to talk about this one. Ask me about my "
+    "projects, hackathons, music, that kind of thing."
+)
+
+# What the visitor hears when an idle reminder trips the guardrail after the
+# agent already replied. A reminder adds no visitor input, so the trip is the
+# judge re-judging their previous turn, and repeating the refusal would answer
+# something they didn't just say. Fixed text: a turn that trips never reaches
+# the agent.
+reminder_checkin_message = (
+    "You still there? No rush. Whenever you're ready, ask me about my projects, "
+    "hackathons, music, whatever you're curious about."
+)
+
 # Base prompt shared between voice and text modes
 base_prompt = """
 ## **SYSTEM PROMPT: "Bill Zhang" AI Persona**
