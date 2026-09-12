@@ -3,11 +3,59 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   MAX_MESSAGE_CHARS,
+  applyReplyChunk,
   createSseParser,
   parseChatMarkdown,
   toChatMessages,
   tokenizeInline,
+  type ChatChunk,
 } from "./text-chat";
+
+describe("applyReplyChunk", () => {
+  const fold = (chunks: ChatChunk[]) => chunks.reduce(applyReplyChunk, "");
+
+  it("appends content chunks in order", () => {
+    expect(
+      fold([
+        { type: "content", content: "I built " },
+        { type: "content", content: "Dispatch AI." },
+      ]),
+    ).toBe("I built Dispatch AI.");
+  });
+
+  it("lets replace withdraw everything streamed so far", () => {
+    // The guardrail blocked the turn after the answer had started.
+    expect(
+      fold([
+        { type: "content", content: "Dear hiring manager," },
+        { type: "content", content: " I am thrilled" },
+        { type: "replace", content: "That one's outside what I do here." },
+      ]),
+    ).toBe("That one's outside what I do here.");
+  });
+
+  it("keeps appending after a replace", () => {
+    expect(
+      fold([
+        { type: "content", content: "old" },
+        { type: "replace", content: "new" },
+        { type: "content", content: "!" },
+      ]),
+    ).toBe("new!");
+  });
+
+  it("leaves the reply alone for status, metadata, done and error", () => {
+    const reply = "so far";
+    for (const chunk of [
+      { type: "status", content: "Searching projects..." },
+      { type: "metadata", metadata: { type: "navigation", page: "education" } },
+      { type: "done" },
+      { type: "error", content: "boom" },
+    ] as ChatChunk[]) {
+      expect(applyReplyChunk(reply, chunk)).toBe(reply);
+    }
+  });
+});
 
 describe("toChatMessages", () => {
   it("maps agent turns to assistant and keeps order", () => {

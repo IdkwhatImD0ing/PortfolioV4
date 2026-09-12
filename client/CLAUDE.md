@@ -60,7 +60,7 @@ The non-obvious core of this project is a contract that spans the browser, the b
 
 1. **Browser starts a call.** `src/components/voice-orb/` is the only stateful client component. It lazy-imports `retell-client-js-sdk`, POSTs to `src/app/api/create-web-call/route.ts` (a thin server-side proxy that injects `RETELLAI_API_KEY` and calls Retell's `create-web-call`), then opens the WebRTC call with the returned access token.
 
-2. **Server agent runs the conversation.** Retell bridges audio to the FastAPI WebSocket in `server/main.py` (`/{OBFUSCATED_WS_PATH}/{call_id}`). `server/llm.py` runs an OpenAI Agents SDK agent with an input guardrail (`guardrail_agent`) that screens each user turn for jailbreak/off-topic before the main LLM sees it. Project lookups go through `server/project_search.py` (Pinecone).
+2. **Server agent runs the conversation.** Retell bridges audio to the FastAPI WebSocket in `server/main.py` (`/{OBFUSCATED_WS_PATH}/{call_id}`). `server/llm.py` runs an OpenAI Agents SDK agent and, beside it, an input guardrail (`guardrail_agent`) that screens each user turn for jailbreak/off-topic. The answer streams immediately; if the guardrail trips, the run is cancelled and text chat gets a `replace` chunk that swaps the reply for a refusal (voice stops mid-answer and apologizes). Project lookups go through `server/project_search.py` (Pinecone).
 
 3. **Agent navigates by calling tools.** When the agent calls a display tool (`display_homepage`, `display_project`, etc.), `server/navigation.py:tool_call_to_metadata()` converts it into a navigation metadata dict `{type: "navigation", page, project_id?}`. This is sent back through Retell's **metadata event** to the browser.
 

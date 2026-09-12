@@ -13,14 +13,16 @@ scope and report concrete, exploitable regressions — not generic LLM-safety ad
 ## What this system does
 
 User speech → Retell → FastAPI WebSocket → an OpenAI Agents SDK agent in
-`server/llm.py`. Every user turn passes through `security_guardrail` (an
-`@input_guardrail`) in `server/guardrail.py` before the main agent runs. There are
-**no keyword lists** — a `guardrail_agent` (`GUARDRAIL_MODEL`, default
-`gpt-5.6-luna`) classifier is the only gate, returning
-`JailbreakCheckOutput(reasoning, is_jailbreak)`; a tripwire blocks the turn and
-returns `prompts.guardrail_refusal_message`. The main agent then answers and may
-call display/search tools. The same guardrail covers the **unauthenticated
-`/chat` endpoint**, whose entire message array is client-supplied.
+`server/llm.py`. Every user turn is judged by `security_guardrail` (an
+`@input_guardrail`) in `server/guardrail.py`, run by `llm.screened_stream` *beside*
+the main agent, not before it. There are **no keyword lists** — a
+`guardrail_agent` (`GUARDRAIL_MODEL`, default `gpt-5.6-luna`) classifier is the only
+gate, returning `ScreeningDecision(reasoning, rule)`; `rule_blocks()` maps the rule
+to allow/block. A trip cancels the agent run: text chat gets a `replace` chunk that
+swaps the streamed answer for `prompts.guardrail_refusal_message`, and voice stops
+mid-answer and says `prompts.guardrail_interruption_message`. The same guardrail
+covers the **unauthenticated `/chat` endpoint**, whose entire message array is
+client-supplied.
 
 ## Threat surface — what to scrutinize
 
@@ -69,10 +71,14 @@ call display/search tools. The same guardrail covers the **unauthenticated
   internal data, or echo raw args back to the user. Confirm new tools return
   bounded, sanitized strings (existing tools wrap errors as `str(e)` — watch for
   leaking stack traces or secrets that way).
-- **Tripwire handling.** The bypass message is matched by
-  `"InputGuardrailTripwireTriggered" in str(type(e).__name__)`. Flag changes that
-  swallow the tripwire, broaden the `except` so real errors look like guardrail
-  hits, or stream partial agent output before the tripwire is caught.
+- **Tripwire handling.** `llm.screened_stream` owns it, and
+  `tests/test_guardrail_streaming.py` pins it. Flag changes that put
+  `input_guardrails=[...]` back on the Agent (the SDK hook never cancels the model
+  on the streamed path, which is how answers leaked before the refusal), let agent
+  events through after a `GuardrailTripped`, close out a reply (`done` /
+  `content_complete=True`) before the verdict is in, or send the text refusal as a
+  plain `content` chunk to a client that sent `supports_replace: true` (that
+  appends it to the leaked answer; the `content` form is only for old clients).
 - **Model/setting downgrades.** Note (don't necessarily block) changes that swap
   the guardrail/main model or loosen `ModelSettings` in ways that affect refusal
   reliability.

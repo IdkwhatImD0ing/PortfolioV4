@@ -129,6 +129,27 @@ class TestChatEndpoint:
             assert response.status_code == 200
             assert response.headers["content-type"].startswith("text/event-stream")
 
+    def test_chat_passes_supports_replace_through(self, app_client):
+        """Only a client that says it handles `replace` chunks gets them.
+
+        Pages loaded before `replace` existed don't send the flag, and must get
+        the refusal appended instead (llm.draft_text_response).
+        """
+        seen = []
+
+        async def draft_text_response(messages, supports_replace):
+            from custom_types import TextChatStreamChunk
+            seen.append(supports_replace)
+            yield TextChatStreamChunk(type="done")
+
+        with patch("main.LlmClient") as mock_llm:
+            mock_llm.return_value.draft_text_response = draft_text_response
+            hi = [{"role": "user", "content": "Hi"}]
+            app_client.post("/chat", json={"messages": hi})
+            app_client.post("/chat", json={"messages": hi, "supports_replace": True})
+
+        assert seen == [False, True]
+
     def test_chat_request_validation(self, app_client):
         """Test that /chat validates request body."""
         # Missing messages field

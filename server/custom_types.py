@@ -126,10 +126,16 @@ class TextChatMessage(BaseModel):
 
 class TextChatRequest(BaseModel):
     messages: List[TextChatMessage] = Field(max_length=MAX_CHAT_MESSAGES)
+    # Set by clients that handle `replace` chunks. Defaults off, so a page
+    # loaded before `replace` existed still gets a refusal it can show.
+    supports_replace: bool = False
 
 
 class TextChatStreamChunk(BaseModel):
-    type: Literal["content", "metadata", "done", "error", "status"]
+    # "replace" withdraws every `content` chunk sent so far for this reply: the
+    # client shows this chunk's `content` in its place. Sent when the guardrail
+    # blocks a turn after the answer had already started streaming.
+    type: Literal["content", "metadata", "done", "error", "status", "replace"]
     content: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 

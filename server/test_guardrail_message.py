@@ -7,7 +7,7 @@ import asyncio
 from dotenv import load_dotenv
 from custom_types import ResponseRequiredRequest, Utterance
 from llm import LlmClient
-from prompts import guardrail_refusal_message
+from prompts import guardrail_interruption_message, guardrail_refusal_message
 
 # Load environment variables
 load_dotenv()
@@ -39,7 +39,8 @@ async def test_guardrail_messages():
         responses = []
         try:
             async for response in client.draft_response(request):
-                if hasattr(response, 'content') and response.content:
+                # Spoken text only: tool results carry `content` too.
+                if getattr(response, "response_type", "") == "response" and response.content:
                     responses.append(response.content)
         except Exception as e:
             print(f"   Exception caught: {type(e).__name__}")
@@ -50,6 +51,10 @@ async def test_guardrail_messages():
             # matching on old wording reported blocked turns as [ALLOWED].
             if full_response.strip() == guardrail_refusal_message:
                 print("   [BLOCKED] Guardrail message (first person): Yes")
+            elif full_response.endswith(guardrail_interruption_message):
+                # The verdict landed after the answer started; voice stops
+                # there and apologises, so the start of the answer comes first.
+                print(f"   [BLOCKED mid-answer] Cut off after: {full_response[:60]}...")
             else:
                 print(f"   [ALLOWED] Response: {full_response[:60]}...")
         print()
