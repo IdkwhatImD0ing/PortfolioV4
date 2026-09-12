@@ -103,7 +103,7 @@ async def draft_response(self, request: ResponseRequiredRequest):
     prompt = self.prepare_prompt(request)
     messages = [m for m in prompt if m.get("role") != "system"]
     
-    result = Runner.run_streamed(self.agent, messages)
+    result = Runner.run_streamed(self._agent_for(request), messages)
     
     async for event in result.stream_events():
         if isinstance(event, RawResponsesStreamEvent):
@@ -121,6 +121,12 @@ async def draft_response(self, request: ResponseRequiredRequest):
     
     yield ResponseResponse(content_complete=True)
 ```
+
+On an idle reminder (`reminder_required`), `_agent_for` returns a copy of the agent whose
+input guardrails run before the model instead of beside it. If the guardrail trips and the
+agent already replied to the turn being re-judged, `_refusal_for` says
+`reminder_checkin_message` instead of repeating the refusal. See
+[guardrail.md](guardrail.md#what-the-classifier-receives).
 
 ### prepare_functions()
 
@@ -206,14 +212,15 @@ if name == "display_education_page":
 ```python
 if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
     yield ResponseResponse(
-        content=guardrail_refusal_message,
+        content=self._refusal_for(request),  # draft_text_response: guardrail_refusal_message
         content_complete=True,
     )
     return
 ```
 
 The text lives in `prompts.guardrail_refusal_message` so both the voice and text
-paths share one wording. It deliberately names the hobbies — the old copy listed
+paths share one wording. The one exception is a voice reminder that trips after the
+agent already replied, which says `prompts.reminder_checkin_message` instead. It deliberately names the hobbies — the old copy listed
 only "background, education, projects, and professional experience", which told
 visitors that music and cooking were off-limits (issue #10).
 
