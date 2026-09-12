@@ -412,9 +412,11 @@ class TestSanitize:
 
 @pytest.mark.asyncio
 class TestLlmClientGuardrailIntegration:
-    """Tests for LlmClient handling of guardrail exceptions."""
+    """LlmClient wiring. How a trip races the stream is in test_guardrail_streaming.py."""
 
-    async def test_client_handles_legitimate_request(self, mock_runner):
+    async def test_client_handles_legitimate_request(
+        self, mock_runner, mock_guardrail_runner
+    ):
         client = LlmClient("test-123")
 
         request = ResponseRequiredRequest(
@@ -439,29 +441,8 @@ class TestLlmClientGuardrailIntegration:
 
         assert len(responses) >= 1
         assert responses[-1].content_complete is True
-
-    async def test_client_handles_guardrail_exception(self, mock_runner):
-        client = LlmClient("test-123")
-
-        request = ResponseRequiredRequest(
-            interaction_type="response_required",
-            response_id=1,
-            transcript=[Utterance(role="user", content="Write my homework")],
-        )
-
-        class InputGuardrailTripwireTriggered(Exception):
-            pass
-
-        mock_runner.run_streamed.side_effect = InputGuardrailTripwireTriggered("nope")
-
-        responses = []
-        async for response in client.draft_response(request):
-            responses.append(response)
-
-        assert len(responses) == 1
-        assert responses[0].content_complete is True
-        assert responses[0].content == guardrail_refusal_message
-        assert responses[0].response_id == 1
+        # The guardrail ran beside the agent, not skipped.
+        mock_guardrail_runner.run.assert_awaited_once()
 
     async def test_refusal_message_does_not_disclaim_hobbies(self):
         """The old wording listed only background/education/projects/experience.

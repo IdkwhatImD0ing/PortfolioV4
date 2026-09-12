@@ -72,7 +72,9 @@ async def chat_endpoint(request: TextChatRequest):
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
         
         try:
-            async for chunk in llm_client.draft_text_response(messages):
+            async for chunk in llm_client.draft_text_response(
+                messages, supports_replace=request.supports_replace
+            ):
                 # Format as SSE
                 data = json.dumps(chunk.model_dump())
                 yield f"data: {data}\n\n"

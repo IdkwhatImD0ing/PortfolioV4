@@ -1,14 +1,21 @@
+import asyncio
 import os
 import json
 import traceback
+from contextlib import AsyncExitStack, asynccontextmanager
+from dataclasses import dataclass
 from typing import Any, List
 
 from agents import (
     Agent,
+    GuardrailFunctionOutput,
     RawResponsesStreamEvent,
+    RunContextWrapper,
     RunItemStreamEvent,
     Runner,
     ModelSettings,
+    SpanError,
+    guardrail_span,
     trace,
 )
 from openai.types.shared import Reasoning
@@ -26,6 +33,7 @@ from custom_types import (
 
 from prompts import (
     begin_sentence,
+    guardrail_interruption_message,
     guardrail_refusal_message,
     reminder_prompt,
     text_system_prompt,
@@ -65,7 +73,145 @@ __all__ = [
     "search_projects",
     "get_project_details",
     "AGENT_MODEL",
+    "GuardrailTripped",
+    "screened_stream",
 ]
+
+
+@dataclass(frozen=True)
+class GuardrailTripped:
+    """The last item `screened_stream` yields when the guardrail blocks a turn.
+
+    By the time a caller sees it, the agent run has already been cancelled.
+    `verdict` is None when the screening itself crashed, which blocks.
+    """
+
+    verdict: GuardrailVerdict | None = None
+
+
+async def _screen(agent: Agent, messages: list) -> GuardrailFunctionOutput:
+    """Run the input guardrail once, under a guardrail span as the SDK would."""
+    with guardrail_span(security_guardrail.get_name()) as span:
+        result = await security_guardrail.run(
+            agent, messages, RunContextWrapper(context=None)
+        )
+        span.span_data.triggered = result.output.tripwire_triggered
+        if result.output.tripwire_triggered:
+            # The SDK hook recorded this error on a trip. Keep it, so trace
+            # filters on span errors still find blocked turns.
+            span.set_error(
+                SpanError(
+                    message="Guardrail tripwire triggered",
+                    data={"guardrail": security_guardrail.get_name(), "type": "input_guardrail"},
+                )
+            )
+    return result.output
+
+
+def _trip_from(screening: asyncio.Task) -> GuardrailTripped | None:
+    """A finished screening task as a trip, or None if the turn is allowed."""
+    try:
+        output = screening.result()
+    except Exception as e:  # noqa: BLE001 - anything unexpected must block
+        # guardrail.py already sorts classifier failures into open and closed.
+        # An exception that gets this far is a bug in our own code, and like
+        # every failure not on its fail-open list, it blocks.
+        print(f"[guardrail] screening crashed, blocking turn: {e!r}", flush=True)
+        return GuardrailTripped()
+    if output.tripwire_triggered:
+        return GuardrailTripped(verdict=output.output_info)
+    return None
+
+
+@asynccontextmanager
+async def screened_stream(agent: Agent, messages: list):
+    """Run the agent and the input guardrail side by side on the same turn.
+
+    Use as `async with screened_stream(agent, messages) as events:`. Both start
+    on entry, so an allowed visitor waits on nothing extra, and both are
+    stopped on exit even if `events` was never read.
+
+    `events` yields the agent's stream events as they arrive. If the guardrail
+    trips, the run is cancelled the moment the verdict lands, not when the
+    caller next reads, and a `GuardrailTripped` is the last item; the caller
+    decides what the visitor gets instead. If the agent finishes first,
+    `events` still waits for the verdict before ending, so a caller never
+    closes out a turn that is still being judged.
+
+    This replaces the Agent's `input_guardrails` hook. On the streamed path the
+    SDK runs that hook as a detached task, notices a trip only between stream
+    events, and never cancels the model, so a blocked answer kept streaming and
+    the refusal arrived after it.
+    """
+    result = Runner.run_streamed(agent, messages)
+    screening = asyncio.create_task(_screen(agent, messages))
+
+    def stop_on_trip(task: asyncio.Task) -> None:
+        # Runs as soon as the verdict lands, even while the caller is busy
+        # sending. That keeps the model from generating, and tools from
+        # running, after a trip: the SDK hook's `before_side_effects` check did
+        # that job before.
+        if task.cancelled() or result.is_complete:
+            return
+        if task.exception() is not None or task.result().tripwire_triggered:
+            result.cancel()
+
+    screening.add_done_callback(stop_on_trip)
+    stream = result.stream_events()
+    events = _merge(stream, screening)
+    try:
+        yield events
+    finally:
+        if not result.is_complete:
+            result.cancel()
+        screening.cancel()
+        await asyncio.gather(screening, return_exceptions=True)
+        await events.aclose()
+        await stream.aclose()
+
+
+async def _merge(stream, screening: asyncio.Task):
+    """The `events` of `screened_stream`: agent events, raced against the verdict."""
+    pending = asyncio.ensure_future(anext(stream, None))
+    agent_error = None
+    try:
+        # Race until the verdict is in. It is checked first, so an event that
+        # lands in the same tick as a trip is dropped rather than sent.
+        while not screening.done():
+            watching = {screening} if pending is None else {screening, pending}
+            await asyncio.wait(watching, return_when=asyncio.FIRST_COMPLETED)
+            if screening.done():
+                break
+            try:
+                event = pending.result()
+            except Exception as e:  # noqa: BLE001 - re-raised below
+                # Hold an agent failure until the verdict is in: a blocked
+                # turn gets the refusal whether or not the agent finished.
+                agent_error, pending = e, None
+                continue
+            if event is None:
+                pending = None
+                continue
+            pending = asyncio.ensure_future(anext(stream, None))
+            yield event
+
+        trip = _trip_from(screening)
+        if trip is not None:
+            yield trip
+            return
+        if agent_error is not None:
+            raise agent_error
+
+        # Allowed: nothing left to race, so read the rest of the stream directly.
+        if pending is not None:
+            event, pending = await pending, None
+            while event is not None:
+                yield event
+                event = await anext(stream, None)
+    finally:
+        if pending is not None:
+            pending.cancel()
+            await asyncio.gather(pending, return_exceptions=True)
 
 
 class LlmClient:
@@ -77,13 +223,13 @@ class LlmClient:
         # both come from model_config so there is one place to change them.
         system_prompt = voice_system_prompt if mode == "voice" else text_system_prompt
 
-        # Create the main agent with input guardrails
+        # No `input_guardrails` here on purpose: `screened_stream` runs the
+        # guardrail beside the run so a trip can stop it. See its docstring.
         self.agent = Agent(
             name="portfolio_agent",
             instructions=system_prompt,
             model=AGENT_MODEL,
             tools=self.prepare_functions(),
-            input_guardrails=[security_guardrail],
             model_settings=ModelSettings(
                 verbosity="low",
                 reasoning=Reasoning(
@@ -196,18 +342,44 @@ class LlmClient:
         if not messages:
             messages = [{"role": "user", "content": "Hello"}]
 
+        spoke = False
+        # Tool calls sent to Retell that haven't had their result yet. A trip
+        # can cancel the run mid-tool, so these get closed out first.
+        unfinished_tools: list[str] = []
         try:
-            # Create an explicit trace for this response so analytics can be grouped by call/session.
-            with trace(
-                workflow_name="portfolio_voice_response",
-                group_id=self.call_id,
-                metadata={"mode": self.mode, "response_id": str(response_id)},
-            ):
-                # Runner.run_streamed returns a RunResultStreaming object synchronously
-                # The guardrails will be checked automatically before the agent runs
-                result = Runner.run_streamed(self.agent, messages)
+            async with AsyncExitStack() as stack:
+                # Create an explicit trace for this response so analytics can be grouped by call/session.
+                stack.enter_context(trace(
+                    workflow_name="portfolio_voice_response",
+                    group_id=self.call_id,
+                    metadata={"mode": self.mode, "response_id": str(response_id)},
+                ))
+                # The guardrail runs beside the agent; see screened_stream.
+                events = await stack.enter_async_context(screened_stream(self.agent, messages))
 
-                async for event in result.stream_events():
+                async for event in events:
+                    if isinstance(event, GuardrailTripped):
+                        self._log(f"Guardrail blocked the turn: {event.verdict}")
+                        for tool_call_id in unfinished_tools:
+                            yield ToolCallResultResponse(
+                                tool_call_id=tool_call_id,
+                                content="Cancelled: the guardrail blocked this turn.",
+                            )
+                        # Whatever already streamed has been spoken, and speech
+                        # can't be taken back. Stop there and apologise. If
+                        # nothing went out yet, give the full refusal instead.
+                        yield ResponseResponse(
+                            response_id=response_id,
+                            content=(
+                                guardrail_interruption_message
+                                if spoke
+                                else guardrail_refusal_message
+                            ),
+                            content_complete=True,
+                            end_call=False,
+                        )
+                        return
+
                     if isinstance(event, RawResponsesStreamEvent):
                         data = event.data
                         if getattr(data, "type", "") == "response.output_text.delta":
@@ -215,6 +387,7 @@ class LlmClient:
                             # The AI has been instructed not to use markdown in the prompts
                             delta_content = getattr(data, "delta", "")
                             if delta_content:
+                                spoke = True
                                 yield ResponseResponse(
                                     response_id=response_id,
                                     content=delta_content,
@@ -231,6 +404,7 @@ class LlmClient:
                             name = getattr(tool_call, "name", "")
                             args = getattr(tool_call, "arguments", "") or ""
 
+                            unfinished_tools.append(call_id)
                             yield ToolCallInvocationResponse(
                                 tool_call_id=call_id,
                                 name=name,
@@ -248,23 +422,14 @@ class LlmClient:
                         elif event.name == "tool_output":
                             output_item = event.item
                             call_id = getattr(output_item.raw_item, "call_id", "")
+                            if call_id in unfinished_tools:
+                                unfinished_tools.remove(call_id)
                             yield ToolCallResultResponse(
                                 tool_call_id=call_id,
                                 content=str(output_item.output),
                             )
 
         except Exception as e:
-            # Check if it's a guardrail tripwire trigger
-            if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
-                self._log("Guardrail triggered: Request blocked due to security check")
-                yield ResponseResponse(
-                    response_id=response_id,
-                    content=guardrail_refusal_message,
-                    content_complete=True,
-                    end_call=False,
-                )
-                return
-
             print(
                 f"Error creating agent stream: {e}\n{traceback.format_exc()}",
                 flush=True,
@@ -289,13 +454,15 @@ class LlmClient:
             flush=True,
         )
 
-    async def draft_text_response(self, messages: List[dict]):
+    async def draft_text_response(self, messages: List[dict], supports_replace: bool = True):
         """
         Generate a streaming response for text chat (non-voice).
         Yields TextChatStreamChunk objects for SSE streaming.
 
         Args:
             messages: List of message dicts with 'role' and 'content' keys
+            supports_replace: Whether the client understands `replace` chunks.
+                A client that doesn't gets the refusal appended as `content`.
         """
         from custom_types import TextChatStreamChunk
 
@@ -320,17 +487,43 @@ class LlmClient:
             else:
                 processed_messages.append(msg)
 
+        streamed = False
         try:
-            with trace(
-                workflow_name="portfolio_text_response",
-                group_id=self.call_id,
-                metadata={"mode": self.mode, "message_count": str(len(processed_messages))},
-            ):
-                result = Runner.run_streamed(self.agent, processed_messages)
+            async with AsyncExitStack() as stack:
+                stack.enter_context(trace(
+                    workflow_name="portfolio_text_response",
+                    group_id=self.call_id,
+                    metadata={"mode": self.mode, "message_count": str(len(processed_messages))},
+                ))
+                # Starts the agent and the guardrail now, so the model request
+                # overlaps the status write below. See screened_stream.
+                events = await stack.enter_async_context(
+                    screened_stream(self.agent, processed_messages)
+                )
 
                 yield TextChatStreamChunk(type="status", content="Thinking...")
 
-                async for event in result.stream_events():
+                async for event in events:
+                    if isinstance(event, GuardrailTripped):
+                        self._log(f"Guardrail blocked the turn: {event.verdict}")
+                        if supports_replace:
+                            # Part of the answer may already be on screen.
+                            # `replace` withdraws all of it, so the visitor is
+                            # left with the refusal and nothing else.
+                            yield TextChatStreamChunk(
+                                type="replace",
+                                content=guardrail_refusal_message,
+                            )
+                        else:
+                            # A client from before `replace` would drop it and
+                            # keep the answer with no refusal at all. Append
+                            # the refusal instead, as this endpoint used to.
+                            yield TextChatStreamChunk(
+                                type="content",
+                                content=("\n\n" if streamed else "") + guardrail_refusal_message,
+                            )
+                        break
+
                     if isinstance(event, RawResponsesStreamEvent):
                         data = event.data
                         event_type = getattr(data, "type", "")
@@ -338,6 +531,7 @@ class LlmClient:
                             delta_content = getattr(data, "delta", "")
                             if delta_content:
                                 self._log(f"text content delta: {len(delta_content)} chars")
+                                streamed = True
                                 yield TextChatStreamChunk(
                                     type="content",
                                     content=delta_content,
@@ -365,16 +559,6 @@ class LlmClient:
                         self._log(f"unhandled stream event: {type(event).__name__}")
 
         except Exception as e:
-            # Check if it's a guardrail tripwire trigger
-            if "InputGuardrailTripwireTriggered" in str(type(e).__name__):
-                self._log("Guardrail triggered: Request blocked due to security check")
-                yield TextChatStreamChunk(
-                    type="content",
-                    content=guardrail_refusal_message,
-                )
-                yield TextChatStreamChunk(type="done")
-                return
-
             print(
                 f"Error in text chat stream: {e}\n{traceback.format_exc()}",
                 flush=True,

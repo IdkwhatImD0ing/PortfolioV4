@@ -26,12 +26,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "messages is required" }, { status: 400 });
   }
 
+  // Passed on only when the page sent it. A tab loaded before `replace` chunks
+  // existed doesn't, and the backend then appends its refusal the old way.
+  const supportsReplace = (body as { supports_replace?: unknown }).supports_replace === true;
+
   try {
     const base = await resolveApiBase();
     const upstream = await fetch(`${base}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify(supportsReplace ? { messages, supports_replace: true } : { messages }),
       cache: "no-store",
       // Stop the backend's work when the visitor closes the panel or the
       // client gives up waiting.

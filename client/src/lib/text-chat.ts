@@ -4,9 +4,19 @@ import type { NavigationMeta } from "./voice-bus";
 /** One JSON payload from the backend's `/chat` Server-Sent Events stream.
  *  Mirrors `TextChatStreamChunk` in server/custom_types.py. */
 export interface ChatChunk {
-  type: "content" | "metadata" | "done" | "error" | "status";
+  type: "content" | "metadata" | "done" | "error" | "status" | "replace";
   content?: string;
   metadata?: NavigationMeta;
+}
+
+/** The reply text after one chunk arrives. `content` appends to it.
+ *  `replace` throws away everything streamed so far and shows its own
+ *  `content` instead: the backend sends it when the guardrail blocks a turn
+ *  after the answer already started. Other chunk types leave the reply alone. */
+export function applyReplyChunk(reply: string, chunk: ChatChunk): string {
+  if (chunk.type === "content") return reply + (chunk.content ?? "");
+  if (chunk.type === "replace") return chunk.content ?? "";
+  return reply;
 }
 
 /** One message in the `/chat` request body (`TextChatMessage` server-side). */

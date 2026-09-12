@@ -12,7 +12,8 @@ re-exported from `llm.py` for backwards compatibility, so
 ## Purpose
 
 Keeps the persona from being used as a general-purpose assistant, and resists prompt
-injection, before the main LLM sees a turn.
+injection. It judges each turn while the main agent is already answering, and a trip
+cancels that answer — see [How a trip reaches the visitor](#how-a-trip-reaches-the-visitor).
 
 ## There are no keyword lists
 
@@ -164,26 +165,67 @@ Properties worth preserving when editing:
   number, so `tests/test_guardrail_eval.py` reports which rule fired rather than
   only which cases leaked. That is what diagnosed the B1-B5 failure.
 
-## Known limitation: streaming trip ordering
+## How a trip reaches the visitor
 
-`llm.py` uses `Runner.run_streamed`. In that path the SDK fires the guardrail as a detached
-task (`agents/run_internal/run_loop.py:980-990`) and **never cancels the model task on a
-trip** — the non-streaming `asyncio.gather` + cancel path is a different code path this repo
-does not use. Two consequences, both pre-existing:
+The guardrail is **not** attached to the Agent as `input_guardrails`. `llm.screened_stream`
+(an async context manager) starts the agent's streamed run and the guardrail at the same
+moment and races them:
 
-1. Deltas can reach the caller before the tripwire lands, so a blocked turn may emit partial
-   text followed by the refusal.
-2. A trip that lands after the model finishes is caught by `except Exception: logger.debug(...)`
-   at `run_loop.py:1208-1215` and swallowed.
+- The answer streams straight away. An allowed visitor waits on nothing extra, so the
+  classifier adds no time-to-first-token.
+- If the guardrail trips, the agent run is cancelled the moment the verdict lands, even if
+  the caller is busy sending, so no tool runs for a blocked turn. A `GuardrailTripped`
+  marker is the last thing the stream yields, and the guardrail span records the trip as
+  an error.
+- If the agent finishes first, the stream still waits for the verdict before it ends. A
+  reply is never closed out while it is still being judged.
 
-The mitigation is to keep the classifier fast so it lands first: capped payload, 5s timeout,
-and a rubric that asks for one-sentence reasoning. The system prompt's §6.2 boundaries are the
-second layer.
+What the visitor gets on a trip depends on the channel:
+
+| Channel | On a trip |
+|---|---|
+| Text chat (`/chat`) | A `replace` chunk carrying `guardrail_refusal_message`, then `done`. The client swaps the whole reply for it, so nothing the agent streamed stays on screen or goes back as history. A client that did not send `supports_replace: true` (a page loaded before `replace` existed) would drop that chunk, so it gets the refusal appended as `content` instead, as before. |
+| Voice (Retell) | If nothing was spoken yet, `guardrail_refusal_message`. If the answer had started, it stops there and `guardrail_interruption_message` ("Actually, sorry, I'm not allowed to talk about this one…") follows. Speech can't be withdrawn. Tool calls Retell was told about but never got a result for are closed out first. |
+
+The text path does **not** keep the answer off the wire. The early chunks still travel to the
+browser and are then withdrawn, so someone reading the raw SSE stream can see them. The
+trade was chosen on purpose: holding every chunk until the verdict would add the classifier's
+latency (up to its 5s timeout) to every legitimate reply.
+
+Waiting for the verdict does cost something at the end of a reply. When an allowed answer
+finishes before the verdict, `done` (text) and the closing `content_complete=True` (voice)
+wait for it. Live verdicts took 1.4-3.4 s, with the 5 s timeout as the cap. The text chat
+keeps its send box locked until `done`, so after a short answer the visitor can wait a
+second or two before sending again. Speech itself is not delayed. The fix for that is a
+faster classifier, not an earlier `done`: a reply marked done can no longer be replaced.
+
+### Why not the SDK hook
+
+The SDK's `input_guardrails` hook was the old wiring, and on the streamed path it leaked.
+`Runner.run_streamed` runs the hook as a detached task
+(`agents/run_internal/run_loop.py`), notices a trip only between stream events, and
+**never cancels the model**. After a trip, `stream_events()` waits for the model to finish
+its whole turn before raising. In production (Sept 2026, revision `fastapi-ws-00016-pf8`) a
+cover-letter request streamed 50-70 chunks of the agent's reply before the refusal was
+appended after them. The agent happened to decline on its own that time; for a request it
+would have complied with, the visitor would have got the content.
+
+`tests/test_guardrail_streaming.py` pins the new behaviour, including one test that drives
+the SDK's real Runner with a slow fake model. On the old wiring that test shows the bug: the
+refusal arrives as a plain `content` chunk after the answer, and the model runs all 40
+chunks. On the new wiring the reply is replaced and the model stops after about five.
+
+Failure handling is unchanged. The classifier's timeouts still fail **open**; an exception
+escaping the guardrail call itself is treated as a trip (fail closed); and an agent error on a
+turn that then trips still gets the refusal rather than the half-answer plus an error.
 
 ## Testing
 
 - `tests/test_guardrail.py` — mocked judge. Pins the no-keyword-lists property, extraction,
   payload construction, bypass resistance, and the fail-open/fail-closed split.
+- `tests/test_guardrail_streaming.py` — mocked judge racing the agent stream. Pins that a
+  trip replaces the text reply, stops the voice answer, cancels the run, and never lets
+  `done` go out before the verdict; and that allowed turns stream before the verdict.
 - `tests/test_guardrail_eval.py` — real judge over 133 labelled cases, marked `integration`.
   Reports **false-refusal rate separately**, since that is the metric issue #10 was about.
   Hard-asserts the critical cases; rate-bounds the rest because the judge is nondeterministic.
