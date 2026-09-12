@@ -92,6 +92,27 @@ The idle-timeout sentinel (`prompts.reminder_prompt`) is dropped — it is the h
 to the model, not visitor input. Only an exact full-string match drops the turn, so nothing
 can be smuggled through by padding it.
 
+Voice idle reminders are screened too. When Retell sends `reminder_required`, the only new
+user-role turn is that sentinel, so the judge re-classifies the visitor's previous turn. Two
+things keep that from misfiring:
+
+- **On a reminder the guardrail runs before the model**, not beside it. `llm.py`'s
+  `_agent_for` gives the reminder a copy of the agent's guardrails with
+  `run_in_parallel=False`. Nobody is waiting on a reminder, so the wait costs nothing, and a
+  trip leaves no model output to leak.
+- **A trip after the agent already replied says `prompts.reminder_checkin_message`**, not the
+  refusal. The visitor has heard the answer to that turn, so repeating the refusal would
+  answer something they didn't just say. If the agent never replied (an agent error sends an
+  empty reply), the reminder is their first answer, and a trip is the refusal.
+
+Do not skip the judge on reminders to save the call. The agent still reads the whole
+transcript, so it would meet the refused turn with nothing to stop it: a payload planted for
+"when I go quiet", a turn the judge failed closed on, or refused text the model had already
+started speaking. The reminder keeps `prepare_prompt`'s `User question:` wrapper on that turn,
+so the judge sees the same text it judged the first time. Which line a trip gets is keyed on
+`interaction_type`, which `/chat` cannot set; the transcript only picks between two fixed
+strings. `tests/test_guardrail_reminder.py` pins all of this.
+
 Note that `llm.py` wraps the last user turn in `User question:…Always respond in plain
 conversational text…` before the guardrail sees it. That scaffolding is left in place and
 simply read as part of the message.
@@ -184,6 +205,10 @@ second layer.
 
 - `tests/test_guardrail.py` — mocked judge. Pins the no-keyword-lists property, extraction,
   payload construction, bypass resistance, and the fail-open/fail-closed split.
+- `tests/test_guardrail_reminder.py` — the real SDK path with only the judge and the agent's
+  model faked. Pins that a reminder is judged before the model runs, that a trip after a
+  reply is the check-in rather than a second refusal, and that visitor turns, unanswered
+  turns and `/chat` still get the refusal.
 - `tests/test_guardrail_eval.py` — real judge over 133 labelled cases, marked `integration`.
   Reports **false-refusal rate separately**, since that is the metric issue #10 was about.
   Hard-asserts the critical cases; rate-bounds the rest because the judge is nondeterministic.
