@@ -16,6 +16,32 @@ os.environ.setdefault("PINECONE_API_KEY", "test-pinecone-key")
 
 
 @pytest.fixture(autouse=True)
+def no_firetrace_network(monkeypatch):
+    """Unit tests never talk to FireTrace.
+
+    The exporter only tracks runs while FIRETRACE_API_KEY is set, so drop the
+    key a developer may have in their shell; and stub the one function that
+    performs the POST so that even a test which sets a key on purpose (see
+    test_firetrace.py) records nothing outside the process.
+    """
+    monkeypatch.delenv("FIRETRACE_API_KEY", raising=False)
+    import firetrace
+
+    def offline(body, api_key, timeout=None):
+        return 201, {
+            "ok": True,
+            "traceId": "",
+            "projectId": "test",
+            "spanCount": 0,
+            "duplicate": False,
+            "requestId": "test",
+        }
+
+    monkeypatch.setattr(firetrace, "_deliver", offline)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def reset_pinecone_index():
     """Reset cached Pinecone state in project_search after each test."""
     try:

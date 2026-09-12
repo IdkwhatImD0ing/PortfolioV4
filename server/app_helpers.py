@@ -47,12 +47,15 @@ def validate_environment_variables():
     optional_vars = {
         "OBFUSCATED_WS_PATH": "WebSocket path obfuscation (defaults to 'ws-default')",
         "LLM_DEBUG": "Enable debug logging for LLM (0 or 1, defaults to 0)",
+        "FIRETRACE_API_KEY": "FireTrace tracing key (runs are not recorded when unset)",
     }
 
-    # This output lands in Cloud Run logs on every boot. OBFUSCATED_WS_PATH is
-    # the only thing guarding the Retell LLM websocket (no signature or call_id
-    # check), so its value must never be printed.
-    secret_optional_vars = {"OBFUSCATED_WS_PATH"}
+    # This output lands in Cloud Run logs on every boot. Only values known not
+    # to be secret are echoed; everything else is reported as set or not.
+    # OBFUSCATED_WS_PATH is the only thing guarding the Retell LLM websocket
+    # (no signature or call_id check) and FIRETRACE_API_KEY is a key, so
+    # neither value is ever printed.
+    printable_optional_vars = {"LLM_DEBUG"}
 
     missing_required = []
     for var, description in required_vars.items():
@@ -73,10 +76,10 @@ def validate_environment_variables():
         value = os.getenv(var)
         if not value:
             print(f"  ℹ {var} not set ({description})")
-        elif var in secret_optional_vars:
-            print(f"  ✓ {var} is set")
-        else:
+        elif var in printable_optional_vars:
             print(f"  ✓ {var} is set to: {value}")
+        else:
+            print(f"  ✓ {var} is set")
 
     # Unset is fine for local dev and tests, but it means the websocket answers
     # on a path anyone who reads this repo knows.

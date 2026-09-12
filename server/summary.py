@@ -6,10 +6,10 @@ from agents import (
     Agent,
     ModelSettings,
     Runner,
-    trace,
 )
 
 from custom_types import TextChatMessage
+from firetrace import traced_run
 from model_config import REASONING_EFFORT, SUMMARY_MODEL
 
 __all__ = [
@@ -54,12 +54,17 @@ async def generate_summary(transcript: List[TextChatMessage]) -> str:
     )
 
     try:
-        # Run the agent to get a single response
-        with trace(
-            workflow_name="portfolio_summary_generation",
+        # Run the agent to get a single response. One FireTrace trace per
+        # summary; the request has no call id, so there is no sessionId here.
+        with traced_run(
+            "portfolio_summary_generation",
+            model=SUMMARY_MODEL,
+            input={"transcript": messages},
             metadata={"message_count": str(len(messages))},
-        ):
+            tags=("summary",),
+        ) as run:
             result = await Runner.run(summary_agent, messages)
+            run.set_output({"summary": result.final_output})
         return result.final_output
     except Exception as e:
         print(f"Error generating summary: {e}")

@@ -158,8 +158,9 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
     """Send messages through the full agent pipeline and log everything."""
     from contextlib import AsyncExitStack
 
-    from agents import RawResponsesStreamEvent, RunItemStreamEvent, trace
+    from agents import RawResponsesStreamEvent, RunItemStreamEvent
 
+    from firetrace import traced_run
     from llm import GuardrailTripped, LlmClient, screened_stream
     from model_config import AGENT_MODEL
     from prompts import guardrail_refusal_message, voice_turn
@@ -198,10 +199,15 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
 
         try:
             async with AsyncExitStack() as stack:
-                stack.enter_context(trace(
-                    workflow_name="debug_session",
-                    group_id="debug",
+                # Debug turns are traced to FireTrace too (tagged "debug") when
+                # FIRETRACE_API_KEY is set, so the span tree can be inspected there.
+                run = stack.enter_context(traced_run(
+                    "debug_session",
+                    session_id="debug",
+                    model=AGENT_MODEL,
+                    input={"messages": list(conversation)},
                     metadata={"mode": mode, "turn": str(turn_num)},
+                    tags=("debug", mode),
                 ))
                 # Same path as production: the guardrail runs beside the agent.
                 events = await stack.enter_async_context(
@@ -218,6 +224,7 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
                         print(f"     {DIM}(withdrawn after {len(full_text)} chars had streamed){RESET}")
                         # What the chat panel is left showing and sends back as history.
                         full_text = guardrail_refusal_message
+                        run.mark_guardrail_blocked(output={"text": full_text})
                         break
 
                     if isinstance(event, RawResponsesStreamEvent):
@@ -326,6 +333,9 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
 
                     else:
                         print(f"\n  {DIM}[unknown event] {type(event).__name__}{RESET}")
+
+                if full_text != guardrail_refusal_message or tool_calls_log:
+                    run.set_output({"text": full_text, "tool_calls": tool_calls_log})
 
         except Exception as e:
             print(f"\n  {BOLD}{RED}❌ ERROR: {e}{RESET}")

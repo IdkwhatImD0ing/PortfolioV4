@@ -93,4 +93,4 @@ NEXT_PUBLIC_API_URL=...           # optional; backend pinged on page load to wak
 NEXT_PUBLIC_APP_URL=...           # locks the proxy's CORS origin in prod
 ```
 
-The backend (`server/.env`) needs `RETELL_API_KEY`, `OPENAI_API_KEY`, `PINECONE_API_KEY` (validated at startup in `main.py`), plus optional `OBFUSCATED_WS_PATH` and `LLM_DEBUG`.
+The backend (`server/.env`) needs `RETELL_API_KEY`, `OPENAI_API_KEY`, `PINECONE_API_KEY` (validated at startup in `main.py`), plus optional `OBFUSCATED_WS_PATH`, `LLM_DEBUG` and `FIRETRACE_API_KEY` (records every agent run at tracing.art3m1s.me; one key per environment, see `server/README.md`).

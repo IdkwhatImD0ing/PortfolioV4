@@ -84,7 +84,7 @@ flowchart LR
 | **Backend** | FastAPI · Uvicorn · OpenAI Agents SDK · Retell SDK 4.4 · Pydantic | Streaming WebSocket + tool-calling agent |
 | **Vector DB** | Pinecone 7 · `text-embedding-3-large` | Semantic search across projects |
 | **Infra** | Docker · Cloud Run · Vercel · ngrok (dev) | One-command deploys, edge-friendly |
-| **Observability** | Vercel Analytics · Speed Insights · structured logs | Real-user perf + traces |
+| **Observability** | Vercel Analytics · Speed Insights · structured logs · [FireTrace](https://tracing.art3m1s.me) | Real-user perf + one trace per agent run |
 
 </details>
 
@@ -119,6 +119,7 @@ ngrok http --url=conversational.ngrok.app 8000         # public webhook
 RETELL_API_KEY=...
 OPENAI_API_KEY=...
 PINECONE_API_KEY=...
+FIRETRACE_API_KEY=...     # optional: records every agent run at tracing.art3m1s.me
 
 # client/.env.local (see client/.env.local.example for optional dev-agent vars)
 RETELLAI_API_KEY=...

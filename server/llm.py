@@ -16,9 +16,10 @@ from agents import (
     ModelSettings,
     SpanError,
     guardrail_span,
-    trace,
 )
 from openai.types.shared import Reasoning
+
+from firetrace import traced_run
 
 
 from navigation import tool_call_to_metadata
@@ -240,6 +241,10 @@ class LlmClient:
     def __init__(self, call_id: str, mode: str = "voice", debug=None):
         self.call_id = call_id
         self.mode = mode
+        # Retell's call_details payload (agent id, call type, the metadata the
+        # browser attached when it created the call). main.py fills this in on
+        # the first websocket message; every turn's trace carries it.
+        self.call_details: dict = {}
 
         # The prompt varies by mode; the model and reasoning effort do not —
         # both come from model_config so there is one place to change them.
@@ -357,6 +362,39 @@ class LlmClient:
             get_project_details,
         ]
 
+    def _call_metadata(self) -> dict:
+        """Trace metadata from Retell's call_details, when the call sent them."""
+        details = self.call_details if isinstance(self.call_details, dict) else {}
+        meta: dict = {}
+        for key in ("agent_id", "call_type"):
+            if details.get(key):
+                meta[f"retell.{key}"] = details[key]
+        custom = details.get("metadata")
+        if isinstance(custom, dict) and custom:
+            meta["retell.metadata"] = custom
+        return meta
+
+    def _user_id(self) -> str | None:
+        """A user id, if the browser attached one to the call. None today."""
+        details = self.call_details if isinstance(self.call_details, dict) else {}
+        custom = details.get("metadata")
+        if isinstance(custom, dict):
+            uid = custom.get("user_id") or custom.get("userId")
+            return str(uid) if uid else None
+        return None
+
+    @staticmethod
+    def _run_output(
+        text_parts: List[str], tool_calls: List[dict], refusal_parts: List[str] | None = None
+    ) -> dict:
+        """The run's result as stored on its trace: final text plus tool calls."""
+        output: dict = {"text": "".join(text_parts)}
+        if refusal_parts:
+            output["refusal"] = "".join(refusal_parts)
+        if tool_calls:
+            output["tool_calls"] = tool_calls
+        return output
+
     @staticmethod
     def _tool_status_label(name: str, args: str) -> str | None:
         """Map a tool call to a user-facing status label for the text chat UI."""
@@ -394,14 +432,41 @@ class LlmClient:
         # Tool calls sent to Retell that haven't had their result yet. A trip
         # can cancel the run mid-tool, so these get closed out first.
         unfinished_tools: list[str] = []
+        # Set by a trip; the closing chunks are yielded after the trace has
+        # closed, so a consumer that stops reading there cannot make a finished
+        # turn look abandoned.
+        refusal_text: str | None = None
+        text_parts: List[str] = []
+        tool_calls: List[dict] = []
+        refusal_parts: List[str] = []
         try:
             async with AsyncExitStack() as stack:
-                # Create an explicit trace for this response so analytics can be grouped by call/session.
-                stack.enter_context(trace(
-                    workflow_name="portfolio_voice_response",
-                    group_id=self.call_id,
-                    metadata={"mode": self.mode, "response_id": str(response_id)},
+                # One FireTrace trace per turn, grouped by call id so a whole
+                # conversation can be pulled up by sessionId. The Agents SDK's
+                # own trace (and the OpenAI dashboard export) rides inside it.
+                run = stack.enter_context(traced_run(
+                    "portfolio_voice_response",
+                    session_id=self.call_id,
+                    user_id=self._user_id(),
+                    model=AGENT_MODEL,
+                    input={
+                        "interaction_type": request.interaction_type,
+                        "response_id": response_id,
+                        "transcript": [
+                            {"role": u.role, "content": u.content} for u in request.transcript
+                        ],
+                    },
+                    metadata={
+                        "mode": self.mode,
+                        "response_id": str(response_id),
+                        "interaction_type": request.interaction_type,
+                    },
+                    tags=("voice", request.interaction_type),
                 ))
+                # Retell's call details carry what the browser chose to attach,
+                # so they go to FireTrace only (redacted and bounded there),
+                # never to the SDK trace that the OpenAI exporter uploads as is.
+                run.set_metadata(**self._call_metadata())
                 # The guardrail runs beside the model on visitor turns and before
                 # it on reminders; see screened_stream and _screens_first.
                 events = await stack.enter_async_context(
@@ -413,34 +478,33 @@ class LlmClient:
                 async for event in events:
                     if isinstance(event, GuardrailTripped):
                         self._log(f"Guardrail blocked the turn: {event.verdict}")
-                        for tool_call_id in unfinished_tools:
-                            yield ToolCallResultResponse(
-                                tool_call_id=tool_call_id,
-                                content="Cancelled: the guardrail blocked this turn.",
-                            )
                         # Whatever already streamed has been spoken, and speech
                         # can't be taken back. Stop there and apologise. If
                         # nothing went out yet, give the full refusal instead.
-                        yield ResponseResponse(
-                            response_id=response_id,
-                            content=(
-                                guardrail_interruption_message
-                                if spoke
-                                else self._refusal_for(request)
-                            ),
-                            content_complete=True,
-                            end_call=False,
+                        refusal_text = (
+                            guardrail_interruption_message
+                            if spoke
+                            else self._refusal_for(request)
                         )
-                        return
+                        run.mark_guardrail_blocked(
+                            output=self._run_output([refusal_text], tool_calls, refusal_parts)
+                        )
+                        break
 
                     if isinstance(event, RawResponsesStreamEvent):
                         data = event.data
-                        if getattr(data, "type", "") == "response.output_text.delta":
+                        event_type = getattr(data, "type", "")
+                        if event_type == "response.refusal.delta":
+                            # Not spoken (nothing is yielded), but recorded on
+                            # the trace so an empty answer can be explained.
+                            refusal_parts.append(getattr(data, "delta", "") or "")
+                        elif event_type == "response.output_text.delta":
                             # For streaming, pass through the delta as-is
                             # The AI has been instructed not to use markdown in the prompts
                             delta_content = getattr(data, "delta", "")
                             if delta_content:
                                 spoke = True
+                                text_parts.append(delta_content)
                                 yield ResponseResponse(
                                     response_id=response_id,
                                     content=delta_content,
@@ -456,6 +520,7 @@ class LlmClient:
                             )
                             name = getattr(tool_call, "name", "")
                             args = getattr(tool_call, "arguments", "") or ""
+                            tool_calls.append({"name": name, "arguments": args})
 
                             unfinished_tools.append(call_id)
                             yield ToolCallInvocationResponse(
@@ -482,6 +547,9 @@ class LlmClient:
                                 content=str(output_item.output),
                             )
 
+                if refusal_text is None:
+                    run.set_output(self._run_output(text_parts, tool_calls, refusal_parts))
+
         except Exception as e:
             print(
                 f"Error creating agent stream: {e}\n{traceback.format_exc()}",
@@ -490,6 +558,20 @@ class LlmClient:
             yield ResponseResponse(
                 response_id=response_id,
                 content="",
+                content_complete=True,
+                end_call=False,
+            )
+            return
+
+        if refusal_text is not None:
+            for tool_call_id in unfinished_tools:
+                yield ToolCallResultResponse(
+                    tool_call_id=tool_call_id,
+                    content="Cancelled: the guardrail blocked this turn.",
+                )
+            yield ResponseResponse(
+                response_id=response_id,
+                content=refusal_text,
                 content_complete=True,
                 end_call=False,
             )
@@ -539,12 +621,20 @@ class LlmClient:
         processed_messages = list(messages)
 
         streamed = False
+        # Set by a trip; yielded after the trace has closed (see draft_response).
+        refusal_chunk: TextChatStreamChunk | None = None
+        text_parts: List[str] = []
+        tool_calls: List[dict] = []
+        refusal_parts: List[str] = []
         try:
             async with AsyncExitStack() as stack:
-                stack.enter_context(trace(
-                    workflow_name="portfolio_text_response",
-                    group_id=self.call_id,
+                run = stack.enter_context(traced_run(
+                    "portfolio_text_response",
+                    session_id=self.call_id,
+                    model=AGENT_MODEL,
+                    input={"messages": messages},
                     metadata={"mode": self.mode, "message_count": str(len(processed_messages))},
+                    tags=("text",),
                 ))
                 # Starts the agent and the guardrail now, so the model request
                 # overlaps the status write below. See screened_stream.
@@ -561,7 +651,7 @@ class LlmClient:
                             # Part of the answer may already be on screen.
                             # `replace` withdraws all of it, so the visitor is
                             # left with the refusal and nothing else.
-                            yield TextChatStreamChunk(
+                            refusal_chunk = TextChatStreamChunk(
                                 type="replace",
                                 content=guardrail_refusal_message,
                             )
@@ -569,20 +659,28 @@ class LlmClient:
                             # A client from before `replace` would drop it and
                             # keep the answer with no refusal at all. Append
                             # the refusal instead, as this endpoint used to.
-                            yield TextChatStreamChunk(
+                            refusal_chunk = TextChatStreamChunk(
                                 type="content",
                                 content=("\n\n" if streamed else "") + guardrail_refusal_message,
                             )
+                        run.mark_guardrail_blocked(
+                            output=self._run_output(
+                                [guardrail_refusal_message], tool_calls, refusal_parts
+                            )
+                        )
                         break
 
                     if isinstance(event, RawResponsesStreamEvent):
                         data = event.data
                         event_type = getattr(data, "type", "")
-                        if event_type == "response.output_text.delta":
+                        if event_type == "response.refusal.delta":
+                            refusal_parts.append(getattr(data, "delta", "") or "")
+                        elif event_type == "response.output_text.delta":
                             delta_content = getattr(data, "delta", "")
                             if delta_content:
                                 self._log(f"text content delta: {len(delta_content)} chars")
                                 streamed = True
+                                text_parts.append(delta_content)
                                 yield TextChatStreamChunk(
                                     type="content",
                                     content=delta_content,
@@ -593,6 +691,7 @@ class LlmClient:
                             tool_call = event.item.raw_item
                             name = getattr(tool_call, "name", "")
                             args = getattr(tool_call, "arguments", "") or ""
+                            tool_calls.append({"name": name, "arguments": args})
 
                             # Emit a human-readable status for tool calls
                             status_label = self._tool_status_label(name, args)
@@ -609,6 +708,9 @@ class LlmClient:
                     else:
                         self._log(f"unhandled stream event: {type(event).__name__}")
 
+                if refusal_chunk is None:
+                    run.set_output(self._run_output(text_parts, tool_calls, refusal_parts))
+
         except Exception as e:
             print(
                 f"Error in text chat stream: {e}\n{traceback.format_exc()}",
@@ -619,6 +721,9 @@ class LlmClient:
                 content="An error occurred. Please try again.",
             )
             return
+
+        if refusal_chunk is not None:
+            yield refusal_chunk
 
         # Signal completion
         yield TextChatStreamChunk(type="done")
