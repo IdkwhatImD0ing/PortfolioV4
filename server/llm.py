@@ -39,6 +39,7 @@ from prompts import (
     reminder_prompt,
     text_system_prompt,
     voice_system_prompt,
+    voice_turn,
 )
 
 from model_config import AGENT_MODEL, REASONING_EFFORT
@@ -305,12 +306,7 @@ class LlmClient:
                 break
 
         if last_user_message:
-            last_user_message = (
-                f"User question:{last_user_message}\n\n"
-                "Always respond in plain conversational text. No special symbols or markdown."
-                "This is a VOICE conversation - every character you type will be spoken aloud."
-            )
-            prompt[last_user_message_index]["content"] = last_user_message
+            prompt[last_user_message_index]["content"] = voice_turn(last_user_message)
 
         if request.interaction_type == "reminder_required":
             prompt.append({"role": "user", "content": reminder_prompt})
@@ -532,17 +528,15 @@ class LlmClient:
         if not messages:
             messages = [{"role": "user", "content": "Hello"}]
 
-        # Add instruction to the last user message for text chat
-        # Encourage markdown formatting for better readability
-        processed_messages = []
-        for i, msg in enumerate(messages):
-            if i == len(messages) - 1 and msg.get("role") == "user":
-                processed_messages.append({
-                    "role": "user",
-                    "content": f"User question: {msg['content']}\n\nThis is a TEXT chat. Use markdown formatting: **bold** for emphasis, `code` for tech terms, and bullet points for lists.",
-                })
-            else:
-                processed_messages.append(msg)
+        # The visitor's turns go to the agent exactly as typed. This used to
+        # rewrite the last one to "User question: {q}\n\nThis is a TEXT chat.
+        # Use markdown formatting: ...", but the input guardrail classifies that
+        # turn, so the judge read our formatting instruction as the visitor's own
+        # words, and that changed verdicts: "Tell me more about Dispatch AI." was
+        # refused 3 of 6 times wrapped and 0 of 6 plain. The markdown guidance
+        # already lives in text_system_prompt (prompts.py), so the wrapper added
+        # nothing the agent did not already have.
+        processed_messages = list(messages)
 
         streamed = False
         try:
