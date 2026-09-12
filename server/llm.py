@@ -30,6 +30,7 @@ from prompts import (
     reminder_prompt,
     text_system_prompt,
     voice_system_prompt,
+    voice_turn,
 )
 
 from model_config import AGENT_MODEL, REASONING_EFFORT
@@ -138,12 +139,7 @@ class LlmClient:
                 break
 
         if last_user_message:
-            last_user_message = (
-                f"User question:{last_user_message}\n\n"
-                "Always respond in plain conversational text. No special symbols or markdown."
-                "This is a VOICE conversation - every character you type will be spoken aloud."
-            )
-            prompt[last_user_message_index]["content"] = last_user_message
+            prompt[last_user_message_index]["content"] = voice_turn(last_user_message)
 
         if request.interaction_type == "reminder_required":
             prompt.append({"role": "user", "content": reminder_prompt})

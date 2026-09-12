@@ -2,6 +2,8 @@
 Tests for llm.py - LlmClient and utility functions.
 """
 
+import copy
+
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
@@ -300,11 +302,15 @@ class TestTextModeSendsVisitorWordsUnchanged:
             {"role": "assistant", "content": "hey"},
             {"role": "user", "content": "Tell me more about Dispatch AI."},
         ]
+        # Snapshot first. The captured list shares its dicts with `messages`, so
+        # comparing the two would pass even if the turn were rewritten in place.
+        expected = copy.deepcopy(messages)
         with patch("llm.Runner.run_streamed", side_effect=fake_run_streamed):
             async for _ in client.draft_text_response(messages):
                 pass
 
-        assert captured["messages"] == messages
+        assert captured["messages"] == expected
+        assert messages == expected
 
     def test_markdown_guidance_still_reaches_the_text_agent(self):
         """Dropping the wrapper must not drop the instruction it carried."""

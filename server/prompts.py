@@ -3,6 +3,35 @@
 # classifying our own sentinel.
 reminder_prompt = "(Now the user has not responded in a while, you would say:)"
 
+# The voice path wraps the visitor's last turn in formatting boilerplate before
+# the agent sees it (llm.py prepare_prompt). The guardrail strips exactly this
+# wrapper before classifying, so the judge reads only what the visitor said: the
+# boilerplate is instruction-shaped, and judging it as the visitor's words skewed
+# verdicts. It lives here, once, because the wrapping and the stripping must match
+# character for character or the strip silently stops working.
+voice_turn_prefix = "User question:"
+voice_turn_suffix = (
+    "\n\nAlways respond in plain conversational text. No special symbols or markdown."
+    "This is a VOICE conversation - every character you type will be spoken aloud."
+)
+
+
+def voice_turn(text: str) -> str:
+    """The visitor's voice turn as the agent receives it."""
+    return f"{voice_turn_prefix}{text}{voice_turn_suffix}"
+
+
+def unwrap_voice_turn(text: str) -> str:
+    """Undo `voice_turn` exactly; any other text comes back unchanged.
+
+    Only the exact wrapper is removed. Text a visitor types that merely looks like
+    it (the suffix with an instruction spliced in, say) does not match and reaches
+    the judge whole. That is the point: no boilerplate is taken on trust.
+    """
+    if text.startswith(voice_turn_prefix) and text.endswith(voice_turn_suffix):
+        return text[len(voice_turn_prefix) : len(text) - len(voice_turn_suffix)]
+    return text
+
 # What the visitor hears when the guardrail trips. Stays in Bill's voice (§4.2
 # forbids brochure phrasing) and names the hobbies deliberately — the old wording
 # listed only "background, education, projects, professional experience", which

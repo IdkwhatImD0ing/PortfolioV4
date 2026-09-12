@@ -159,6 +159,7 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
     from agents import RawResponsesStreamEvent, RunItemStreamEvent, Runner, trace
     from llm import LlmClient
     from model_config import AGENT_MODEL
+    from prompts import voice_turn
 
     header("Agent Debug Session")
     kv("Mode", mode)
@@ -175,8 +176,12 @@ async def run_agent_debug(user_messages: List[str], mode: str = "text"):
 
         conversation.append({"role": "user", "content": user_msg})
 
-        # Same input draft_text_response sends: the visitor's words, unwrapped.
+        # Same input the live path sends: text mode passes the visitor's words
+        # as typed (draft_text_response); voice mode wraps the last turn the way
+        # prepare_prompt does.
         processed = list(conversation)
+        if mode == "voice":
+            processed[-1] = {**processed[-1], "content": voice_turn(processed[-1]["content"])}
 
         kv("Processed messages count", len(processed))
         print()

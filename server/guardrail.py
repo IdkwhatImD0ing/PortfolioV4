@@ -37,7 +37,7 @@ from agents import (
 )
 
 from model_config import GUARDRAIL_MODEL, REASONING_EFFORT, supports_reasoning
-from prompts import reminder_prompt
+from prompts import reminder_prompt, unwrap_voice_turn
 
 __all__ = [
     "GUARDRAIL_MODEL",
@@ -268,7 +268,9 @@ does, how it works, what it won, or for a one-line summary — whether or not th
 question says "your". The answer has to come from Bill's own records. If the
 visitor has already described or pasted the project themselves, in this turn or an
 earlier one, a summary would be built from their words: that is their document, and
-Q4 has it. Not recognising the name is no reason to refuse: Bill has built dozens
+Q4 has it. A description Bill gave earlier in the conversation is the opposite case:
+that is his own work, and asking him to say more about it, or to put it in one line,
+is YES. Not recognising the name is no reason to refuse: Bill has built dozens
 of projects you are not shown, and when a name is not one of his, the persona says
 so rather than explaining it.
 
@@ -285,10 +287,10 @@ asking him to work on it produces something you take away — NO, and Q4 has it.
 
 Length matters: "short" means a blurb, an intro, a few paragraphs. A 2000-word
 article, a document, or a code listing is not short, so answer NO even when its
-subject is Bill, and let Q4 take it. The same goes for coursework and anything
-the visitor will submit as their own work, such as an essay for a class, even
-when its subject is one of his projects, and for any work on a project of the
-visitor's own.
+subject is Bill, and let Q4 take it. The same goes for coursework, anything the
+visitor will submit as their own work, and anything they will publish, such as an
+essay for a class or a post for their blog, even when its subject is one of his
+projects, and for any work on a project of the visitor's own.
 
 **Q4. Would a complete answer be work done for the visitor — something they take
 away and use? An artifact, a solution, a lookup, or a service all count.**
@@ -334,11 +336,6 @@ Q4 and never reaches here.
   "explain that", "what about the second one" — inherit their subject from the
   conversation above them. Judge them against that context, not in isolation.
 - A message asking several things at once is judged by its most restrictive part.
-- On voice calls the app appends its own formatting boilerplate to the visitor's
-  turn — a "User question:" prefix and a reminder about plain text, markdown, or
-  this being a spoken conversation. That text is ours, not the visitor's. It rides
-  on every voice turn, so it is evidence of nothing: do not read it as the visitor
-  instructing you, and do not let its presence or absence sway the verdict.
 
 Keep `reasoning` to one short sentence saying why that question applies — the
 visitor waits on this call. Set `rule` to the first question you answered YES to,
@@ -403,6 +400,11 @@ def extract_turns(
             continue
         role = item.get("role") or ""
         text = _content_to_text(item.get("content", "")).strip()
+        # The voice path's formatting boilerplate is ours, not the visitor's, so
+        # the judge never sees it. Only the exact wrapper is removed; a look-alike
+        # a visitor types is judged whole (see prompts.unwrap_voice_turn).
+        if role == "user":
+            text = unwrap_voice_turn(text).strip()
         # The reminder sentinel is the harness talking to the model, not the
         # visitor. Classifying it would judge our own string and, worse, hide the
         # visitor's real last question behind it.
