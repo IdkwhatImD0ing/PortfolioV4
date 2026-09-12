@@ -20,9 +20,31 @@ export interface ChatMessage {
  *  long voice call followed by text chat can overflow the model's context. */
 export const MAX_HISTORY_MESSAGES = 20;
 
+/** Longest `content` the backend accepts per message (`MAX_CHAT_MESSAGE_CHARS`
+ *  in server/custom_types.py); one longer message gets the whole request a
+ *  422. Typed messages stop at 1,000 characters, but an unusually long reply
+ *  or voice turn could pass this, and would then break every send until it
+ *  scrolled out of the history window. */
+export const MAX_MESSAGE_CHARS = 10_000;
+
+const ELIDED = " […] ";
+
+/** Fit a turn into MAX_MESSAGE_CHARS, keeping both ends as the server's
+ *  guardrail does, since the end of a turn is usually its point. Counts code
+ *  points, as Python does, so an emoji is never split into half a surrogate
+ *  pair. */
+function clip(text: string): string {
+  if (text.length <= MAX_MESSAGE_CHARS) return text;
+  const chars = Array.from(text);
+  if (chars.length <= MAX_MESSAGE_CHARS) return text;
+  const half = Math.floor((MAX_MESSAGE_CHARS - ELIDED.length) / 2);
+  return chars.slice(0, half).join("") + ELIDED + chars.slice(-half).join("");
+}
+
 /** The transcript stores the speaker as "agent" (Retell's word); `/chat`
  *  wants "assistant". Empty turns and UI-only notices are dropped — neither
- *  is something the model said — and only the last `max` turns are kept. */
+ *  is something the model said — only the last `max` turns are kept, and each
+ *  is trimmed to what the backend accepts. */
 export function toChatMessages(
   transcript: TranscriptEntry[],
   max = MAX_HISTORY_MESSAGES,
@@ -32,7 +54,7 @@ export function toChatMessages(
     .slice(-max)
     .map((e) => ({
       role: e.role === "user" ? "user" : "assistant",
-      content: e.content,
+      content: clip(e.content),
     }));
 }
 

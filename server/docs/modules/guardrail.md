@@ -84,7 +84,7 @@ after it in `<trailing_turns>`.
 | Last **non-empty** user turn is the target | `/chat` takes a client-supplied array, so a whitespace-only trailing turn would otherwise hide the payload behind it. |
 | Turns *after* the target are still rendered | Slicing them off is a hole: a caller can append their own `assistant` turns, which the model reads as a prefill to continue from. Dropped here means invisible to the judge but fully visible to the agent. |
 | An array with no user turn at all is still classified | A pure-assistant array is a prefill attempt, not an empty request. Waving it through unclassified is the bypass. |
-| Delimiter-shaped text stripped; per-call nonce on the tags, named in the payload | Stops a visitor closing `</turn_to_classify>` to forge an "already screened" note. The regex covers `< /tag>` as well as `</ tag>`. |
+| Delimiter names stripped from visitor text; per-call nonce on the tags, named in the payload | Stops a visitor closing `</turn_to_classify>` to forge an "already screened" note. The names are removed wherever they appear rather than matched as whole tags, so no spacing (`< /tag>`), nesting (`<<tag>/tag>`) or unclosed variant can leave a tag behind, and text inside a fake tag stays visible to the judge. |
 | Truncation keeps **both ends** of a turn and of the conversation | Head-only truncation makes length a bypass: the cap bounds what the *judge* sees, not what the *agent* sees, so `"A" * cap + payload` would show the judge pure filler. Likewise, evicting oldest-first would let cheap filler flush the setup out of view. |
 | Non-text content parts are marked, not dropped | Silently discarding an image or file part would let content the agent consumes go unclassified. |
 
@@ -95,6 +95,29 @@ can be smuggled through by padding it.
 Note that `llm.py` wraps the last user turn in `User question:…Always respond in plain
 conversational text…` before the guardrail sees it. That scaffolding is left in place and
 simply read as part of the message.
+
+### Size limits
+
+There are two layers of caps.
+
+| Where | Limit | Why |
+|---|---|---|
+| `custom_types.py`, the `/chat` request | 50 messages (`MAX_CHAT_MESSAGES`), 10,000 characters each (`MAX_CHAT_MESSAGE_CHARS`). Anything larger gets a 422 before the guardrail runs, and a body over 4 MiB (`MAX_CHAT_BODY_BYTES`) gets a 413 before it is even parsed. | `/chat` is unauthenticated and reachable directly at the Cloud Run URL, which accepts 32 MiB bodies. The client sends at most 20 messages and trims each to 10,000 characters, typed ones stop at 1,000, and replies are prompted to stay under 300 words, so real traffic sits far below every cap. |
+| `guardrail.py`, what the judge sees | 4,000 characters for the judged turn (`MAX_TURN_CHARS`), 1,000 for each other turn (`MAX_CONTEXT_CHARS_PER_TURN`), 12,000 for the earlier turns (`MAX_TOTAL_CONTEXT_CHARS`), plus up to 3,000 more for trailing turns (a quarter of that, counted separately). | Bounds the judge's context window and latency. A timeout fails open, so a slow judge is a bypass. |
+
+All of this runs synchronously on the event loop, so its cost must stay small however long
+a turn is. The old whole-tag regex ran on the **whole** turn before truncation and was
+quadratic: `"<turn_to_classify " * 20_000` (360 KB) took 2.8 s, and `"<" + " " * 20_000`
+(20 KB) took 4 s. For that long the server answered nothing else, voice calls included.
+
+Two changes fixed it. The pattern is now a plain alternation of the three names, which gets
+through a megabyte in about 10 ms. And `_sanitize` now truncates first and strips second, so
+the regex only sees the capped text. Because stripping runs last, nothing the slicing
+produces can survive as a name. The voice websocket has no request cap, so these two are its
+whole defence. `tests/test_guardrail.py::TestSanitize` times both on 1 MB adversarial inputs.
+
+A 422 from this server leaves out the `input` FastAPI normally echoes back for each error
+(`main.py`). Echoing an oversized list meant encoding all of it on the event loop.
 
 ## Failure behaviour
 
