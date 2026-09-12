@@ -15,6 +15,11 @@ def validate_environment_variables():
         "LLM_DEBUG": "Enable debug logging for LLM (0 or 1, defaults to 0)",
     }
 
+    # This output lands in Cloud Run logs on every boot. OBFUSCATED_WS_PATH is
+    # the only thing guarding the Retell LLM websocket (no signature or call_id
+    # check), so its value must never be printed.
+    secret_optional_vars = {"OBFUSCATED_WS_PATH"}
+
     missing_required = []
     for var, description in required_vars.items():
         if not os.getenv(var):
@@ -32,10 +37,21 @@ def validate_environment_variables():
 
     for var, description in optional_vars.items():
         value = os.getenv(var)
-        if value:
-            print(f"  ✓ {var} is set to: {value}")
-        else:
+        if not value:
             print(f"  ℹ {var} not set ({description})")
+        elif var in secret_optional_vars:
+            print(f"  ✓ {var} is set")
+        else:
+            print(f"  ✓ {var} is set to: {value}")
+
+    # Unset is fine for local dev and tests, but it means the websocket answers
+    # on a path anyone who reads this repo knows.
+    if not os.getenv("OBFUSCATED_WS_PATH"):
+        print(
+            "  ⚠ WARNING: OBFUSCATED_WS_PATH is not set, so the Retell LLM websocket "
+            "is served at the public default path /ws-default/{call_id}. Anyone can "
+            "connect to it. Set OBFUSCATED_WS_PATH before exposing this server."
+        )
 
     # Print what model_config actually resolved, not the raw env vars. Reading
     # the env here would report an override that the constants may not have

@@ -2,9 +2,9 @@
 Tests for main.py - FastAPI endpoints and handlers.
 """
 
-import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 
 class TestPingEndpoint:
@@ -183,6 +183,47 @@ class TestValidateEnvironmentVariables:
         with patch.dict("os.environ", env_vars, clear=True):
             # Should not raise
             validate_environment_variables()
+
+    def test_ws_path_value_never_printed(self, capsys):
+        """The websocket path is a secret: startup logs say it's set, never what it is."""
+        from main import validate_environment_variables
+
+        secret_path = "s3cret-ws-path-7f3a9c"
+        env_vars = {
+            "RETELL_API_KEY": "test-key",
+            "OPENAI_API_KEY": "test-key",
+            "PINECONE_API_KEY": "test-key",
+            "OBFUSCATED_WS_PATH": secret_path,
+            "LLM_DEBUG": "1",
+        }
+
+        with patch.dict("os.environ", env_vars, clear=True):
+            validate_environment_variables()
+
+        captured = capsys.readouterr()
+        assert secret_path not in captured.out
+        assert secret_path not in captured.err
+        assert "OBFUSCATED_WS_PATH is set" in captured.out
+        assert "WARNING" not in captured.out
+        # LLM_DEBUG isn't secret, so its value is still shown.
+        assert "LLM_DEBUG is set to: 1" in captured.out
+
+    def test_unset_ws_path_warns(self, capsys):
+        """Without OBFUSCATED_WS_PATH the socket sits on the public default path, so say so."""
+        from main import validate_environment_variables
+
+        env_vars = {
+            "RETELL_API_KEY": "test-key",
+            "OPENAI_API_KEY": "test-key",
+            "PINECONE_API_KEY": "test-key",
+        }
+
+        with patch.dict("os.environ", env_vars, clear=True):
+            validate_environment_variables()
+
+        out = capsys.readouterr().out
+        assert "WARNING: OBFUSCATED_WS_PATH is not set" in out
+        assert "/ws-default/" in out
 
 
 class TestCORSConfiguration:
