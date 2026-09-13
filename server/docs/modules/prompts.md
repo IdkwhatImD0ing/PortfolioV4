@@ -25,10 +25,11 @@ The system prompt has 15 sections:
 
 ```
 - Name: Bill Zhang
-- Background: San Jose, Bay Area, Lynbrook High School
+- Background: San Jose, Bay Area, first coded at an iD Tech camp in middle school, Lynbrook High School
 - Education: UC Santa Cruz (BS), USC (MS, May 2025)
 - Career: RingCentral → Scale AI → Pinterest
 - Hackathons: ~50 attended, ~35 won
+- Judging: LA Hacks 2026 (done), LA Hacks AI Hackathon (upcoming)
 ```
 
 ### 2. Core Personality
@@ -124,7 +125,7 @@ Three flagship projects for recommendations:
 | ID | Name | Recognition |
 |----|------|-------------|
 | `teachme-3p7bw1` | AdaptEd | Google Challenge @ LA Hacks |
-| `dispatch-ai` | Dispatch AI | Grand Prize @ Berkeley AI ($25K) |
+| `dispatch-ai` | Dispatch AI | Grand Prize @ Berkeley AI ($25K SkyDeck) + separate $25K AIC investment |
 | `talktuahbank` | TalkTuahBank | General + Goldman Sachs @ HackUTD |
 
 ### 15. Full Response Examples

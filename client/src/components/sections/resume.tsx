@@ -59,7 +59,7 @@ export function ResumeSection() {
                 hero's shortcut. */}
             <div className="flex justify-between items-center gap-4 px-[18px] py-3.5 border-t border-line bg-[rgba(15,12,28,0.7)] max-[700px]:order-first max-[700px]:flex-col max-[700px]:items-stretch max-[700px]:gap-3 max-[700px]:border-t-0 max-[700px]:border-b">
               <span className="font-mono text-[11px] tracking-[0.14em] uppercase text-muted">
-                resume.pdf · last updated July 26, 2026
+                resume.pdf · last updated September 12, 2026
               </span>
               <div className="flex gap-2.5 flex-wrap">
                 <a
