@@ -20,6 +20,9 @@ Owner-provided portfolio facts:
 - His site describes previous work at RingCentral from June 2023 to June 2025 — joining as a senior AI intern and converting to a full-time AI Engineer in August 2023 — focused on conversational AI and QA testing.
 - His site describes a Master's degree in Computer Science with an Artificial Intelligence specialization from USC, graduated May 2025.
 - His education page lists USC for Master's in Computer Science + AI, UC Santa Cruz for Bachelor's in Computer Science, and Lynbrook High School.
+- Bill's first coding experience was an iD Tech summer camp in middle school.
+- Dispatch AI earned $50K in total investment across two awards: the $25K Berkeley SkyDeck grand prize and a separate $25K AIC investment. The grand prize itself was $25K.
+- Bill judged LA Hacks 2026 and is confirmed as a judge for the upcoming LA Hacks AI Hackathon, which has not happened yet.
 - His focus areas include artificial intelligence, machine learning, NLP, conversational AI, voice agents, telephony integrations, agentic systems, and LLM-powered applications.
 
 Hackathon Playbook facts to attribute carefully:

@@ -17,7 +17,7 @@ const ABOUT = [
   {
     num: "03 / HOW",
     title: "One idea, end to end, in 36 hours.",
-    body: "At a hackathon I pick one idea and make it actually work. Dispatch AI was a phone line, a fine-tuned triage model, and a dispatcher screen. It took the $50K grand prize at Berkeley against 900+ people.",
+    body: "At a hackathon I pick one idea and make it actually work. Dispatch AI was a phone line, a fine-tuned triage model, and a dispatcher screen. It won the $25K SkyDeck grand prize at Berkeley against 900+ people, plus a separate $25K investment from AIC.",
   },
   {
     num: "04 / WHY",

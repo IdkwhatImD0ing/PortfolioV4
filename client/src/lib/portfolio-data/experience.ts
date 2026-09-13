@@ -45,7 +45,8 @@ export const EXPERIENCE: ExperienceEntry[] = [
     bullets: [
       "Built an emergency-response AI platform with Berkeley SkyDeck funding.",
       "Solo-engineered the low-latency voice agent and telephony behind the dispatcher demo: intent routing, emotion signals, and structured handoff to responders.",
-      "Won the $50K Grand Prize at the UC Berkeley AI Hackathon against 900+ participants.",
+      "Won the Grand Prize at the UC Berkeley AI Hackathon against 900+ participants.",
+      "Earned $50K in total investment across two awards: the $25K Berkeley SkyDeck grand prize and a separate $25K investment from AIC.",
     ],
   },
   {
@@ -76,6 +77,8 @@ export const EXPERIENCE: ExperienceEntry[] = [
     bullets: [
       "Competed mostly during college; still enter a few events a year.",
       "Most of the projects on this page started as weekend builds.",
+      "Judged LA Hacks 2026.",
+      "Upcoming: confirmed as a judge for the LA Hacks AI Hackathon.",
     ],
   },
 ];

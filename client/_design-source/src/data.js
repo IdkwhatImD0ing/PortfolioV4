@@ -193,7 +193,7 @@ window.EDUCATION = [
     full: "Lynbrook High School",
     degree: "College Prep",
     when: "2016 — 2020",
-    detail: "South Bay. First wrote code here.",
+    detail: "South Bay. Arrived already coding, thanks to an iD Tech camp in middle school.",
     logo: "assets/lynbrook.png",
   },
 ];
