@@ -27,6 +27,14 @@ DEFAULT_PROJECT_DETAILS = "No details available"
 _index_host: Optional[str] = None
 
 
+class ProjectSearchUnavailable(Exception):
+    """The embedding call or the Pinecone index failed.
+
+    Raised instead of returning an empty result. An empty search reads as "Bill
+    has no such project", and the persona would then disown a real one.
+    """
+
+
 async def _resolve_index_host() -> str:
     """Resolve and cache the Pinecone index host for INDEX_NAME."""
     global _index_host
@@ -83,6 +91,9 @@ async def search_projects(query: str, top_k: int = 3) -> List[Dict]:
 
     Returns:
         List of project dictionaries with metadata and relevance scores
+
+    Raises:
+        ProjectSearchUnavailable: the embedding call or the Pinecone query failed
     """
     try:
         query_embedding = await get_embedding(query)
@@ -125,7 +136,7 @@ async def search_projects(query: str, top_k: int = 3) -> List[Dict]:
 
     except Exception as e:
         print(f"Error searching projects: {e}")
-        return []
+        raise ProjectSearchUnavailable(str(e)) from e
 
 
 async def get_project_by_id(project_id: str) -> Optional[Dict]:
@@ -137,6 +148,9 @@ async def get_project_by_id(project_id: str) -> Optional[Dict]:
 
     Returns:
         Project dictionary with metadata or None if not found
+
+    Raises:
+        ProjectSearchUnavailable: the Pinecone fetch failed
     """
     try:
         host = await _resolve_index_host()
@@ -171,7 +185,7 @@ async def get_project_by_id(project_id: str) -> Optional[Dict]:
 
     except Exception as e:
         print(f"Error fetching project {project_id}: {e}")
-        return None
+        raise ProjectSearchUnavailable(str(e)) from e
 
 
 async def find_similar_projects(project_id: str, top_k: int = 3) -> List[Dict]:
@@ -184,6 +198,9 @@ async def find_similar_projects(project_id: str, top_k: int = 3) -> List[Dict]:
 
     Returns:
         List of similar project dictionaries
+
+    Raises:
+        ProjectSearchUnavailable: the Pinecone fetch or query failed
     """
     try:
         host = await _resolve_index_host()
@@ -216,4 +233,4 @@ async def find_similar_projects(project_id: str, top_k: int = 3) -> List[Dict]:
 
     except Exception as e:
         print(f"Error finding similar projects: {e}")
-        return []
+        raise ProjectSearchUnavailable(str(e)) from e

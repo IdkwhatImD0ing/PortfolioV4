@@ -4,7 +4,7 @@ Documentation for the project search tools used by the LLM.
 
 ## File Location
 
-`llm.py` (lines 233-302)
+`agent_tools.py` (registered on the agent in `llm.py`)
 
 ## Purpose
 
@@ -55,6 +55,9 @@ Found 3 relevant projects:
    Summary: Voice-based banking assistant...
 ```
 
+If the search can't run, it returns `PROJECT_SEARCH_UNAVAILABLE` instead. See
+[When Pinecone Is Down](#when-pinecone-is-down).
+
 ### get_project_details
 
 Fetch full details for a specific project.
@@ -96,42 +99,80 @@ Imagine: A major earthquake hits...
 ### search_projects
 
 ```python
-def search_projects(query: str, message: str) -> str:
-    results = search_projects_impl(query, top_k=3)
-    
-    if not results:
-        return "No projects found matching that query."
-    
-    response = f"Found {len(results)} relevant projects:\n\n"
-    for i, project in enumerate(results, 1):
-        clean_name = clean_markdown(project["name"])
-        clean_summary = clean_markdown(project["summary"])
-        response += f"{i}. Project ID: {project['id']}\n"
-        response += f"   Name: {clean_name}\n"
-        response += f"   Summary: {clean_summary}\n\n"
-    
-    return response.strip()
+async def search_projects(query: str, message: str, num_results: int = 3) -> str:
+    try:
+        top_k = max(3, min(10, num_results))
+        results = await search_projects_impl(query, top_k=top_k)
+
+        # A working index always returns its closest projects, so an empty
+        # list means the index is empty or misconfigured: an outage too.
+        if not results:
+            return PROJECT_SEARCH_UNAVAILABLE
+
+        response = f"Found {len(results)} relevant projects:\n\n"
+        for i, project in enumerate(results, 1):
+            clean_name = clean_markdown(project["name"])
+            clean_summary = clean_markdown(project["summary"])
+            response += f"{i}. Project ID: {project['id']}\n"
+            response += f"   Name: {clean_name}\n"
+            response += f"   Summary: {clean_summary}\n\n"
+        return response.strip()
+
+    except ProjectSearchUnavailable:
+        return PROJECT_SEARCH_UNAVAILABLE
+    except Exception:
+        logger.exception("search_projects failed for %r", query)
+        return PROJECT_SEARCH_UNAVAILABLE
 ```
 
 ### get_project_details
 
 ```python
-def get_project_details(project_id: str, message: str) -> str:
-    project = get_project_by_id(project_id)
-    
-    if not project:
-        return f"Could not find project with ID: {project_id}"
-    
-    clean_name = clean_markdown(project["name"])
-    clean_summary = clean_markdown(project["summary"])
-    clean_details = clean_markdown(project["details"])
-    
-    response = f"Project: {clean_name}\n\n"
-    response += f"Summary: {clean_summary}\n\n"
-    response += f"Details: {clean_details}"
-    
-    return response.strip()
+async def get_project_details(project_id: str, message: str) -> str:
+    try:
+        project = await get_project_by_id(project_id)
+
+        if not project:
+            return f"Could not find project with ID: {project_id}"
+
+        clean_name = clean_markdown(project["name"])
+        clean_summary = clean_markdown(project["summary"])
+        clean_details = clean_markdown(project["details"])
+
+        response = f"Project ID: {project['id']}\n"
+        response += f"Project: {clean_name}\n\n"
+        response += f"Summary: {clean_summary}\n\n"
+        response += f"Details: {clean_details}"
+        return response.strip()
+
+    except ProjectSearchUnavailable:
+        return PROJECT_SEARCH_UNAVAILABLE
+    except Exception:
+        logger.exception("get_project_details failed for %r", project_id)
+        return PROJECT_SEARCH_UNAVAILABLE
 ```
+
+## When Pinecone Is Down
+
+If the embedding call or Pinecone fails, `project_search.py` raises
+`ProjectSearchUnavailable` instead of returning an empty list. Both tools then
+return the same fixed string, `PROJECT_SEARCH_UNAVAILABLE` in `agent_tools.py`:
+
+```
+Project search is temporarily unavailable. This is an outage, not a result: it
+says nothing about which projects are Bill's, so don't tell the user any project
+isn't his.
+```
+
+Why it can't look like an empty result: `prompts.py` section 11 tells the persona
+that a project search didn't return isn't one of Bill's. The tools used to answer
+an outage with "No projects found matching that query.", so during a Pinecone
+outage the persona told visitors that real projects weren't his. Section 11 now has
+a "When project search is down" rule that keys on the words "project search is
+temporarily unavailable". `tests/test_agent_tools.py` checks that the tool string
+and the prompt still share that phrase, so reword both together.
+
+The raw error goes to the server log, not to the model.
 
 ## Markdown Cleaning
 
