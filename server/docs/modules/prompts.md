@@ -79,7 +79,11 @@ The system prompt has 15 sections:
 
 > Keep §3 (passions) and §6.2 in sync with the classifier rubric in `guardrail.py`.
 > Issue #10 came from those drifting apart: cooking was a listed passion and a
-> blocked keyword at the same time.
+> blocked keyword at the same time. Sci-fi lore drifted the same way: §3.3 listed
+> Halo, Mass Effect and Stargate, the rubric did not, and the judge refused their
+> lore as trivia. The rubric's Q3 now names every game and show in §3.3. Add one
+> inside §3.3's parentheses and `tests/test_guardrail.py::TestPassionsStayInSync`
+> fails until the rubric names it too; a name outside them is not checked.
 
 ### 9. Main Goal
 

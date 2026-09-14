@@ -652,11 +652,13 @@ class TestHeldOutCasesStayUnseen:
         from tests.test_guardrail_eval import (
             CASES,
             CONVERSATION_CASES,
+            LORE_CASES,
             PRODUCTION_CASES,
             WRAPPED_CASES,
         )
 
-        for text, _, _ in list(CASES) + list(PRODUCTION_CASES) + list(WRAPPED_CASES):
+        seen = list(CASES) + list(PRODUCTION_CASES) + list(LORE_CASES) + list(WRAPPED_CASES)
+        for text, _, _ in seen:
             yield self._strip_wrapper(text)
         for convo, _, _ in CONVERSATION_CASES:
             for message in convo:
@@ -934,6 +936,44 @@ class TestLadderBranchCoverage:
 
         assert any(
             TestSanitize._TAG_SHAPED.search(c) for c, _, _ in HELD_OUT_BYPASS_CASES
+        )
+
+
+class TestPassionsStayInSync:
+    def test_rubric_names_every_game_and_show_the_persona_lists(self):
+        """Q3 names Bill's sci-fi and games, so it must name all of them.
+
+        The judge only allows a lore question ("what was the SPARTAN program in
+        Halo?") because the rubric says Halo is his. A franchise the persona
+        lists and the rubric does not is one whose lore gets refused as a lookup,
+        which is issue #10 again: a passion in prompts.py that the guardrail
+        treats as off-topic. This reads the list out of the persona's section 3,
+        so adding a game there fails here until the rubric names it too.
+
+        It reads the parenthesised lists, which is how section 3.3 names its
+        games and shows today. A franchise added outside parentheses ("Playing
+        Elden Ring lately.") is not seen, so keep new ones inside them.
+        """
+        import prompts
+
+        section = prompts.base_prompt.split("**Sci-Fi & Gaming**")[1].split("**Cooking**")[0]
+        names = []
+        for group in re.findall(r"\(([^)]*)\)", section):
+            for item in group.split(","):
+                # "Valorant ace", "finishing The Witcher 3": keep the name only.
+                words = item.split()
+                while words and words[0][0].islower():
+                    words.pop(0)
+                while words and words[-1][0].islower():
+                    words.pop()
+                names.append(" ".join(words))
+
+        rubric = " ".join(guardrail.GUARDRAIL_INSTRUCTIONS.split())
+        missing = [name for name in names if name not in rubric]
+        assert len(names) >= 6, names
+        assert not missing, (
+            "prompts.py section 3 lists these, but the guardrail rubric does not "
+            "name them, so their lore will be refused as trivia: " + ", ".join(missing)
         )
 
 
