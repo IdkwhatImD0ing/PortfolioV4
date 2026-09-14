@@ -22,7 +22,6 @@ and so cannot tell whether it ran.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from agents import set_tracing_disabled
 from agents.models.interface import Model
 from openai.types.responses import (
     Response,
@@ -90,18 +89,6 @@ class _StubModel(Model):
                 tools=[],
             ),
         )
-
-
-@pytest.fixture(autouse=True)
-def no_trace_export():
-    """These tests really run the SDK, and draft_response opens a real trace().
-
-    Left on, every run queues spans that the exporter posts to OpenAI with the
-    fake test key. Restored to the suite's default (on) afterwards.
-    """
-    set_tracing_disabled(True)
-    yield
-    set_tracing_disabled(False)
 
 
 @pytest.fixture

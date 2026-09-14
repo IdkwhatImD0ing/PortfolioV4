@@ -14,6 +14,18 @@ os.environ.setdefault("RETELL_API_KEY", "test-retell-key")
 os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
 os.environ.setdefault("PINECONE_API_KEY", "test-pinecone-key")
 
+# The Agents SDK sends every trace to api.openai.com from a background thread,
+# using OPENAI_API_KEY. With a placeholder key (the one above, or CI's
+# "test-key") that upload can only fail with a 401. Remove the SDK's OpenAI
+# exporter, the only trace processor registered so far, but leave tracing on:
+# FireTrace's processor, which test_firetrace.py exercises, is fed by the SDK's
+# spans. A real key, as in a live `-m integration` run, keeps the default.
+_openai_key = os.environ["OPENAI_API_KEY"]
+if not _openai_key or _openai_key.startswith("test"):
+    from agents.tracing import set_trace_processors
+
+    set_trace_processors([])
+
 
 @pytest.fixture(autouse=True)
 def no_firetrace_network(monkeypatch):
