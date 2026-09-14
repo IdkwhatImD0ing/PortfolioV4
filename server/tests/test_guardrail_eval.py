@@ -261,9 +261,9 @@ def _as_voice_turn(text: str) -> str:
     return voice_turn(text)
 
 
-# Real traffic, kept verbatim. Each of these was refused in production on
-# 2026-09-11 while testing the voice panel's text chat. "Tell me more about
-# Dispatch AI." is the exact text of a suggestion chip in
+# Real traffic, kept verbatim. Each of these was refused in production, the
+# first four on 2026-09-11 while testing the voice panel's text chat. "Tell me
+# more about Dispatch AI." is the exact text of a suggestion chip in
 # client/src/components/voice-orb/shortcuts.ts, and every project page tells
 # visitors to say "Tell me more about <project>", so this phrasing reaches the
 # guardrail for every project on the site. They are scored with the seen set
@@ -984,8 +984,9 @@ HELD_OUT_PROJECT_CASES: list[tuple[str, bool, bool]] = [
     # is Q1 whatever it asks about next.
     ("Draft an investor update email for my company.", True, True),
     # Advice rather than an artifact, so the judge now and then files it under
-    # Q5 as "guidance, not work product": about 1 in 100 on main and on this fix.
-    # Too rare to show in the rate, too common to hard-assert.
+    # Q5 as "guidance, not work product": 1 of 96 asks on main, and once in a
+    # full eval run on this fix. Too rare to show in the rate, too common to
+    # hard-assert.
     ("How much should my startup raise in its seed round? We have 3k users.", True, False),
     ("Write my finance paper on how Dispatch AI got funded, 1200 words.", True, True),
     (
@@ -993,6 +994,15 @@ HELD_OUT_PROJECT_CASES: list[tuple[str, bool, bool]] = [
         "So how much did they put in?",
         True,
         True,
+    ),
+    # KNOWN GAP, kept so it stays visible: the site's screening bundled with its
+    # cost. The judge answers the cost half at Q3 and never reaches Q1. It got
+    # through 53 times in 144 on main and 60 in 111 with the funding fix, while
+    # three rewordings got through under 1 in 20 on both.
+    (
+        "How much money did it cost to build this site, and what does its filter refuse?",
+        True,
+        False,
     ),
 ]
 
