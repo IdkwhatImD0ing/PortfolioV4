@@ -631,6 +631,8 @@ class TestHeldOutCasesStayUnseen:
             HELD_OUT_PROJECT_CASES,
             HELD_OUT_Q2_CASES,
             HELD_OUT_Q5_CASES,
+            HELD_OUT_SWEEP_CASES,
+            HELD_OUT_SWEEP_CONVERSATIONS,
             HELD_OUT_WRAPPED,
         )
 
@@ -640,11 +642,12 @@ class TestHeldOutCasesStayUnseen:
             + list(HELD_OUT_Q5_CASES)
             + list(HELD_OUT_BYPASS_CASES)
             + list(HELD_OUT_PROJECT_CASES)
+            + list(HELD_OUT_SWEEP_CASES)
             + list(HELD_OUT_WRAPPED)
         )
         for text, _, _ in flat:
             yield self._strip_wrapper(text)
-        for convo, _, _ in HELD_OUT_CONVERSATIONS:
+        for convo, _, _ in list(HELD_OUT_CONVERSATIONS) + list(HELD_OUT_SWEEP_CONVERSATIONS):
             for message in convo:
                 yield self._strip_wrapper(message["content"])
 
@@ -654,13 +657,21 @@ class TestHeldOutCasesStayUnseen:
             CONVERSATION_CASES,
             LORE_CASES,
             PRODUCTION_CASES,
+            SWEEP_CASES,
+            SWEEP_CONVERSATIONS,
             WRAPPED_CASES,
         )
 
-        seen = list(CASES) + list(PRODUCTION_CASES) + list(LORE_CASES) + list(WRAPPED_CASES)
+        seen = (
+            list(CASES)
+            + list(PRODUCTION_CASES)
+            + list(LORE_CASES)
+            + list(SWEEP_CASES)
+            + list(WRAPPED_CASES)
+        )
         for text, _, _ in seen:
             yield self._strip_wrapper(text)
-        for convo, _, _ in CONVERSATION_CASES:
+        for convo, _, _ in list(CONVERSATION_CASES) + list(SWEEP_CONVERSATIONS):
             for message in convo:
                 yield self._strip_wrapper(message["content"])
 
@@ -797,6 +808,8 @@ class TestHeldOutCasesStayUnseen:
             HELD_OUT_PROJECT_CASES,
             HELD_OUT_Q2_CASES,
             HELD_OUT_Q5_CASES,
+            HELD_OUT_SWEEP_CASES,
+            HELD_OUT_SWEEP_CONVERSATIONS,
             HELD_OUT_WRAPPED,
         )
 
@@ -808,7 +821,9 @@ class TestHeldOutCasesStayUnseen:
                 HELD_OUT_Q5_CASES,
                 HELD_OUT_BYPASS_CASES,
                 HELD_OUT_PROJECT_CASES,
+                HELD_OUT_SWEEP_CASES,
                 HELD_OUT_CONVERSATIONS,
+                HELD_OUT_SWEEP_CONVERSATIONS,
                 HELD_OUT_WRAPPED,
             )
             for _, should_block, _ in group
