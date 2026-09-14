@@ -80,6 +80,8 @@ def _model_from_env(var: str, default: str) -> str:
 
 
 # The conversational agent behind both the voice call and the /chat endpoint.
+# prompts.py section 13 tells visitors the replies come from GPT-5.6, so move
+# that line too if this leaves the GPT-5.6 family.
 AGENT_MODEL = _model_from_env("AGENT_MODEL", "gpt-5.6-terra")
 
 # The jailbreak classifier in guardrail.py. This is the only gate in front of the
