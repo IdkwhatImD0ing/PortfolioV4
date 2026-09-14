@@ -285,15 +285,16 @@ ships and programs, and the music written for them, are his to talk about as a f
 whether or not the question says "you".
 
 Yes also for: asking about a project by its name alone — what it is, what it
-does, how it works, what it won, or for a one-line summary — whether or not the
-question says "your". The answer has to come from Bill's own records. If the
+does, how it works, what it won or raised, or for a one-line summary — whether or
+not the question says "your". The answer has to come from Bill's own records. If the
 visitor has already described or pasted the project themselves, in this turn or an
 earlier one, a summary would be built from their words: that is their document, and
 Q4 has it. A description Bill gave earlier in the conversation is the opposite case:
 that is his own work, and asking him to say more about it, or to put it in one line,
-is YES. Not recognising the name is no reason to refuse: Bill has built dozens
-of projects you are not shown, and when a name is not one of his, the persona says
-so rather than explaining it.
+is YES. Not recognising the name is no reason to refuse, and neither is its sounding
+like a startup: Bill has built dozens of projects you are not shown, several of which
+won prize money or investment. When a name is not one of his, the persona says so
+rather than explaining it.
 
 The test is *whose life the answer describes*. "Write a blurb about you I can
 forward to my hiring manager" describes Bill — YES. "Write my cover letter for a job
