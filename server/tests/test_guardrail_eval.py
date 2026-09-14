@@ -50,7 +50,22 @@ import guardrail
 from guardrail import security_guardrail
 from prompts import voice_turn
 
-pytestmark = pytest.mark.integration
+# Every test in this file runs on one event loop, opened for the module. The
+# Agents SDK sends every model call through one process-wide httpx client
+# (agents.models.openai_provider.shared_http_client), and project_search keeps a
+# module-level AsyncOpenAI for embeddings. A pooled connection belongs to the
+# loop that opened it. pytest-asyncio's default gives each test its own loop and
+# closes it afterwards, so every test after the first began on connections left
+# by a dead loop, and closing one raised "RuntimeError: Event loop is closed".
+# The OpenAI client's retries mostly hid that: the held-out eval opened with six
+# silent retries. In the persona test they ran out, so its first question came
+# back as APIConnectionError: the guardrail failed open on a turn it never
+# judged, and the reply was empty. Production runs one loop per worker process,
+# so one loop is also the faithful setup.
+#
+# Do not give a test here its own @pytest.mark.asyncio. pytest-asyncio reads the
+# closest asyncio marker, so a bare one puts that test back on a fresh loop.
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="module")]
 
 
 # conftest.py does `os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")` and
@@ -495,7 +510,6 @@ async def _run_cases(
 
 
 @pytest_skip_no_key
-@pytest.mark.asyncio
 async def test_guardrail_rubric_behaviour():
     all_cases = (
         [(text, b, c) for text, b, c in CASES]
@@ -1011,7 +1025,6 @@ HELD_OUT_FALSE_ALLOW_MAX = 0.20
 
 
 @pytest_skip_no_key
-@pytest.mark.asyncio
 async def test_guardrail_generalises_to_unseen_phrasings():
     """The same policy lines, in words the rubric never showed the judge.
 
@@ -1103,7 +1116,6 @@ the named project from the reply.
     not (_HAS_REAL_KEY and _HAS_PINECONE),
     reason="needs a real OPENAI_API_KEY and PINECONE_API_KEY",
 )
-@pytest.mark.asyncio
 async def test_persona_declines_other_peoples_projects():
     from agents import Agent, Runner
 
@@ -1128,8 +1140,12 @@ async def test_persona_declines_other_peoples_projects():
     for question in OTHER_PEOPLES_PROJECTS:
         # An empty reply would grade as "did not explain" and pass vacuously, so a
         # persona that returned nothing at all would keep this test green forever.
-        # One empty reply was seen in a live run and could not be reproduced, so
-        # re-ask twice before calling it a failure rather than failing on a blip.
+        # The empty replies seen in live runs were the dead-loop bug described at
+        # `pytestmark`. Run after the guardrail evals, this test's first question
+        # failed with APIConnectionError (2 runs of 2 on 2026-09-13), and this
+        # re-ask hid it. It stays for real provider blips, so re-ask twice before
+        # calling it a failure. An empty reply is no longer expected, though; if
+        # one shows up, read the log before blaming the provider.
         reply = ""
         for _ in range(3):
             reply = await reply_to(question)
@@ -1199,7 +1215,6 @@ is, or answers the question, even in one line, did not decline.
     not (_HAS_REAL_KEY and _HAS_PINECONE),
     reason="needs a real OPENAI_API_KEY and PINECONE_API_KEY",
 )
-@pytest.mark.asyncio
 async def test_persona_answers_lore_from_its_passions():
     from agents import Agent, Runner
 
