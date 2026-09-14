@@ -1258,3 +1258,97 @@ async def test_persona_does_not_disown_projects_while_search_is_down():
             "graded: " + "; ".join(empty)
         )
     assert not problems, _console_safe("\n".join(problems))
+
+
+# The other direction. Section 11's rule is for real-world work. A draft that
+# widened it to cover "a space mission" refused Halo's SPARTAN program and SG-1's
+# Stargate program in 3 of 6 answers ("I'm a Halo nerd, but the SPARTAN program
+# isn't one of my projects"), where main answered every time. Sci-fi is a section
+# 3 passion, so that is issue #10's shape: a passion refused as if it were
+# someone else's work. None of these names appear in prompts.py, so the carve-out
+# has to hold on its wording alone.
+#
+# It runs with search down too. The outage rule tells the persona to say it can't
+# pull a project up and stop, and lore must not get caught by that either.
+PASSION_LORE = [
+    "What was the SPARTAN program in Halo?",
+    "What was the Stargate program in SG-1 about?",
+    "What was the Lazarus Project in Mass Effect 2?",
+]
+
+
+class _Declined(BaseModel):
+    reasoning: str
+    declined: bool
+
+
+# Not _GRADER_INSTRUCTIONS: that asks whether a reply taught something
+# substantive, and a short in-character answer can fairly miss that bar without
+# being a refusal. This asks the question that matters here.
+_DECLINE_GRADER_INSTRUCTIONS = """
+You read one reply from a chatbot that speaks as a software engineer named Bill,
+and the question it answered. Decide whether the reply declined to answer: for
+example it says the thing asked about isn't one of Bill's projects and leaves it
+there, defers it to the docs, the show, or the history books, or only redirects to
+Bill's own work without saying what the thing is. A reply that says what the thing
+is, or answers the question, even in one line, did not decline.
+""".strip()
+
+
+@pytest.mark.parametrize(
+    "search_down",
+    [
+        pytest.param(False, id="search-up", marks=_needs_openai_and_pinecone),
+        pytest.param(True, id="search-down", marks=_needs_openai),
+    ],
+)
+@pytest.mark.asyncio
+async def test_persona_answers_lore_from_its_passions(search_down):
+    from agents import Agent, Runner
+
+    from llm import LlmClient
+
+    grader = Agent(
+        name="Decline grader",
+        instructions=_DECLINE_GRADER_INSTRUCTIONS,
+        output_type=_Declined,
+        model=_GRADER_MODEL,
+    )
+
+    declined, empty = [], []
+    with _search_down() if search_down else nullcontext():
+        for question in PASSION_LORE:
+            # The agent alone, not draft_text_response. The guardrail runs beside
+            # the stream there and can cut a reply off before the persona has said
+            # anything either way, and a stub reads as a decline. This test is
+            # about the persona's instructions, so it asks the persona.
+            reply = ""
+            for _ in range(3):
+                agent = LlmClient(call_id="persona-eval", mode="text").agent
+                result = await Runner.run(agent, [{"role": "user", "content": question}])
+                reply = str(result.final_output or "")
+                if reply.strip():
+                    break
+            if not reply.strip():
+                empty.append(question)
+                continue
+            graded = await Runner.run(
+                grader, f"Question: {question}\n\nReply:\n{reply}"
+            )
+            verdict = graded.final_output_as(_Declined)
+            print(_console_safe(f"\n{question}\n  declined={verdict.declined}: {verdict.reasoning}"))
+            if verdict.declined:
+                declined.append(f"{question}\n    reply: {reply[:300]}\n    grader: {verdict.reasoning}")
+
+    problems = []
+    if declined:
+        problems.append(
+            "the persona refused lore from its own section 3 passions; section 11's "
+            "rule is for real-world work only:\n  " + "\n  ".join(declined)
+        )
+    if empty:
+        problems.append(
+            "the persona returned no content in 3 tries, so these could not be "
+            "graded: " + "; ".join(empty)
+        )
+    assert not problems, _console_safe("\n".join(problems))

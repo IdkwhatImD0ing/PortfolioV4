@@ -113,15 +113,24 @@ get_project_details(project_id, message)      # Full details for one ID
 ```
 - Listing query: list every result; no get_project_details or display_project
 - Showing query: one project, search → get_project_details → display_project
-- A project that isn't yours: search came back with other projects but not the
-  named one → say so in a line, offer the closest one, stop. Never explain
-  someone else's system.
-- When project search is down: never say a project is or isn't yours. Answer
-  about the §12 flagship projects from the prompt. For anything else, say you
+- A project that isn't Bill's, software or not (a codebase, a research effort,
+  a public program, something historical): search came back with other projects
+  but not the named one → say so in a line, point at his closest project, stop.
+  No overview, history, or "but broadly" after it
+- That rule is for real-world work only. His §3 passions (the games, shows, and
+  music he's into, lore included) are never "someone else's project"
+- When project search is down: never say a project is or isn't his. Answer
+  about the §12 flagship projects from the prompt. For anything else, say he
   can't pull it up right now, offer a flagship if it fits, and stop: no guessed
-  details and no general explanation of how it works.
+  details, overview, or history. §3 passions are unaffected
 - Keep descriptions brief and end with a question
 ```
+
+> The guardrail allows any question that names a project, so this decline is the
+> only thing between a visitor and a free explainer of someone else's project.
+> `test_persona_declines_other_peoples_projects` checks the decline end to end, and
+> `test_persona_answers_lore_from_its_passions` checks the passion carve-out. Both
+> run with search working and with search down.
 
 > The "search is down" rule exists because a Pinecone outage used to come back
 > from the tools as "No projects found". The "isn't yours" rule then turned that
@@ -131,11 +140,9 @@ get_project_details(project_id, message)      # Full details for one ID
 > the phrase "project search is temporarily unavailable". Reword them together.
 > See [../tools/search.md](../tools/search.md#when-pinecone-is-down).
 >
-> Live checks (skip without a real `OPENAI_API_KEY`) are in
-> `tests/test_guardrail_eval.py`: `test_persona_declines_other_peoples_projects`
-> runs with search up and down, and
-> `test_persona_does_not_disown_projects_while_search_is_down` asks about three of
-> Bill's real projects with search down.
+> `test_persona_does_not_disown_projects_while_search_is_down` (live, skips
+> without a real `OPENAI_API_KEY`) asks about three of Bill's real projects with
+> search down.
 
 ### 12. Default Projects
 

@@ -465,11 +465,51 @@ projects for a hiring committee is the blurb rule, which now covers his projects
 name.
 
 The persona half is tested too. `test_persona_declines_other_peoples_projects` runs
-the real text agent on three questions about famous projects that are not his and
+the real text agent on four questions about famous projects that are not his and
 has a grader check the reply does not explain them. It found a real leak before the
 wording in section 11 was tightened: asked about the Linux kernel's copy-on-write
 `fork()`, the persona said it was not his project and then explained it anyway. After
 tightening, 0 of 12 replies explained, and 9 of 9 in the final runs.
+
+The fourth question, "What's the Human Genome Project about?", is not software, and
+it leaked next. Section 11 talked about "the mechanism" and "someone else's system",
+so the persona read it as a rule about code, and treated a research effort as a term
+to explain under section 6.2. It would say "not one of mine" and then give the
+history anyway. Section 11 now says the rule covers real-world work of any kind,
+rules out a summary or a line of history after the decline, and says a project he had
+nothing to do with is not a term to explain. Its new example is the Marshall Plan;
+the Human Genome Project is deliberately not named, so the test question stays unseen.
+
+Broadening the rule broke something else first. A draft that listed "a space
+mission" beside research efforts and public programs refused Halo's SPARTAN program
+and SG-1's Stargate program in 3 of 6 answers ("I'm a Halo nerd, but the SPARTAN
+program isn't one of my projects"), where main answered every time. Sci-fi is a
+section 3 passion, so that is issue #10's shape again. A carve-out tacked onto the
+end of the sentence did not hold. What did: scoping the rule to real-world work,
+dropping the space wording, and a separate line saying his passions, and any program
+or project inside their stories, are never covered.
+
+Measured on full replies (a guardrail cut-off was re-asked rather than counted):
+
+| | main | after |
+|---|---|---|
+| Human Genome Project explained | 13 of 99 | 0 of 50 |
+| Manhattan Project, Large Hadron Collider explained (named nowhere in the prompt) | 6 of 24 | 0 of 12 |
+| The three software questions explained | 0 of 24 | 0 of 12 |
+| Halo, Stargate and Mass Effect lore, and Halo Infinite, refused | 0 of 21 | 0 of 28 |
+| IPFS, Berkeley SkyDeck, React, and his own Scale AI work, refused | 0 of 24 | 0 of 28 |
+
+One behaviour moved: "What's Riot's Project L?", a real game he does not list as one
+he plays, is declined 6 times in 7, against 3 in 6 on main. That is the rule working
+as written.
+
+`test_persona_answers_lore_from_its_passions` guards the carve-out. It asks the persona
+about three pieces of lore and fails if it refuses any; run against the first draft,
+it failed 3 times in 3. It calls the agent directly rather than through
+`draft_text_response`, because the guardrail currently blocks lore questions like these
+about half the time as a Q4 lookup (4 of 6 each for the SPARTAN program and Mass
+Effect's Lazarus Project). That is a separate gap: the persona lists sci-fi trivia as
+Bill's own, and the rubric does not.
 
 After the change, the same probe:
 
