@@ -95,15 +95,42 @@ class TestSearchProjects:
         assert "github" in project
 
     @pytest.mark.asyncio
-    async def test_search_projects_handles_exception(self, mock_openai_embeddings, mock_pinecone):
-        """Test that exceptions are handled gracefully."""
-        from project_search import search_projects
-        
+    async def test_search_projects_raises_when_pinecone_fails(self, mock_openai_embeddings, mock_pinecone):
+        """A Pinecone outage raises instead of looking like an empty result.
+
+        An empty list reads as "Bill has no such project", which made the persona
+        disown real projects whenever Pinecone was down.
+        """
+        from project_search import ProjectSearchUnavailable, search_projects
+
         mock_pinecone.query.side_effect = Exception("API error")
-        
-        results = await search_projects("test")
-        
-        assert results == []
+
+        with pytest.raises(ProjectSearchUnavailable) as raised:
+            await search_projects("test")
+
+        assert str(raised.value.__cause__) == "API error"
+
+    @pytest.mark.asyncio
+    async def test_search_projects_raises_when_embedding_fails(self, mock_openai_embeddings, mock_pinecone):
+        """The OpenAI embedding call failing is the same outage as far as callers care."""
+        from project_search import ProjectSearchUnavailable, search_projects
+
+        mock_openai_embeddings.embeddings.create.side_effect = Exception("connection reset")
+
+        with pytest.raises(ProjectSearchUnavailable):
+            await search_projects("test")
+
+        mock_pinecone.query.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_search_projects_raises_when_index_host_lookup_fails(self, mock_openai_embeddings, mock_pinecone):
+        """A cold process resolves the index host first, so that's where an outage shows up."""
+        import project_search
+
+        project_search._resolve_index_host.side_effect = Exception("describe_index failed")
+
+        with pytest.raises(project_search.ProjectSearchUnavailable):
+            await project_search.search_projects("test")
 
 
 class TestGetProjectById:
@@ -135,15 +162,16 @@ class TestGetProjectById:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_project_by_id_handles_exception(self, mock_pinecone):
-        """Test that exceptions are handled gracefully."""
-        from project_search import get_project_by_id
-        
+    async def test_get_project_by_id_raises_when_pinecone_fails(self, mock_pinecone):
+        """An outage raises; None is kept for an ID the index really doesn't have."""
+        from project_search import ProjectSearchUnavailable, get_project_by_id
+
         mock_pinecone.fetch.side_effect = Exception("Fetch error")
-        
-        result = await get_project_by_id("test-project")
-        
-        assert result is None
+
+        with pytest.raises(ProjectSearchUnavailable) as raised:
+            await get_project_by_id("test-project")
+
+        assert str(raised.value.__cause__) == "Fetch error"
 
 
 class TestFindSimilarProjects:
@@ -213,12 +241,11 @@ class TestFindSimilarProjects:
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_find_similar_handles_exception(self, mock_pinecone):
-        """Test that exceptions are handled gracefully."""
-        from project_search import find_similar_projects
-        
+    async def test_find_similar_raises_when_pinecone_fails(self, mock_pinecone):
+        """Same contract as search_projects: an outage raises, it doesn't return []."""
+        from project_search import ProjectSearchUnavailable, find_similar_projects
+
         mock_pinecone.fetch.side_effect = Exception("Error")
-        
-        results = await find_similar_projects("test-project")
-        
-        assert results == []
+
+        with pytest.raises(ProjectSearchUnavailable):
+            await find_similar_projects("test-project")

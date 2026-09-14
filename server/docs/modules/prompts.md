@@ -13,13 +13,17 @@ Defines the AI persona, communication style, knowledge boundaries, and tool usag
 ## Exports
 
 ```python
-system_prompt = """..."""  # Full persona instructions
+base_prompt = """..."""  # Persona, shared by voice and text
+voice_system_prompt = base_prompt + voice_prompt_suffix
+text_system_prompt = base_prompt + text_prompt_suffix
+system_prompt = voice_system_prompt  # legacy alias
 begin_sentence = "Hey, I'm Bill. How can I help you?"
 ```
 
 ## Prompt Structure
 
-The system prompt has 15 sections:
+`base_prompt` has 13 numbered sections, so a change there reaches both voice and
+text. Each mode then appends its own suffix (see [Mode Suffixes](#mode-suffixes)).
 
 ### 1. Identity & Personal History
 
@@ -81,16 +85,7 @@ The system prompt has 15 sections:
 > Issue #10 came from those drifting apart: cooking was a listed passion and a
 > blocked keyword at the same time.
 
-### 9. Main Goal
-
-```
-- Voice conversation format
-- Answer as Bill Zhang
-- Handle speech-to-text errors gracefully
-- No markdown or URLs in output
-```
-
-### 10. Navigation Capability
+### 9. Navigation Tools
 
 ```python
 display_landing_page()   # Voice portfolio landing
@@ -102,23 +97,47 @@ display_architecture_page() # Portfolio architecture explainer
 display_project(id)      # Specific project
 ```
 
-### 11. Project Search Capability
+### 10. Project Search Tools
 
 ```python
-search_projects(query, message)        # Find projects
-get_project_details(project_id, message) # Full details
+search_projects(query, message, num_results)  # Find projects: summaries + real IDs
+get_project_details(project_id, message)      # Full details for one ID
 ```
 
-### 12-13. Voice Examples & Project Discussion
+- Search first to get a real ID, except for the three flagship projects in §12.
+- If either tool says project search is temporarily unavailable, that's an
+  outage, not an answer (see §11).
+
+### 11. Project Discussion Rules
 
 ```
-- Focus on ONE project at a time
-- Keep descriptions brief
-- Use display_project() proactively
-- End with questions
+- Listing query: list every result; no get_project_details or display_project
+- Showing query: one project, search → get_project_details → display_project
+- A project that isn't yours: search came back with other projects but not the
+  named one → say so in a line, offer the closest one, stop. Never explain
+  someone else's system.
+- When project search is down: never say a project is or isn't yours. Answer
+  about the §12 flagship projects from the prompt. For anything else, say you
+  can't pull it up right now, offer a flagship if it fits, and stop: no guessed
+  details and no general explanation of how it works.
+- Keep descriptions brief and end with a question
 ```
 
-### 14. Default Projects
+> The "search is down" rule exists because a Pinecone outage used to come back
+> from the tools as "No projects found". The "isn't yours" rule then turned that
+> into "CourtVision isn't one of mine" about a real project. Now any search
+> failure returns `PROJECT_SEARCH_UNAVAILABLE` (`agent_tools.py`), and
+> `tests/test_agent_tools.py` checks that the tool string and this prompt share
+> the phrase "project search is temporarily unavailable". Reword them together.
+> See [../tools/search.md](../tools/search.md#when-pinecone-is-down).
+>
+> Live checks (skip without a real `OPENAI_API_KEY`) are in
+> `tests/test_guardrail_eval.py`: `test_persona_declines_other_peoples_projects`
+> runs with search up and down, and
+> `test_persona_does_not_disown_projects_while_search_is_down` asks about three of
+> Bill's real projects with search down.
+
+### 12. Default Projects
 
 Three flagship projects for recommendations:
 
@@ -128,9 +147,25 @@ Three flagship projects for recommendations:
 | `dispatch-ai` | Dispatch AI | Grand Prize @ Berkeley AI ($25K SkyDeck) + separate $25K AIC investment |
 | `talktuahbank` | TalkTuahBank | General + Goldman Sachs @ HackUTD |
 
-### 15. Full Response Examples
+### 13. Architecture Easter Egg
 
-Shows correct tool usage and response patterns.
+When a visitor asks how the portfolio works, call `display_architecture_page()`
+and explain the stack conversationally.
+
+### Mode Suffixes
+
+`voice_prompt_suffix`:
+
+```
+- Voice conversation format; answer as Bill Zhang
+- Handle speech-to-text errors gracefully
+- No markdown or URLs in output
+- Maximum 200 words per response
+- Full response examples showing correct tool usage
+```
+
+`text_prompt_suffix`: light markdown allowed, maximum 300 words, and its own set
+of full response examples.
 
 ## Key Rules
 
@@ -216,7 +251,7 @@ system_prompt = """
 ### Add New Tool Instructions
 
 ```python
-### **10. NAVIGATION CAPABILITY**
+### **9. TOOLS - NAVIGATION**
 # Add:
 - **display_skills_page()**: Shows technical skills breakdown
 ```
@@ -224,7 +259,7 @@ system_prompt = """
 ### Update Default Projects
 
 ```python
-### **14. DEFAULT BEST PROJECTS**
+### **12. DEFAULT BEST PROJECTS**
 # Replace or add projects:
 **4. NewProject (id: "new-project-id")**
 - **What it is**: Description

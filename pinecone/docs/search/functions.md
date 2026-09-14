@@ -243,13 +243,21 @@ for p in similar:
 
 ## Error Handling
 
-All functions wrap errors gracefully:
+`search_projects`, `get_project_by_id`, and `find_similar_projects` log a failure
+and raise `ProjectSearchUnavailable`:
 
 ```python
 except Exception as e:
     print(f"Error searching projects: {e}")
-    return []
+    raise ProjectSearchUnavailable(str(e)) from e
 ```
+
+They don't return `[]` or `None` on failure, because an empty result reads as
+"Bill has no such project". When they returned `[]`, a Pinecone outage made the
+persona tell visitors that real projects weren't his. `[]` and `None` now only
+mean the index answered and had nothing. The agent tools turn the exception into
+a "project search is temporarily unavailable" message; see
+`../../server/docs/tools/search.md`.
 
 ## Modifications
 

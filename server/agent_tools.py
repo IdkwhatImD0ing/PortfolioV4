@@ -1,7 +1,9 @@
-from agents import function_tool as tool
+import logging
 
+from agents import function_tool as tool
+from project_search import ProjectSearchUnavailable, get_project_by_id
+from project_search import search_projects as search_projects_impl
 from text_utils import clean_markdown
-from project_search import search_projects as search_projects_impl, get_project_by_id
 
 __all__ = [
     "display_resume_page",
@@ -14,6 +16,19 @@ __all__ = [
     "get_project_details",
     "search_projects",
 ]
+
+logger = logging.getLogger(__name__)
+
+# What the model gets when the project index can't answer. It must not look like
+# an empty result: prompts.py section 11 says a project search didn't return
+# isn't Bill's, so when outages came back as "No projects found" the persona
+# disowned his real projects. Section 11's "When project search is down" rule
+# keys on this wording (tests/test_agent_tools.py checks they still match).
+PROJECT_SEARCH_UNAVAILABLE = (
+    "Project search is temporarily unavailable. This is an outage, not a result: "
+    "it says nothing about which projects are Bill's, so don't tell the user any "
+    "project isn't his."
+)
 
 
 @tool
@@ -99,8 +114,12 @@ async def get_project_details(project_id: str, message: str) -> str:
 
         return response.strip()
 
-    except Exception as e:
-        return f"Error fetching project details: {str(e)}"
+    except ProjectSearchUnavailable:
+        # project_search already logged the cause.
+        return PROJECT_SEARCH_UNAVAILABLE
+    except Exception:
+        logger.exception("get_project_details failed for %r", project_id)
+        return PROJECT_SEARCH_UNAVAILABLE
 
 
 @tool
@@ -117,14 +136,18 @@ async def search_projects(query: str, message: str, num_results: int = 3) -> str
         num_results: How many projects to return (3-10). Use 3 for specific lookups, 5-10 for listing or broad queries.
 
     Returns:
-        String description of matching projects with id, name, and summary only
+        String description of matching projects with id, name, and summary only,
+        or a notice that project search is temporarily unavailable
     """
     try:
         top_k = max(3, min(10, num_results))
         results = await search_projects_impl(query, top_k=top_k)
 
+        # A working index always returns its closest projects, so an empty list
+        # means the index itself is empty or misconfigured. That's an outage
+        # too, not "nothing matched".
         if not results:
-            return "No projects found matching that query."
+            return PROJECT_SEARCH_UNAVAILABLE
 
         response = f"Found {len(results)} relevant projects:\n\n"
 
@@ -140,5 +163,9 @@ async def search_projects(query: str, message: str, num_results: int = 3) -> str
 
         return response.strip()
 
-    except Exception as e:
-        return f"Error searching projects: {str(e)}"
+    except ProjectSearchUnavailable:
+        # project_search already logged the cause.
+        return PROJECT_SEARCH_UNAVAILABLE
+    except Exception:
+        logger.exception("search_projects failed for %r", query)
+        return PROJECT_SEARCH_UNAVAILABLE
