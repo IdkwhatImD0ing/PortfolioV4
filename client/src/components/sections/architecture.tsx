@@ -12,7 +12,7 @@ const FLOW = [
   {
     k: "02",
     title: "LLM agent",
-    body: "Retell hands the transcript to a FastAPI backend, where a GPT-5.6 Terra agent (OpenAI Agents SDK) runs with this site's content in context, nine registered tools, and a jailbreak guardrail in front.",
+    body: "Retell hands the transcript to a FastAPI backend, where a GPT-5.6 Terra agent (OpenAI Agents SDK) runs with this site's content in context and nine registered tools.",
   },
   {
     k: "03",
@@ -45,7 +45,7 @@ const STACK = [
     group: "Brain",
     items: [
       "GPT-5.6 Terra (the agent)",
-      "GPT-5.6 Luna (guardrail + call summary)",
+      "GPT-5.6 Luna (call summary)",
       "OpenAI Agents SDK, nine tools",
       "Site-grounded system prompt",
     ],
