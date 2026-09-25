@@ -20,6 +20,7 @@ from retell import Retell
 from custom_types import (
     MAX_CHAT_BODY_BYTES,
     ConfigResponse,
+    MetadataResponse,
     ResponseRequiredRequest,
     TextChatRequest,
     SummaryRequest,
@@ -28,6 +29,7 @@ from typing import Optional, List
 from socket_manager import manager
 from llm import LlmClient, generate_summary
 from app_helpers import BodySizeLimit, validate_environment_variables
+from voice_events import VoiceEvents
 
 # Re-export previously module-level public names so existing
 # `from main import validate_environment_variables` imports keep working.
@@ -167,7 +169,10 @@ async def handle_webhook(request: Request):
 async def websocket_handler(websocket: WebSocket, call_id: str):
     # Initialize tasks set before try block for proper cleanup
     tasks = set()
-    
+    # Where this call's page moves and captions go (voice_events.py). Set from
+    # the call details; None when the browser named no channel.
+    voice_events: VoiceEvents | None = None
+
     try:
         print(f"Attempting to accept websocket for call_id={call_id}")
         await websocket.accept()
@@ -191,6 +196,7 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
             try:
                 nonlocal response_id
                 nonlocal llm_client
+                nonlocal voice_events
                 # There are 5 types of interaction_type: call_details, pingpong, update_only, response_required, and reminder_required.
                 # Not all of them need to be handled, only response_required and reminder_required.
                 print("handle_message received:", request_json.get("interaction_type"))
@@ -199,6 +205,11 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
                     # metadata the browser attached) for this call's traces.
                     call = request_json.get("call")
                     llm_client.call_details = call if isinstance(call, dict) else {}
+                    # The channel name keeps this call's events from other
+                    # visitors, so it isn't printed here. (It does reach the
+                    # trace metadata and Retell's call record, owner-only.)
+                    voice_events = VoiceEvents.for_call(llm_client.call_details)
+                    print(f"Voice events {'on' if voice_events else 'off'} for {call_id}", flush=True)
                     # Send first message to signal ready of server
                     first_event = llm_client.draft_begin_message()
                     print("Sent first_event", flush=True)
@@ -213,6 +224,10 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
                     )
                     return
                 if request_json["interaction_type"] == "update_only":
+                    # The call panel's captions. v3 calls stopped sending the
+                    # browser its own transcript updates.
+                    if voice_events is not None:
+                        voice_events.transcript(request_json.get("transcript"))
                     return
                 if (
                     request_json["interaction_type"] == "response_required"
@@ -233,6 +248,16 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
                     try:
                         async for event in stream:
                             await websocket.send_json(event.__dict__)
+                            # Retell drops this metadata on v3 calls instead of
+                            # passing it to the browser, so the page move goes
+                            # out over Pusher too. Not once a newer turn has
+                            # started: this reply is being thrown away.
+                            if (
+                                voice_events is not None
+                                and isinstance(event, MetadataResponse)
+                                and request.response_id == response_id
+                            ):
+                                voice_events.navigation(event.metadata)
                             if request.response_id < response_id:
                                 print(
                                     "Detected newer response_id, abandoning current stream"
@@ -280,5 +305,9 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
         # Wait for all tasks to complete cancellation
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
-        
+
+        # Let the last captions reach the browser; bounded, never raises.
+        if voice_events is not None:
+            await voice_events.aclose()
+
         print(f"LLM WebSocket connection closed for {call_id}")

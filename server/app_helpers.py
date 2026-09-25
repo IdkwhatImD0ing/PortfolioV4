@@ -48,6 +48,7 @@ def validate_environment_variables():
         "OBFUSCATED_WS_PATH": "WebSocket path obfuscation (defaults to 'ws-default')",
         "LLM_DEBUG": "Enable debug logging for LLM (0 or 1, defaults to 0)",
         "FIRETRACE_API_KEY": "FireTrace tracing key (runs are not recorded when unset)",
+        "PUSHER_SECRET": "Pusher secret (voice calls can't move the page or show captions when unset)",
     }
 
     # This output lands in Cloud Run logs on every boot. Only values known not

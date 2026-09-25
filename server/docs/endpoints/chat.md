@@ -183,7 +183,7 @@ while (true) {
 | Protocol | Retell | Standard HTTP |
 | Input | Audio | Text |
 | Output | Audio + Transcript | Text |
-| Navigation | Metadata events | Metadata in stream |
+| Navigation | Pusher `navigation` events | Metadata in stream |
 | Guardrails | Yes | Yes |
 
 ## Related Files

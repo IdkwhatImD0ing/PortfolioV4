@@ -3,7 +3,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CreateWebCallRequest } from '@/types/api';
 
-const RETELL_CREATE_WEB_CALL_URL = 'https://api.retellai.com/v2/create-web-call';
+// v2 of this endpoint is deprecated on 2026-09-30. v3 takes the same body but
+// returns connection details (call_id, access_token, transport, ice_servers)
+// instead of the whole call object, and needs retell-client-js-sdk 3.x.
+const RETELL_CREATE_WEB_CALL_URL = 'https://api.retellai.com/v3/create-web-call';
 
 // Define CORS headers
 const corsHeaders = {
@@ -70,8 +73,13 @@ export async function POST(request: NextRequest) {
 
         if (!response.ok) {
             console.error('Error creating web call:', data ?? response.statusText);
+            // v3 errors carry their text in `message`; older ones in `error`.
             const upstreamError =
-                typeof data?.error === 'string' ? data.error : null;
+                typeof data?.message === 'string'
+                    ? data.message
+                    : typeof data?.error === 'string'
+                      ? data.error
+                      : null;
             return NextResponse.json(
                 { error: upstreamError || 'Failed to create web call' },
                 { status: response.status, headers: jsonHeaders }

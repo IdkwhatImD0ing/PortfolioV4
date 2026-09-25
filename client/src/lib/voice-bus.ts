@@ -41,8 +41,9 @@ export function scrollToSection(id: string): void {
   window.scrollTo({ top: y, behavior: prefersReducedMotion() ? "instant" : "smooth" });
 }
 
-/** Navigation metadata shape emitted by the server via Retell's metadata
- *  event. Each `page` value here MUST be in PAGE_TO_SECTION below. */
+/** Navigation payload the server emits: a `navigation` event on the voice
+ *  call's Pusher channel, or a `metadata` chunk in text chat. Each `page`
+ *  value here MUST be in PAGE_TO_SECTION below. */
 export interface NavigationMeta {
   type: string;
   page?:
@@ -99,7 +100,7 @@ export function metaToNavigationAction(
 
 /** Apply a server navigation payload to the page: emit its VoiceBus command,
  *  then scroll to its section on the next frame. No-op for anything that
- *  isn't navigation metadata. The voice path (Retell `metadata` events) and
+ *  isn't navigation metadata. The voice path (Pusher `navigation` events) and
  *  the text path (`/chat` SSE chunks) both go through here. */
 export function applyNavigation(meta: NavigationMeta | null | undefined): void {
   const action = metaToNavigationAction(meta);

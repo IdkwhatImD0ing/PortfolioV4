@@ -8,7 +8,7 @@ Documentation for the page navigation tools used by the LLM.
 
 ## Purpose
 
-Allow the LLM to navigate the frontend to different pages during conversation. Each tool triggers a `MetadataResponse` that the frontend handles.
+Allow the LLM to navigate the frontend to different pages during conversation. Each tool triggers a `MetadataResponse`, which reaches the frontend as a Pusher `navigation` event on voice calls and a `metadata` chunk in text chat.
 
 ## Available Tools
 
@@ -136,15 +136,17 @@ def display_project(id: str) -> str:
 
 Navigation tools do not accept a `message` parameter and do not emit spoken `ResponseResponse` chunks. If the assistant should narrate a page transition, that narration belongs in the normal model response text.
 
-## Metadata Event Flow
+## Navigation Event Flow
 
 ```
 1. LLM calls tool (e.g., display_education_page)
 2. Server yields ToolCallInvocationResponse
 3. Server yields MetadataResponse
-4. Server yields ToolCallResultResponse
-5. Frontend receives metadata event
-6. Frontend calls setActivePage("education")
+4. main.py sends it to Retell, and publishes it as a `navigation` event on the
+   call's Pusher channel (voice_events.py). Retell's v3 web calls don't forward
+   metadata to the browser, so the Pusher event is the one that arrives.
+5. Server yields ToolCallResultResponse
+6. Frontend's channel handler calls applyNavigation() and the page scrolls
 ```
 
 ## Adding a New Navigation Tool

@@ -22,6 +22,7 @@ Runtime secrets live in **GCP Secret Manager** in project `spiritual-storm-46970
 | `PINECONE_API_KEY` | Vector search |
 | `OBFUSCATED_WS_PATH` | Hardens the public WebSocket route |
 | `FIRETRACE_API_KEY` | Optional. [FireTrace](https://tracing.art3m1s.me) ingest key; one key per environment (see below) |
+| `PUSHER_SECRET` | Optional, but voice calls need it to move the page and show captions (`voice_events.py`). The app id, key and cluster aren't secret and default in code |
 
 ### How they get loaded
 
@@ -119,4 +120,23 @@ cd server
 bash deploy.sh
 ```
 
-`deploy.sh` builds from source via Cloud Build, deploys to Cloud Run (`us-west1`, service `fastapi-ws`), wipes any plain env vars from the prior revision, and mounts the four secrets above. Domain mapping at `portfolio-ws.art3m1s.me` is created on first deploy.
+`deploy.sh` builds from source via Cloud Build, deploys to Cloud Run (`us-west1`, service `fastapi-ws`), wipes any plain env vars from the prior revision, and mounts the secrets above (`FIRETRACE_API_KEY` only when it exists; `PUSHER_SECRET` is required unless you pass `PUSHER=off`). Domain mapping at `portfolio-ws.art3m1s.me` is created on first deploy. `deploy.ps1` never changes secret mounts, so use `deploy.sh` whenever a secret is added.
+
+## Voice events (Pusher)
+
+Retell's v3 web calls don't forward the backend's `metadata` events or live
+transcript to the browser, so `voice_events.py` publishes each call's page moves
+and captions to a Pusher channel the browser named (`voice-<uuid>`, sent as
+`metadata.events_channel` when the call is created). The app id, key and cluster
+aren't secret and default in code. `PUSHER_SECRET` is: anyone holding it can list
+the open voice channels and read or forge their events. Keep it in Secret
+Manager and `server/.env` only.
+
+Roll out the server before the client. The new server is safe with the old
+client (no `events_channel`, so nothing is published, and Retell still gets
+the metadata), but the new client depends on the new server:
+
+1. Create `PUSHER_SECRET` and grant `deploy-sa` access ("Add a new secret" above).
+2. From this branch, run `bash deploy.sh` and check it prints `PUSHER_SECRET found`.
+3. Merge, so Vercel ships the client.
+4. On the first real call, the server log shows `Voice events on for <call_id>`.
