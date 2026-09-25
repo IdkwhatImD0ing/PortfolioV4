@@ -3,8 +3,9 @@
 # classifying our own sentinel.
 reminder_prompt = "(Now the user has not responded in a while, you would say:)"
 
-# The voice path wraps the visitor's last turn in formatting boilerplate before
-# the agent sees it (llm.py prepare_prompt). The guardrail strips exactly this
+# The voice path wraps every visitor turn in formatting boilerplate before the
+# agent sees it (llm.py prepare_prompt; every turn, so the history stays the
+# same from one request to the next and the prompt cache can reuse it). The guardrail strips exactly this
 # wrapper before classifying, so the judge reads only what the visitor said: the
 # boilerplate is instruction-shaped, and judging it as the visitor's words skewed
 # verdicts. It lives here, once, because the wrapping and the stripping must match

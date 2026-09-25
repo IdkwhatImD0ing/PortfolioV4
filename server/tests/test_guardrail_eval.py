@@ -251,7 +251,7 @@ CONVERSATION_CASES: list[tuple[list[dict], bool, bool]] = [
 ]
 
 
-# Voice never sends a bare utterance: `llm.py` prepare_prompt wraps the last user
+# Voice never sends a bare utterance: `llm.py` prepare_prompt wraps every user
 # turn in formatting boilerplate, and the guardrail strips that exact wrapper before
 # classifying (prompts.unwrap_voice_turn). The wrapped cases pin that the strip
 # works end to end: each should be decided exactly as its bare twin is. (Text chat

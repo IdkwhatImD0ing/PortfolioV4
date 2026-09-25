@@ -181,11 +181,16 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
         conversation.append({"role": "user", "content": user_msg})
 
         # Same input the live path sends: text mode passes the visitor's words
-        # as typed (draft_text_response); voice mode wraps the last turn the way
-        # prepare_prompt does.
+        # as typed (draft_text_response); voice mode wraps every visitor turn
+        # the way prepare_prompt does.
         processed = list(conversation)
         if mode == "voice":
-            processed[-1] = {**processed[-1], "content": voice_turn(processed[-1]["content"])}
+            processed = [
+                {**m, "content": voice_turn(m["content"])}
+                if m["role"] == "user" and m["content"]
+                else m
+                for m in processed
+            ]
 
         kv("Processed messages count", len(processed))
         print()

@@ -234,6 +234,78 @@ class TestLlmClientPreparePrompt:
         # Last message should be the reminder prompt
         assert "not responded in a while" in result[-1]["content"]
 
+    def test_every_visitor_turn_is_wrapped(self):
+        from prompts import voice_turn
+
+        client = LlmClient(call_id="test", mode="voice")
+        request = ResponseRequiredRequest(
+            interaction_type="response_required",
+            response_id=2,
+            transcript=[
+                Utterance(role="agent", content="Hello!"),
+                Utterance(role="user", content="What do you do?"),
+                Utterance(role="agent", content="I build AI things."),
+                Utterance(role="user", content="Show me your projects."),
+            ],
+        )
+        assert client.prepare_prompt(request) == [
+            {"role": "assistant", "content": "Hello!"},
+            {"role": "user", "content": voice_turn("What do you do?")},
+            {"role": "assistant", "content": "I build AI things."},
+            {"role": "user", "content": voice_turn("Show me your projects.")},
+        ]
+
+    def test_each_request_starts_with_the_previous_one(self):
+        # What makes the prompt cache work: GPT-5.6 reuses a cached prompt only
+        # if the next request repeats it exactly before adding anything.
+        client = LlmClient(call_id="test", mode="voice")
+        turns = [
+            Utterance(role="agent", content="Hello!"),
+            Utterance(role="user", content="What do you do?"),
+            Utterance(role="agent", content="I build AI things."),
+            Utterance(role="user", content="Show me your projects."),
+            Utterance(role="agent", content="Here are a few."),
+            Utterance(role="user", content="Tell me about GitPT."),
+        ]
+        requests = [
+            ResponseRequiredRequest(
+                interaction_type="response_required", response_id=n, transcript=turns[:end]
+            )
+            for n, end in enumerate((2, 4, 6), 1)
+        ]
+        prompts = [client.prepare_prompt(r) for r in requests]
+        for earlier, later in zip(prompts, prompts[1:]):
+            assert later[: len(earlier)] == earlier
+
+    def test_an_empty_visitor_turn_stays_empty(self):
+        client = LlmClient(call_id="test", mode="voice")
+        request = ResponseRequiredRequest(
+            interaction_type="response_required",
+            response_id=1,
+            transcript=[Utterance(role="agent", content="Hello!"), Utterance(role="user", content="")],
+        )
+        assert client.prepare_prompt(request)[-1] == {"role": "user", "content": ""}
+
+    def test_the_guardrail_reads_every_turn_unwrapped(self):
+        # Wrapping more turns must not change what the judge classifies.
+        from guardrail import extract_turns
+
+        client = LlmClient(call_id="test", mode="voice")
+        request = ResponseRequiredRequest(
+            interaction_type="response_required",
+            response_id=2,
+            transcript=[
+                Utterance(role="user", content="What do you do?"),
+                Utterance(role="agent", content="I build AI things."),
+                Utterance(role="user", content="Show me your projects."),
+            ],
+        )
+        assert extract_turns(client.prepare_prompt(request)) == [
+            ("user", "What do you do?"),
+            ("assistant", "I build AI things."),
+            ("user", "Show me your projects."),
+        ]
+
     @patch("llm.Agent")
     def test_prepare_prompt_empty_transcript(self, mock_agent):
         """Test preparing prompt with empty transcript."""
@@ -251,6 +323,45 @@ class TestLlmClientPreparePrompt:
         
         # Empty transcript returns empty list (system prompt is in agent.instructions)
         assert len(result) == 0
+
+
+class TestPromptCacheKey:
+    """A stable prompt_cache_key per mode (llm.PROMPT_CACHE_KEYS)."""
+
+    def test_each_mode_has_its_own_stable_key(self):
+        voice = LlmClient(call_id="a", mode="voice").agent.model_settings.extra_args
+        voice_again = LlmClient(call_id="b", mode="voice").agent.model_settings.extra_args
+        text = LlmClient(call_id="c", mode="text").agent.model_settings.extra_args
+        assert voice["prompt_cache_key"] == "portfolio-agent-voice"
+        assert voice_again == voice
+        assert text["prompt_cache_key"] == "portfolio-agent-text"
+
+    def test_any_other_mode_gets_the_text_key_like_the_text_prompt(self):
+        settings = LlmClient(call_id="a", mode="other").agent.model_settings
+        assert settings.extra_args["prompt_cache_key"] == "portfolio-agent-text"
+
+    def test_the_sdk_keeps_our_key_instead_of_a_random_one(self):
+        # Pins SDK behaviour this fix relies on (agents/run_internal, 0.14.x):
+        # with no key the runner makes up a random one per run, which on
+        # GPT-5.6 means no cache reuse between turns; with ours in extra_args
+        # it adds none. If an SDK upgrade breaks this, caching is off again.
+        from agents import ModelSettings, OpenAIResponsesModel
+        from agents.run_internal.prompt_cache_key import (
+            PromptCacheKeyResolver,
+            model_settings_with_prompt_cache_key,
+        )
+        from openai import AsyncOpenAI
+
+        model = OpenAIResponsesModel(model="gpt-5.6-terra", openai_client=AsyncOpenAI(api_key="test-key"))
+        where = {"conversation_id": None, "session": None, "group_id": None}
+
+        generated = PromptCacheKeyResolver().resolve(ModelSettings(), model=model, **where)
+        assert generated and generated.startswith("agents-sdk:")
+
+        ours = LlmClient(call_id="t", mode="voice").agent.model_settings
+        assert PromptCacheKeyResolver().resolve(ours, model=model, **where) is None
+        sent = model_settings_with_prompt_cache_key(ours, None)
+        assert sent.extra_args["prompt_cache_key"] == "portfolio-agent-voice"
 
 
 class TestLlmClientPrepareFunctions:
