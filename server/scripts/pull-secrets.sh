@@ -6,6 +6,8 @@ set -euo pipefail
 
 PROJECT="${GCP_PROJECT:-spiritual-storm-469704-n2}"
 SECRETS=(OPENAI_API_KEY RETELL_API_KEY PINECONE_API_KEY OBFUSCATED_WS_PATH)
+# Pulled when present. The server runs without them (see app_helpers.py).
+OPTIONAL_SECRETS=(PUSHER_SECRET)
 # Kept, never pulled. FireTrace keys are per environment: the production key
 # lives in Secret Manager for deploy.sh alone, and the development key is
 # typed into this file once. A re-pull carries it over instead of wiping it,
@@ -44,11 +46,8 @@ trap 'rm -f "$TMP"' EXIT
   echo
 } >"$TMP"
 
-for name in "${SECRETS[@]}"; do
-  if ! val="$(gcloud secrets versions access latest --secret="$name" --project "$PROJECT" 2>/dev/null)"; then
-    echo "✗ Failed to read secret '$name'. Does your account have secretmanager.secretAccessor on it?" >&2
-    exit 1
-  fi
+write_env_line() {
+  local name="$1" val="$2" escaped ch
   # Single-quote the value: bash and python-dotenv both read that literally.
   # A value holding a single quote (or a doubled backslash, which python-dotenv
   # would collapse) goes in double quotes instead. Both loaders agree on \\ and
@@ -66,7 +65,28 @@ for name in "${SECRETS[@]}"; do
       echo "  ⚠ $name: python-dotenv keeps the backslash before \$ and \` in a double-quoted value; check $ENV_FILE by hand" >&2
     fi
   fi
+}
+
+for name in "${SECRETS[@]}"; do
+  if ! val="$(gcloud secrets versions access latest --secret="$name" --project "$PROJECT" 2>/dev/null)"; then
+    echo "✗ Failed to read secret '$name'. Does your account have secretmanager.secretAccessor on it?" >&2
+    exit 1
+  fi
+  write_env_line "$name" "$val"
   echo "  ✓ $name"
+done
+
+for name in "${OPTIONAL_SECRETS[@]}"; do
+  if val="$(gcloud secrets versions access latest --secret="$name" --project "$PROJECT" 2>/dev/null)"; then
+    write_env_line "$name" "$val"
+    echo "  ✓ $name"
+  elif [[ -f "$ENV_FILE" ]] && existing="$(grep -m1 "^${name}=" "$ENV_FILE")"; then
+    # Not in Secret Manager (yet), but typed into .env by hand: keep it.
+    printf "%s\n" "$existing" >>"$TMP"
+    echo "  ↻ $name kept from existing .env (not readable in Secret Manager)"
+  else
+    echo "  – $name not readable in Secret Manager (optional; skipped)"
+  fi
 done
 
 for name in "${KEEP_FROM_ENV[@]}"; do

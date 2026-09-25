@@ -60,7 +60,8 @@ interface TextChatStreamChunk {
   content?: string;      // Text (for "content", "replace", "status" or "error")
   metadata?: {           // Navigation metadata (for type: "metadata")
     type: "navigation";
-    page: "landing" | "personal" | "education" | "project";
+    page: "landing" | "about" | "experience" | "education" | "project"
+        | "skills" | "personal" | "resume" | "hackathon" | "architecture";
     project_id?: string;
   };
 }
@@ -183,7 +184,7 @@ while (true) {
 | Protocol | Retell | Standard HTTP |
 | Input | Audio | Text |
 | Output | Audio + Transcript | Text |
-| Navigation | Metadata events | Metadata in stream |
+| Navigation | Pusher `navigation` events | Metadata in stream |
 | Guardrails | Yes | Yes |
 
 ## Related Files

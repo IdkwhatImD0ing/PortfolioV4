@@ -12,6 +12,7 @@ KEEP_WARM="${KEEP_WARM:-0}"                   # 1 = keep 1 warm instance (no col
 ALLOW_UNAUTH="${ALLOW_UNAUTH:-1}"             # 1 = public URL
 KEY_FILE="${KEY_FILE:-./gcloud.json}"         # your SA key path (optional if using personal account)
 FIRETRACE="${FIRETRACE:-auto}"                # auto = mount FIRETRACE_API_KEY if the secret exists; off = never
+PUSHER="${PUSHER:-auto}"                      # auto = mount PUSHER_SECRET if the secret exists; off = never
 ### =================================
 
 # Check if service account key exists, otherwise use personal account
@@ -80,6 +81,29 @@ else
   echo "  $probe" >&2
   echo "  Not deploying: that would silently remove tracing from production." >&2
   echo "  Fix the account's access, or re-run with FIRETRACE=off to deploy without it." >&2
+  exit 1
+fi
+
+# Pusher (voice_events.py) carries a voice call's page moves and captions to
+# the browser, since Retell's v3 web calls no longer do. Without it calls still
+# work, but the page doesn't follow along. Probed the same way as FireTrace,
+# for the same reason: --set-secrets replaces the whole set. Unlike FireTrace,
+# a missing secret stops the deploy: the site's main feature depends on it.
+if [[ "$PUSHER" == "off" ]]; then
+  echo "▶ PUSHER=off; voice calls won't move the page or show captions."
+elif probe="$(gcloud secrets versions access latest --secret=PUSHER_SECRET --project "$PROJECT_ID" 2>&1 >/dev/null)"; then
+  SECRETS="${SECRETS},PUSHER_SECRET=PUSHER_SECRET:latest"
+  echo "▶ PUSHER_SECRET found in Secret Manager; voice calls will move the page."
+elif [[ "$probe" == *NOT_FOUND* ]]; then
+  echo "✗ No PUSHER_SECRET secret in Secret Manager." >&2
+  echo "  Without it voice calls won't move the page or show captions." >&2
+  echo "  Create it (see README, \"Add a new secret\"), or re-run with PUSHER=off." >&2
+  exit 1
+else
+  echo "✗ Could not read PUSHER_SECRET from Secret Manager:" >&2
+  echo "  $probe" >&2
+  echo "  Not deploying: that would silently stop voice calls moving the page." >&2
+  echo "  Fix the account's access, or re-run with PUSHER=off to deploy without it." >&2
   exit 1
 fi
 

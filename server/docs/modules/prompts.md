@@ -142,7 +142,11 @@ Hacks yet, 6 times in 6.
 
 ```python
 display_landing_page()   # Voice portfolio landing
-display_homepage()       # Personal overview
+display_homepage()       # About section: overview ("tell me about yourself")
+display_experience_page() # Work experience
+display_skills_page()    # Skills and tech stack
+display_personal_page()  # Hobbies, life outside work
+display_projects_page()  # Projects grid (no project opened)
 display_hackathons_page() # Hackathon journey and US map
 display_education_page() # Academic background
 display_resume_page()    # Resume and qualifications
@@ -318,7 +322,7 @@ system_prompt = """
 ```python
 ### **9. TOOLS - NAVIGATION**
 # Add:
-- **display_skills_page()**: Shows technical skills breakdown
+- **display_contact_page()**: Shows how to get in touch
 ```
 
 ### Update Default Projects

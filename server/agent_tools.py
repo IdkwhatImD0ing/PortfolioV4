@@ -12,6 +12,10 @@ __all__ = [
     "display_hackathons_page",
     "display_landing_page",
     "display_architecture_page",
+    "display_experience_page",
+    "display_skills_page",
+    "display_personal_page",
+    "display_projects_page",
     "display_project",
     "get_project_details",
     "search_projects",
@@ -45,8 +49,32 @@ def display_education_page() -> str:
 
 @tool
 def display_homepage() -> str:
-    """Displays Bill's personal homepage on the frontend."""
-    return "Successfully displayed the personal homepage"
+    """Displays the About section on the frontend: who Bill is, at a glance."""
+    return "Successfully displayed the about section"
+
+
+@tool
+def display_experience_page() -> str:
+    """Displays Bill's work experience on the frontend: where he works now and where he has worked."""
+    return "Successfully displayed the experience section"
+
+
+@tool
+def display_skills_page() -> str:
+    """Displays Bill's skills on the frontend: languages, frameworks and tools he works with."""
+    return "Successfully displayed the skills section"
+
+
+@tool
+def display_projects_page() -> str:
+    """Displays the grid of all of Bill's projects on the frontend, without opening any one of them."""
+    return "Successfully displayed the projects section"
+
+
+@tool
+def display_personal_page() -> str:
+    """Displays the personal section on the frontend: Bill's life outside work, hobbies like music and cooking."""
+    return "Successfully displayed the personal section"
 
 
 @tool

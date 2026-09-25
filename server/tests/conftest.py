@@ -54,6 +54,22 @@ def no_firetrace_network(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_pusher_network(monkeypatch):
+    """Unit tests never publish to Pusher.
+
+    Drop a PUSHER_SECRET a developer may have in their shell, so the real
+    client is never built, and forget any client an earlier test cached. Tests
+    that need an outbox build one around a fake client.
+    """
+    monkeypatch.delenv("PUSHER_SECRET", raising=False)
+    import voice_events
+
+    monkeypatch.setattr(voice_events, "_client", None)
+    monkeypatch.setattr(voice_events, "_warned_unconfigured", False)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def reset_pinecone_index():
     """Reset cached Pinecone state in project_search after each test."""
     try:

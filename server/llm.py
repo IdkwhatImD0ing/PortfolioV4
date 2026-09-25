@@ -54,6 +54,10 @@ from agent_tools import (
     display_landing_page,
     display_resume_page,
     display_architecture_page,
+    display_experience_page,
+    display_skills_page,
+    display_personal_page,
+    display_projects_page,
     display_project,
     search_projects,
     get_project_details,
@@ -72,6 +76,10 @@ __all__ = [
     "display_landing_page",
     "display_resume_page",
     "display_architecture_page",
+    "display_experience_page",
+    "display_skills_page",
+    "display_personal_page",
+    "display_projects_page",
     "display_project",
     "search_projects",
     "get_project_details",
@@ -79,6 +87,17 @@ __all__ = [
     "GuardrailTripped",
     "screened_stream",
 ]
+
+
+# One stable prompt_cache_key per chat mode. Left unset, the Agents SDK gives
+# every run its own random key, and on GPT-5.6 requests with different keys
+# never share a cache, so the ~8,000-token persona prompt was processed from
+# scratch on every turn. Measured on the voice agent over a 4-turn call
+# (2026-09-24): 0% of input served from cache before; 98-99% after, together
+# with the stable history in prepare_prompt; first word in about 0.6 s instead
+# of 1 to 2 s. The key only groups requests: the cache itself matches on the
+# prompt's exact prefix, so an edited prompt can never be served stale.
+PROMPT_CACHE_KEYS = {"voice": "portfolio-agent-voice", "text": "portfolio-agent-text"}
 
 
 @dataclass(frozen=True)
@@ -263,6 +282,11 @@ class LlmClient:
                     effort=REASONING_EFFORT,
                     summary="auto",
                 ),
+                # A key here stops the SDK generating a random one per run.
+                # Keyed like the prompt above: anything but voice is text.
+                extra_args={
+                    "prompt_cache_key": PROMPT_CACHE_KEYS["voice" if mode == "voice" else "text"]
+                },
             ),
         )
 
@@ -295,23 +319,22 @@ class LlmClient:
         return messages
 
     def prepare_prompt(self, request: ResponseRequiredRequest):
-        # Note: System prompt is in self.agent.instructions, not here
-        # This method prepares the conversation messages from the transcript
-        transcript_messages = self.convert_transcript_to_openai_messages(
-            request.transcript
-        )
-        prompt = list(transcript_messages)
+        """The transcript as agent input, every visitor turn in voice_turn.
 
-        last_user_message = ""
-        last_user_message_index = -1
-        for i, message in enumerate(reversed(transcript_messages)):
-            if message.get("role") == "user":
-                last_user_message = message.get("content", "")
-                last_user_message_index = len(transcript_messages) - i - 1
-                break
+        The system prompt is in self.agent.instructions, not here.
 
-        if last_user_message:
-            prompt[last_user_message_index]["content"] = voice_turn(last_user_message)
+        Every visitor turn is wrapped, not just the newest. GPT-5.6 caches a
+        prompt up to the end of its latest user message, and the next request
+        reuses that only if everything before it is unchanged. When only the
+        newest turn was wrapped, each wrapper came off on the next request, so
+        the conversation could never be reused from cache (see
+        PROMPT_CACHE_KEYS). The guardrail strips the wrapper from every turn
+        (guardrail.extract_turns), so what the judge reads is unchanged.
+        """
+        prompt = self.convert_transcript_to_openai_messages(request.transcript)
+        for message in prompt:
+            if message["role"] == "user" and message["content"]:
+                message["content"] = voice_turn(message["content"])
 
         if request.interaction_type == "reminder_required":
             prompt.append({"role": "user", "content": reminder_prompt})
@@ -357,6 +380,10 @@ class LlmClient:
             display_landing_page,
             display_resume_page,
             display_architecture_page,
+            display_experience_page,
+            display_skills_page,
+            display_personal_page,
+            display_projects_page,
             display_project,
             search_projects,
             get_project_details,

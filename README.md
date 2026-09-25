@@ -45,7 +45,7 @@ flowchart LR
   R -- "transcript" --> WS(["FastAPI<br/>WebSocket"])
   WS -- "stream" --> A[["OpenAI<br/>Agents SDK"]]
   A <-- "tool: search_projects" --> P[("Pinecone<br/>vector DB")]
-  A -- "tool: navigate_to" --> N["Next.js client<br/>(metadata event)"]
+  A -- "tool: navigate_to" --> N["Next.js client<br/>(Pusher event)"]
   A -- "tokens" --> WS --> R --> U
   N -. "page swap" .-> U
 ```
@@ -120,6 +120,7 @@ RETELL_API_KEY=...
 OPENAI_API_KEY=...
 PINECONE_API_KEY=...
 FIRETRACE_API_KEY=...     # optional: records every agent run at tracing.art3m1s.me
+PUSHER_SECRET=...         # voice page moves + live captions (server/README.md, "Voice events")
 
 # client/.env.local (see client/.env.local.example for optional dev-agent vars)
 RETELLAI_API_KEY=...
@@ -136,7 +137,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 │   client/  (Next.js 15)  │  WSS    │  server/  (FastAPI)      │
 │   • voice orb (mic)      │ ◀────▶  │  • /webhook (Retell)     │
 │   • page.tsx (sections)  │         │  • /ws-* (LLM stream)    │
-│   • metadata listener    │         │  • LlmClient + tools     │
+│   • Pusher voice events  │         │  • LlmClient + tools     │
 └────────────┬─────────────┘         └─────────────┬────────────┘
              │                                     │
              ▼                                     ▼
@@ -159,7 +160,7 @@ Deeper docs: [`client/docs`](./client/docs) · [`server/docs`](./server/docs) ·
 
 ## 🎯 Features that make this not-just-another-portfolio
 
-- **Voice as a first-class router.** The agent emits `navigate_to(page)` tool calls; the client subscribes to Retell metadata events and swaps pages — no buttons required.
+- **Voice as a first-class router.** The agent emits `navigate_to(page)` tool calls; the backend publishes them over Pusher to a channel only that call knows, and the client swaps pages — no buttons required.
 - **RAG over me.** Every project + experience is embedded into Pinecone. Ask *"what did you build for emergency dispatch?"* — it pulls **DispatchAI** by meaning, not keywords.
 - **Guardrails that actually run.** A small classifier agent checks each user turn for prompt-injection / off-topic while the main LLM starts answering. If it trips, the answer is cancelled and swapped for a refusal, so legit questions get their first word with no extra wait.
 - **Streaming end-to-end.** Tokens stream from OpenAI → FastAPI → Retell → audio in <600 ms.

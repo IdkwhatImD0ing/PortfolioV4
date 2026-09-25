@@ -6,68 +6,45 @@ export interface TranscriptEntry {
   notice?: boolean;
 }
 
-/** Merge a new rolling window of transcript entries into the running history.
+/** One line of a voice call's transcript, at its position in Retell's own
+ *  transcript. The backend sends the last few of these on every `transcript`
+ *  event; the shape must match caption_window in server/voice_events.py.
+ *  Separate from TranscriptEntry, which also holds typed-chat lines that have
+ *  no index. */
+export interface VoiceLine {
+  index: number;
+  role: "agent" | "user";
+  content: string;
+}
+
+/** Fold a window of voice lines into the call's lines so far.
  *
- * Retell streams the **last ~5 sentences** on every `update` event, not a
- * cumulative log. We have to graft: find where the new window aligns with
- * the tail of our prior history, keep everything before that, then append
- * the window.
+ * Retell re-sends a line as the speaker goes on, with more words or corrected
+ * ones, and it keeps its index. So the newest version of each index wins, and
+ * a new index is a new line. Lines that have scrolled out of the window stay
+ * as they were last sent.
  *
- * Algorithm: find the smallest `i` such that `prev[i..]` aligns with the
- * head of `window` (matching by role+content). That gives the maximum
- * overlap. Keep `prev[0..i]` and append the full window — this is robust to
- * the window shifting past what we previously knew.
- *
- * The catch: Retell streams a turn's content token-by-token, so the *last*
- * overlapping turn is often still mid-stream — `prev` has `"Hey,"` while the
- * window now has `"Hey, I'm"`. We treat that boundary turn as a refinement:
- * if it's the same role and one content is a prefix of the other, it aligns
- * (and the window's longer version wins). Without this, every streamed token
- * would land on its own line.
- *
- * If no alignment exists at all, fall back to append+dedup so no content is
- * lost.
- *
- * Property: as long as turns are appended-only on the server, repeated
- * calls preserve every distinct turn ever passed in.
+ * This replaced a merge that had to guess how each window lined up with what
+ * was on screen. It could only allow the last line to have changed, so when
+ * two lines changed between sends (the visitor still talking as the agent
+ * starts), it gave up and stacked every partial as its own bubble.
  */
-export function mergeTranscript(
-  prev: TranscriptEntry[],
-  window: TranscriptEntry[],
+export function mergeVoiceLines(
+  lines: ReadonlyMap<number, TranscriptEntry>,
+  window: readonly VoiceLine[],
+): Map<number, TranscriptEntry> {
+  const next = new Map(lines);
+  for (const { index, role, content } of window) next.set(index, { role, content });
+  return next;
+}
+
+/** The panel's transcript during a call: whatever was on screen before it
+ *  started (a typed conversation, when switching back to voice), then the
+ *  call's lines in the order Retell has them. */
+export function withVoiceLines(
+  before: readonly TranscriptEntry[],
+  lines: ReadonlyMap<number, TranscriptEntry>,
 ): TranscriptEntry[] {
-  if (window.length === 0) return prev;
-  if (prev.length === 0) return [...window];
-
-  const key = (e: TranscriptEntry) => `${e.role}|${e.content}`;
-  // Same turn, still streaming: same role and one content extends the other.
-  const isRefinement = (p: TranscriptEntry, w: TranscriptEntry) =>
-    p.role === w.role &&
-    (w.content.startsWith(p.content) || p.content.startsWith(w.content));
-
-  for (let i = 0; i < prev.length; i++) {
-    const tail = prev.length - i;
-    if (tail > window.length) continue;
-    let match = true;
-    for (let j = 0; j < tail; j++) {
-      if (key(prev[i + j]) === key(window[j])) continue;
-      // Only the final overlapping turn may still be mid-stream; earlier
-      // turns are frozen and must match exactly.
-      if (j === tail - 1 && isRefinement(prev[i + j], window[j])) continue;
-      match = false;
-      break;
-    }
-    if (match) {
-      return [...prev.slice(0, i), ...window];
-    }
-  }
-
-  // No alignment found — conversation jumped or a turn was refined mid-stream
-  // and broke the prefix match. Append + dedupe so we don't drop history.
-  const seen = new Set<string>();
-  return [...prev, ...window].filter((e) => {
-    const k = key(e);
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  const ordered = [...lines.entries()].sort(([a], [b]) => a - b).map(([, line]) => line);
+  return [...before, ...ordered];
 }

@@ -88,6 +88,9 @@ describe("metaToNavigationAction", () => {
 
   it.each([
     ["landing", "hero"],
+    ["about", "about"],
+    ["experience", "experience"],
+    ["skills", "skills"],
     ["personal", "personal"],
     ["education", "education"],
     ["resume", "resume"],
@@ -151,6 +154,9 @@ describe("PAGE_TO_SECTION", () => {
     // page is added on the server, this test should be updated in lockstep.
     const expected = [
       "landing",
+      "about",
+      "experience",
+      "skills",
       "personal",
       "education",
       "resume",

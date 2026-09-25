@@ -12,17 +12,17 @@ const FLOW = [
   {
     k: "02",
     title: "LLM agent",
-    body: "Retell hands the transcript to a FastAPI backend, where a GPT-5.6 Terra agent (OpenAI Agents SDK) runs with this site's content in context and nine registered tools.",
+    body: "Retell hands the transcript to a FastAPI backend, where a GPT-5.6 Terra agent (OpenAI Agents SDK) runs with this site's content in context and thirteen registered tools.",
   },
   {
     k: "03",
     title: "Tool calls",
-    body: "Agent emits structured tool calls: display_project(id), display_resume_page(), search_projects(query, ...), and six more.",
+    body: "Agent emits structured tool calls: display_project(id), display_resume_page(), search_projects(query, ...), and ten more.",
   },
   {
     k: "04",
     title: "VoiceBus",
-    body: "navigation.py turns each display_* call into a navigation metadata event; the browser converts it to a bus command. No prop drilling, no router. Sections opt in.",
+    body: "navigation.py turns each display_* call into a navigation event, published over Pusher to a channel only this call knows; the browser converts it to a bus command. No prop drilling, no router. Sections opt in.",
   },
   {
     k: "05",
@@ -46,7 +46,7 @@ const STACK = [
     items: [
       "GPT-5.6 Terra (the agent)",
       "GPT-5.6 Luna (call summary)",
-      "OpenAI Agents SDK, nine tools",
+      "OpenAI Agents SDK, thirteen tools",
       "Site-grounded system prompt",
     ],
   },
@@ -60,9 +60,9 @@ const STACK = [
 const SNIPPET = `// server: navigation.py turns a display_* tool call into
 // { type: "navigation", page: "project", project_id: "dispatchai" }
 
-// browser: metadata event → bus command → scroll
-client.on("metadata", ({ metadata }) => {
-  const action = metaToNavigationAction(metadata);
+// browser: Pusher event → bus command → scroll
+channel.bind("navigation", (meta) => {
+  const action = metaToNavigationAction(meta);
   if (!action) return;
   VoiceBus.emit(action.command);
   requestAnimationFrame(() => scrollToSection(action.scrollTo));

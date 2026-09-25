@@ -104,7 +104,8 @@ describe("POST /api/create-web-call", () => {
     );
 
     const { url, init } = requestInit(fetchMock);
-    expect(url).toBe("https://api.retellai.com/v2/create-web-call");
+    // v2 is deprecated on 2026-09-30.
+    expect(url).toBe("https://api.retellai.com/v3/create-web-call");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({
       agent_id: "agent_1",
@@ -149,6 +150,26 @@ describe("POST /api/create-web-call", () => {
 
     expect(res.status).toBe(422);
     await expect(res.json()).resolves.toEqual({ error: "agent not found" });
+  });
+
+  it("reads a v3 error's message", async () => {
+    mockUpstream(422, { status: "error", message: "Cannot find requested asset under given api key." });
+
+    const res = await POST(postRequest({ agent_id: "nope" }));
+
+    expect(res.status).toBe(422);
+    await expect(res.json()).resolves.toEqual({
+      error: "Cannot find requested asset under given api key.",
+    });
+  });
+
+  it("passes the call's events channel through in its metadata", async () => {
+    const fetchMock = mockUpstream(201, { call_id: "c", access_token: "t" });
+    const metadata = { platform: "web", events_channel: "123e4567-e89b-42d3-a456-426614174000" };
+
+    await POST(postRequest({ agent_id: "agent_1", metadata }));
+
+    expect(JSON.parse(requestInit(fetchMock).init.body as string).metadata).toEqual(metadata);
   });
 
   it("keeps the upstream status when the error body isn't JSON", async () => {

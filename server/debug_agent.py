@@ -163,6 +163,7 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
     from firetrace import traced_run
     from llm import GuardrailTripped, LlmClient, screened_stream
     from model_config import AGENT_MODEL
+    from navigation import tool_call_to_metadata
     from prompts import guardrail_refusal_message, voice_turn
 
     header("Agent Debug Session")
@@ -181,11 +182,16 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
         conversation.append({"role": "user", "content": user_msg})
 
         # Same input the live path sends: text mode passes the visitor's words
-        # as typed (draft_text_response); voice mode wraps the last turn the way
-        # prepare_prompt does.
+        # as typed (draft_text_response); voice mode wraps every visitor turn
+        # the way prepare_prompt does.
         processed = list(conversation)
         if mode == "voice":
-            processed[-1] = {**processed[-1], "content": voice_turn(processed[-1]["content"])}
+            processed = [
+                {**m, "content": voice_turn(m["content"])}
+                if m["role"] == "user" and m["content"]
+                else m
+                for m in processed
+            ]
 
         kv("Processed messages count", len(processed))
         print()
@@ -283,23 +289,13 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
                             print(f"     call_id: {DIM}{call_id}{RESET}")
                             print(f"     args: {CYAN}{json.dumps(args_parsed, indent=2)}{RESET}")
 
-                            # Show the navigation action that would fire on the frontend
-                            nav_map = {
-                                "display_homepage": ("personal", None),
-                                "display_landing_page": ("landing", None),
-                                "display_education_page": ("education", None),
-                                "display_resume_page": ("resume", None),
-                                "display_hackathons_page": ("hackathon", None),
-                                "display_architecture_page": ("architecture", None),
-                            }
-                            if name in nav_map:
-                                page, _ = nav_map[name]
-                                print(f"     {BOLD}{MAGENTA}📍 ACTION → navigate to '{page}'{RESET}")
-                                metadata_events.append({"type": "navigation", "page": page})
-                            elif name == "display_project":
-                                pid = args_parsed.get("id", "???")
-                                print(f"     {BOLD}{MAGENTA}📍 ACTION → navigate to project '{pid}'{RESET}")
-                                metadata_events.append({"type": "navigation", "page": "project", "project_id": pid})
+                            # Show the navigation action that would fire on the
+                            # frontend, from the same map the server uses.
+                            nav = tool_call_to_metadata(name, args_str)
+                            if nav is not None:
+                                where = nav["page"] + (f" / {nav['project_id']}" if nav.get("project_id") else "")
+                                print(f"     {BOLD}{MAGENTA}📍 ACTION → navigate to '{where}'{RESET}")
+                                metadata_events.append(nav)
                             elif name == "search_projects":
                                 nk = args_parsed.get("num_results", 3)
                                 q = args_parsed.get("query", "")

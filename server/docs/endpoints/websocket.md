@@ -12,6 +12,7 @@ Real-time bidirectional communication with Retell platform:
 - Receives transcription updates
 - Sends LLM responses (streaming)
 - Handles tool calls and metadata events
+- Publishes each call's navigation and live transcript to the browser over Pusher (`voice_events.py`), since v3 web calls don't forward them
 
 ## Endpoint
 
@@ -53,7 +54,7 @@ Default: `ws://localhost:8000/ws-default/{call_id}`
 | `ResponseResponse` | Text content (streaming) |
 | `ToolCallInvocationResponse` | Tool being called |
 | `ToolCallResultResponse` | Tool result |
-| `MetadataResponse` | Frontend navigation |
+| `MetadataResponse` | Frontend navigation (also published to the call's Pusher channel) |
 
 ## Implementation
 
