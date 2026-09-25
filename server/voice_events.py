@@ -71,6 +71,7 @@ _POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="pusher")
 
 _client: pusher.Pusher | None = None
 _warned_unconfigured = False
+_build_failed = False
 
 
 class _CertifiBackend(RequestsBackend):
@@ -93,9 +94,11 @@ def _pusher_client() -> pusher.Pusher | None:
     modules. One client for the whole process, so every call reuses its
     connection pool and a navigation event doesn't pay for a TLS handshake.
     """
-    global _client, _warned_unconfigured
+    global _client, _warned_unconfigured, _build_failed
     if _client is not None:
         return _client
+    if _build_failed:
+        return None
     secret = os.getenv("PUSHER_SECRET")
     if not secret:
         if not _warned_unconfigured:
@@ -118,6 +121,8 @@ def _pusher_client() -> pusher.Pusher | None:
         )
     except Exception as e:  # noqa: BLE001 - a bad override must not stop the call
         # Runs inside the call_details handler, before the greeting is sent.
+        # A config error won't fix itself, so don't retry and log it per call.
+        _build_failed = True
         print(f"[voice-events] Pusher client not built: {type(e).__name__}: {e}", flush=True)
         return None
     return _client
@@ -230,8 +235,10 @@ class VoiceEvents:
     async def _drain_captions(self) -> None:
         while self._pending_caption is not None:
             window, self._pending_caption = self._pending_caption, None
-            self._last_caption = window
-            await self._send("transcript", {"transcript": window})
+            # Only a delivered window counts as sent: after a failure, the next
+            # update with the same text must go out, not be skipped as a repeat.
+            if await self._send("transcript", {"transcript": window}):
+                self._last_caption = window
             await asyncio.sleep(CAPTION_INTERVAL_S)
 
     def _spawn(self, coro) -> asyncio.Task:
@@ -240,7 +247,8 @@ class VoiceEvents:
         task.add_done_callback(self._tasks.discard)
         return task
 
-    async def _send(self, event: str, data: dict) -> None:
+    async def _send(self, event: str, data: dict) -> bool:
+        """Publish one event; True if Pusher accepted it."""
         # Serialised here, ASCII-only. Given a dict, the library keeps
         # non-ASCII text raw and sizes it with sys.getsizeof, which counts an
         # emoji-bearing string at four bytes a character and rejects captions
@@ -254,3 +262,5 @@ class VoiceEvents:
                 )
             except Exception as e:  # noqa: BLE001 - a lost event must not end the call
                 print(f"[voice-events] {event} not sent: {type(e).__name__}: {e}", flush=True)
+                return False
+            return True
