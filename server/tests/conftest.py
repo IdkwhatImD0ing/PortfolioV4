@@ -66,6 +66,7 @@ def no_pusher_network(monkeypatch):
 
     monkeypatch.setattr(voice_events, "_client", None)
     monkeypatch.setattr(voice_events, "_warned_unconfigured", False)
+    monkeypatch.setattr(voice_events, "_build_failed", False)
     yield
 
 

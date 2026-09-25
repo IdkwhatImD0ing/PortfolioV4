@@ -22,7 +22,9 @@ export interface VoiceLine {
  * Retell re-sends a line as the speaker goes on, with more words or corrected
  * ones, and it keeps its index. So the newest version of each index wins, and
  * a new index is a new line. Lines that have scrolled out of the window stay
- * as they were last sent.
+ * as they were last sent. Lines past the window's last index are dropped:
+ * Retell has removed them (an agent line cut off before any audio played),
+ * and windows arrive in order, since the server sends them one at a time.
  *
  * This replaced a merge that had to guess how each window lined up with what
  * was on screen. It could only allow the last line to have changed, so when
@@ -35,6 +37,10 @@ export function mergeVoiceLines(
 ): Map<number, TranscriptEntry> {
   const next = new Map(lines);
   for (const { index, role, content } of window) next.set(index, { role, content });
+  if (window.length > 0) {
+    const last = Math.max(...window.map((l) => l.index));
+    for (const index of next.keys()) if (index > last) next.delete(index);
+  }
   return next;
 }
 

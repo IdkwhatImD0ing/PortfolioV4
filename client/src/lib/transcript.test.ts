@@ -55,11 +55,19 @@ describe("mergeVoiceLines", () => {
     expect(show(windows).map((t) => t.content)).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
   });
 
-  it("orders lines by index, whatever order windows arrive in", () => {
-    expect(show([[line(3, a("later"))], [line(1, u("earlier"))]])).toEqual([
+  it("orders lines by index, whatever order they come in", () => {
+    expect(show([[line(3, a("later")), line(1, u("earlier"))]])).toEqual([
       u("earlier"),
       a("later"),
     ]);
+  });
+
+  it("drops a line Retell removed from the end of its transcript", () => {
+    const windows = [
+      [line(3, u("tell me more")), line(4, a("Sure, so"))],
+      [line(3, u("tell me more about Dispatch"))],
+    ];
+    expect(show(windows)).toEqual([u("tell me more about Dispatch")]);
   });
 
   it("keeps the same words said twice as two lines", () => {

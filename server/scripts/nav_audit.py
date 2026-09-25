@@ -119,7 +119,7 @@ async def main() -> None:
     set_tracing_disabled(True)
     sections = page_to_section()
     cases = [c for c in CASES if not args.only or args.only in c[1]]
-    unknown = {s for _, want in cases for s in want} - set(sections.values()) - {"hero"}
+    unknown = {s for _, want in cases for s in want} - set(sections.values())
     gate = asyncio.Semaphore(args.concurrency)
 
     async def run(question: str):

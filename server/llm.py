@@ -100,6 +100,18 @@ __all__ = [
 PROMPT_CACHE_KEYS = {"voice": "portfolio-agent-voice", "text": "portfolio-agent-text"}
 
 
+def _spaced(text_parts: List[str], delta: str) -> str:
+    """The first delta of a model response that follows a tool call.
+
+    The agent says its first sentence, calls a display tool, then goes on in a
+    new model response, which starts with no leading space. Joined as is, that
+    reads "Outside work, I cook.I play piano" in the captions and text chat.
+    """
+    if text_parts and not text_parts[-1][-1:].isspace() and not delta[:1].isspace():
+        return " " + delta
+    return delta
+
+
 @dataclass(frozen=True)
 class GuardrailTripped:
     """The last item `screened_stream` yields when the guardrail blocks a turn.
@@ -466,6 +478,7 @@ class LlmClient:
         text_parts: List[str] = []
         tool_calls: List[dict] = []
         refusal_parts: List[str] = []
+        new_response = False
         try:
             async with AsyncExitStack() as stack:
                 # One FireTrace trace per turn, grouped by call id so a whole
@@ -521,7 +534,9 @@ class LlmClient:
                     if isinstance(event, RawResponsesStreamEvent):
                         data = event.data
                         event_type = getattr(data, "type", "")
-                        if event_type == "response.refusal.delta":
+                        if event_type == "response.created":
+                            new_response = True
+                        elif event_type == "response.refusal.delta":
                             # Not spoken (nothing is yielded), but recorded on
                             # the trace so an empty answer can be explained.
                             refusal_parts.append(getattr(data, "delta", "") or "")
@@ -530,6 +545,9 @@ class LlmClient:
                             # The AI has been instructed not to use markdown in the prompts
                             delta_content = getattr(data, "delta", "")
                             if delta_content:
+                                if new_response:
+                                    delta_content = _spaced(text_parts, delta_content)
+                                    new_response = False
                                 spoke = True
                                 text_parts.append(delta_content)
                                 yield ResponseResponse(
@@ -651,6 +669,7 @@ class LlmClient:
         # Set by a trip; yielded after the trace has closed (see draft_response).
         refusal_chunk: TextChatStreamChunk | None = None
         text_parts: List[str] = []
+        new_response = False
         tool_calls: List[dict] = []
         refusal_parts: List[str] = []
         try:
@@ -700,11 +719,16 @@ class LlmClient:
                     if isinstance(event, RawResponsesStreamEvent):
                         data = event.data
                         event_type = getattr(data, "type", "")
-                        if event_type == "response.refusal.delta":
+                        if event_type == "response.created":
+                            new_response = True
+                        elif event_type == "response.refusal.delta":
                             refusal_parts.append(getattr(data, "delta", "") or "")
                         elif event_type == "response.output_text.delta":
                             delta_content = getattr(data, "delta", "")
                             if delta_content:
+                                if new_response:
+                                    delta_content = _spaced(text_parts, delta_content)
+                                    new_response = False
                                 self._log(f"text content delta: {len(delta_content)} chars")
                                 streamed = True
                                 text_parts.append(delta_content)

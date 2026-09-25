@@ -164,7 +164,8 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
     from llm import GuardrailTripped, LlmClient, screened_stream
     from model_config import AGENT_MODEL
     from navigation import tool_call_to_metadata
-    from prompts import guardrail_refusal_message, voice_turn
+    from custom_types import ResponseRequiredRequest, Utterance
+    from prompts import guardrail_refusal_message
 
     header("Agent Debug Session")
     kv("Mode", mode)
@@ -182,16 +183,19 @@ async def run_agent_debug(user_messages: list[str], mode: str = "text"):
         conversation.append({"role": "user", "content": user_msg})
 
         # Same input the live path sends: text mode passes the visitor's words
-        # as typed (draft_text_response); voice mode wraps every visitor turn
-        # the way prepare_prompt does.
+        # as typed (draft_text_response); voice mode goes through the server's
+        # own prepare_prompt, so this can't drift from what calls receive.
         processed = list(conversation)
         if mode == "voice":
-            processed = [
-                {**m, "content": voice_turn(m["content"])}
-                if m["role"] == "user" and m["content"]
-                else m
-                for m in processed
-            ]
+            request = ResponseRequiredRequest(
+                interaction_type="response_required",
+                response_id=turn_num,
+                transcript=[
+                    Utterance(role="agent" if m["role"] == "assistant" else "user", content=m["content"])
+                    for m in conversation
+                ],
+            )
+            processed = llm_client.prepare_prompt(request)
 
         kv("Processed messages count", len(processed))
         print()

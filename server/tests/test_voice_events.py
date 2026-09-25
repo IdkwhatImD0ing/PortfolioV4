@@ -283,6 +283,18 @@ class TestCaptions:
         await events.aclose()
         assert len(fake.sent) == 1
 
+    async def test_a_caption_that_failed_to_send_goes_out_on_the_next_update(self, fast_captions):
+        failing = [True]
+        fake = FakePusher(fail=lambda event, data: failing[0])
+        events = VoiceEvents(CHANNEL, fake)
+        transcript = [utt("agent", "I'm Bill Zhang.")]
+        events.transcript(transcript)
+        await asyncio.sleep(0.1)
+        failing[0] = False
+        events.transcript(transcript)
+        await events.aclose()
+        assert [data["transcript"][0]["content"] for _, _, data in fake.sent] == ["I'm Bill Zhang."]
+
     async def test_an_empty_transcript_sends_nothing(self, fast_captions):
         fake = FakePusher()
         events = VoiceEvents(CHANNEL, fake)
@@ -428,6 +440,20 @@ class TestForCall:
         monkeypatch.setattr(voice_events.pusher, "Pusher", refuse)
         assert VoiceEvents.for_call(call_with({"events_channel": CHANNEL_ID})) is None
         assert "Pusher client not built: ValueError: bad cluster" in capsys.readouterr().out
+
+    def test_a_client_that_failed_to_build_is_not_retried_every_call(self, monkeypatch, capsys):
+        monkeypatch.setenv("PUSHER_SECRET", "test-secret")
+        attempts = []
+
+        def refuse(**kwargs):
+            attempts.append(kwargs)
+            raise ValueError("bad cluster")
+
+        monkeypatch.setattr(voice_events.pusher, "Pusher", refuse)
+        for _ in range(3):
+            assert VoiceEvents.for_call(call_with({"events_channel": CHANNEL_ID})) is None
+        assert len(attempts) == 1
+        assert capsys.readouterr().out.count("Pusher client not built") == 1
 
 
 # --- the browser's half of the contract --------------------------------------

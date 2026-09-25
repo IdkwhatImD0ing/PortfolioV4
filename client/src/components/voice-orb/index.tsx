@@ -215,6 +215,10 @@ export function VoiceOrb() {
   }, [open, closing]);
 
   const fireShortcut = useCallback((item: Suggestion) => {
+    // Only runs with no call live. A caption from the call that just ended
+    // could still land in its linger window and rebuild the panel without
+    // these turns, so retire that call's events first.
+    callGenRef.current++;
     setFullTranscript((prev) => [...prev, { role: "user", content: item.you }]);
     setPulsing(true);
     window.clearTimeout(shortcutTimerRef.current);
