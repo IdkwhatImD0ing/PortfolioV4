@@ -30,19 +30,30 @@ def display_landing_page() -> str:
 
 ### display_homepage
 
-Navigate to the personal/about page.
+Navigate to the About section, the at-a-glance overview ("tell me about yourself"). The name is from the old site, where this was the homepage.
 
 ```python
 @tool
 def display_homepage() -> str:
-    """Displays Bill's personal homepage on the frontend."""
-    return "Successfully displayed the personal homepage"
+    """Displays the About section on the frontend: who Bill is, at a glance."""
+    return "Successfully displayed the about section"
 ```
 
 **Metadata sent:**
 ```json
-{"type": "navigation", "page": "personal"}
+{"type": "navigation", "page": "about"}
 ```
+
+### display_experience_page, display_skills_page, display_personal_page, display_projects_page
+
+| Tool | Page sent | Section | Asked when |
+|---|---|---|---|
+| `display_experience_page` | `experience` | Experience | where Bill works, his job, work history |
+| `display_skills_page` | `skills` | Skills | languages, tech stack, skills |
+| `display_personal_page` | `personal` | Personal | hobbies, life outside work |
+| `display_projects_page` | `project` (no `project_id`) | Projects grid | what he's built, listing projects |
+
+`scripts/nav_audit.py` checks that ordinary questions land on these sections.
 
 ### display_resume_page
 
@@ -149,61 +160,37 @@ Navigation tools do not accept a `message` parameter and do not emit spoken `Res
 6. Frontend's channel handler calls applyNavigation() and the page scrolls
 ```
 
+Text chat skips Pusher: `/chat` streams the same payload as a `metadata` chunk.
+
 ## Adding a New Navigation Tool
 
-### 1. Define the Tool
+Say the page gets a Contact section with `id="contact"`.
 
-```python
-@tool
-def display_skills_page() -> str:
-    """Displays the skills page on the frontend."""
-    return "Successfully displayed the skills page"
-```
+1. **Define the tool** in `agent_tools.py` and add it to `__all__`:
 
-### 2. Add to prepare_functions()
+   ```python
+   @tool
+   def display_contact_page() -> str:
+       """Displays the contact section on the frontend."""
+       return "Successfully displayed the contact section"
+   ```
 
-```python
-def prepare_functions(self) -> List[Any]:
-    return [
-        display_education_page,
-        display_homepage,
-        display_landing_page,
-        display_resume_page,
-        display_hackathons_page,
-        display_architecture_page,
-        display_project,
-        search_projects,
-        get_project_details,
-        display_skills_page,  # Add here
-    ]
-```
+2. **Register it** in `llm.py`: the import, `__all__`, and `prepare_functions()`.
 
-### 3. Handle Metadata in draft_response()
+3. **Map it to a page value** in `navigation.py` `_PAGE_TOOLS`:
+   `"display_contact_page": "contact"`. `main.py` and the text path both go
+   through `tool_call_to_metadata`, so nothing else on the server changes.
 
-```python
-elif name == "display_skills_page":
-    yield MetadataResponse(
-        metadata={"type": "navigation", "page": "skills"}
-    )
-```
+4. **Map the page to the section** in `client/src/lib/voice-bus.ts`: add
+   `"contact"` to `NavigationMeta.page` and `contact: "contact"` to
+   `PAGE_TO_SECTION`.
 
-### 4. Update Frontend
+5. **Tell the agent when to use it** in `prompts.py` section 9, with WHEN TO USE
+   and WHEN NOT TO USE lines like the other tools.
 
-In `client/src/app/page.tsx`:
-
-```typescript
-case "skills":
-    setActivePage("skills");
-    break;
-```
-
-### 5. Update System Prompt
-
-In `prompts.py`, add to navigation section:
-
-```
-- **display_skills_page()**: Shows the skills page
-```
+6. **Update the tests** that pin the contract (`tests/test_navigation.py`,
+   `tests/test_llm.py`, `client/src/lib/voice-bus.test.ts`), and add a question
+   or two to `scripts/nav_audit.py` so the audit checks the agent really uses it.
 
 ## Related Files
 

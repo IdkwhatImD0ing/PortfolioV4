@@ -60,7 +60,8 @@ interface TextChatStreamChunk {
   content?: string;      // Text (for "content", "replace", "status" or "error")
   metadata?: {           // Navigation metadata (for type: "metadata")
     type: "navigation";
-    page: "landing" | "personal" | "education" | "project";
+    page: "landing" | "about" | "experience" | "education" | "project"
+        | "skills" | "personal" | "resume" | "hackathon" | "architecture";
     project_id?: string;
   };
 }

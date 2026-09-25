@@ -17,7 +17,11 @@ from navigation import tool_call_to_metadata, NAVIGATION_PAGES
 @pytest.mark.parametrize(
     "tool_name,expected_page",
     [
-        ("display_homepage", "personal"),
+        ("display_homepage", "about"),
+        ("display_experience_page", "experience"),
+        ("display_skills_page", "skills"),
+        ("display_personal_page", "personal"),
+        ("display_projects_page", "project"),
         ("display_landing_page", "landing"),
         ("display_education_page", "education"),
         ("display_resume_page", "resume"),
@@ -116,6 +120,10 @@ def test_every_nav_metadata_carries_navigation_type():
         "display_resume_page",
         "display_hackathons_page",
         "display_architecture_page",
+        "display_experience_page",
+        "display_skills_page",
+        "display_personal_page",
+        "display_projects_page",
         "display_project",
     ]:
         meta = tool_call_to_metadata(tool_name, '{"id": "x"}')
@@ -134,6 +142,10 @@ def test_navigation_pages_set_matches_emitted_pages():
         "display_resume_page",
         "display_hackathons_page",
         "display_architecture_page",
+        "display_experience_page",
+        "display_skills_page",
+        "display_personal_page",
+        "display_projects_page",
         "display_project",
     ]:
         meta = tool_call_to_metadata(tool_name, '{"id": "x"}')

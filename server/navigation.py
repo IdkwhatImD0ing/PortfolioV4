@@ -13,7 +13,15 @@ from typing import Optional
 # Tool name → (page value sent to client). project is handled separately
 # because it carries an `id` argument.
 _PAGE_TOOLS: dict[str, str] = {
-    "display_homepage": "personal",
+    # "Homepage" is the old site's name for the overview page; on this site
+    # that's the About section. Hobbies have their own tool.
+    "display_homepage": "about",
+    "display_experience_page": "experience",
+    "display_skills_page": "skills",
+    "display_personal_page": "personal",
+    # The grid, no project opened: the same page display_project uses, with
+    # no project_id.
+    "display_projects_page": "project",
     "display_landing_page": "landing",
     "display_education_page": "education",
     "display_resume_page": "resume",

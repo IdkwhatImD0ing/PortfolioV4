@@ -48,8 +48,11 @@ export interface NavigationMeta {
   type: string;
   page?:
     | "landing"
+    | "about"
+    | "experience"
     | "education"
     | "project"
+    | "skills"
     | "personal"
     | "resume"
     | "hackathon"
@@ -60,9 +63,12 @@ export interface NavigationMeta {
 /** Server `page` value → DOM section id on the long-scroll layout. */
 export const PAGE_TO_SECTION: Record<NonNullable<NavigationMeta["page"]>, string> = {
   landing: "hero",
+  about: "about",
+  experience: "experience",
   personal: "personal",
   education: "education",
   project: "projects",
+  skills: "skills",
   resume: "resume",
   hackathon: "hackathons",
   architecture: "architecture",
